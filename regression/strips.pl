@@ -62,20 +62,20 @@ regress_on_effects(Term, [_|R], TermRes) :-
   regress_on_effects(Term, R, TermRes).
 
 
-%% substitute(+OldElem, +OldList, +NewElem, -NewList)
+%% substitute(+Old, +Terms, +New, -NewTerms)
 %
-%  Replace all occurrences of OldElem in OldList by NewElem, giving NewList.
+%  Replace all occurrences of Old in Terms by New, giving NewTerms.
 %  This replaces terms recursively, i.e.
 %  substitute(a, [p(a)], b, p(b)) succeeds.
 substitute(_, [], _, []).
-substitute(OldElem, [Old|OldList], NewElem, [NewElem|NewList]) :-
-  Old == OldElem, !,
-  substitute(OldElem, OldList, NewElem, NewList).
-substitute(OldElem, [Old|OldList], NewElem, [New|NewList]) :-
-  \+ atom(Old),
-  Old =.. ElemList, !,
-  substitute(OldElem, ElemList, NewElem, NewElemList),
-  New =.. NewElemList,
-  substitute(OldElem, OldList, NewElem, NewList), !.
-substitute(OldElem, [E|OldList], NewElem, [E|NewList]) :-
-  substitute(OldElem, OldList, NewElem, NewList), !.
+substitute(Old, [Term|Terms], New, [New|NewTerms]) :-
+  Old == Term, !,
+  substitute(Old, Terms, New, NewTerms).
+substitute(Old, [Term|Terms], New, [NewTerm|NewTerms]) :-
+  \+ atom(Term),
+  Term =.. Subterms, !,
+  substitute(Old, Subterms, New, NewSubterms),
+  NewTerm =.. NewSubterms,
+  substitute(Old, Terms, New, NewTerms).
+substitute(Old, [Term|Terms], New, [Term|NewTerms]) :-
+  substitute(Old, Terms, New, NewTerms).
