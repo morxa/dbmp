@@ -76,6 +76,6 @@ substitute(OldElem, [Old|OldList], NewElem, [New|NewList]) :-
   Old =.. ElemList, !,
   substitute(OldElem, ElemList, NewElem, NewElemList),
   New =.. NewElemList,
-  substitute(OldElem, OldList, NewElem, NewList).
+  substitute(OldElem, OldList, NewElem, NewList), !.
 substitute(OldElem, [E|OldList], NewElem, [E|NewList]) :-
-  substitute(OldElem, OldList, NewElem, NewList).
+  substitute(OldElem, OldList, NewElem, NewList), !.
