@@ -35,7 +35,7 @@ regress(Actions, Cond, CondRes) :-
   CondRes =.. [and|RegressedConjuncts].
 regress([Action|R], Cond, CondRes) :-
   effect(Action,Effect),
-  regress_on_effects(Cond,[Effect],CondInter),
+  regress_on_effects(Cond,[Effect],CondInter), !,
   regress(R,CondInter,CondRes).
 
 %% regress_on_effects(+Term, +EffectList, -RegressedTerm)
@@ -43,7 +43,8 @@ regress([Action|R], Cond, CondRes) :-
 %  Regresses a single term Term with EffectList, giving RegressedTerm.
 %  If Term occurs in the EffectList, RegressedTerm is true, similarly false for
 %  negated Term/Effect.
-%  This also considers effects of the form and(Effect1,Effect2).
+%  This also considers effects of the form and(Effect1,Effect2) and
+%  all(var,type,Effect).
 regress_on_effects(Term, [], Term).
 regress_on_effects(Term, [Effect|R], TermRes) :-
   Effect =.. [and|Conjuncts],
@@ -52,5 +53,29 @@ regress_on_effects(Term, [Effect|R], TermRes) :-
 regress_on_effects(Term, [Term|_], true) :- !.
 regress_on_effects(not(Term), [Term|_], false) :- !.
 regress_on_effects(Term, [not(Term)|_], false) :- !.
+regress_on_effects(Term, [all(X,_,Effect)|R], TermRes) :-
+  Effect =.. [Predicate|Args],
+  substitute(X,Args,_,NArgs),
+  QuantifiedEffect =.. [Predicate|NArgs],
+  regress_on_effects(Term,[QuantifiedEffect|R], TermRes).
 regress_on_effects(Term, [_|R], TermRes) :-
   regress_on_effects(Term, R, TermRes).
+
+
+%% substitute(+OldElem, +OldList, +NewElem, -NewList)
+%
+%  Replace all occurrences of OldElem in OldList by NewElem, giving NewList.
+%  This replaces terms recursively, i.e.
+%  substitute(a, [p(a)], b, p(b)) succeeds.
+substitute(_, [], _, []).
+substitute(OldElem, [Old|OldList], NewElem, [NewElem|NewList]) :-
+  Old == OldElem, !,
+  substitute(OldElem, OldList, NewElem, NewList).
+substitute(OldElem, [Old|OldList], NewElem, [New|NewList]) :-
+  \+ atom(Old),
+  Old =.. ElemList, !,
+  substitute(OldElem, ElemList, NewElem, NewElemList),
+  New =.. NewElemList,
+  substitute(OldElem, OldList, NewElem, NewList).
+substitute(OldElem, [E|OldList], NewElem, [E|NewList]) :-
+  substitute(OldElem, OldList, NewElem, NewList).
