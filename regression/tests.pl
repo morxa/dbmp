@@ -58,6 +58,8 @@ init_dropall_action :-
   assertz(effect(dropall,all(o,not(holding(o))))).
 init_clearall_action :-
   assertz(effect(clearall,all(o,clear(o)))).
+init_condeffect_action :-
+  assertz(effect(drop(O),impl(fragile(O),broken(O)))).
 cleanup_actions :-
   retractall(effect(_,_)).
 
@@ -85,6 +87,15 @@ test(
   regress([dropall], not(holding(a)), true),
   regress([dropall], holding(a), false),
   regress([dropall], other_predicate(a), other_predicate(a)).
+
+% conditional effects: we don't know if the condition is true, so we always
+% assume it's not true, and thus no condition is removed during regression.
+test(
+  regress_conditional_effect,
+  [setup(init_condeffect_action), cleanup(cleanup_actions)]
+) :-
+  regress([drop(o)], broken(o), broken(o)),
+  regress([drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))).
 
 :- end_tests(regression).
 

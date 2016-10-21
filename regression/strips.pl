@@ -63,6 +63,16 @@ regress_on_effects(Term, [all(X,Effect)|R], TermRes) :-
   substitute(X, Args, _, NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
   regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
+% conditional effect: If Effect makes Term false, then Cond must be false so
+% Term can be true. In other words, if Effect = not(Term), then Term is
+% regressed to not(Cond).
+regress_on_effects(Term, [impl(Cond,Effect)|R], TermRes) :-
+  regress_on_effects(Term, R, TermResOfR),
+  ( regress_on_effects(Term, [Effect], false) ->
+    TermRes = and(not(Cond),TermResOfR)
+  ;
+    TermRes = TermResOfR
+  ).
 regress_on_effects(Term, [_|R], TermRes) :-
   regress_on_effects(Term, R, TermRes).
 
