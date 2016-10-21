@@ -20,7 +20,7 @@
  */
 
 :- begin_tests(regression).
-:- [strips].
+:- [regression].
 
 :- dynamic effect/2.
 

@@ -1,7 +1,7 @@
 #! /usr/bin/env swipl
 
 /**
- *  strips.pl - Short description
+ *  regression.pl - ADL regression
  *
  *  Created:  Wed 19 Oct 2016 17:44:44 CEST
  *  Copyright  2016  Till Hofmann <hofmann@kbsg.rwth-aachen.de>
@@ -30,9 +30,10 @@
 %  effect of one of the actions is removed from Condition.
 regress([], Cond, Cond) :- !.
 regress(Actions, Cond, CondRes) :-
-  Cond =.. [and|Conjuncts],
+  Cond =.. [Op|Conjuncts],
+  member(Op,[and,or]),
   maplist(regress(Actions),Conjuncts,RegressedConjuncts),
-  CondRes =.. [and|RegressedConjuncts].
+  CondRes =.. [Op|RegressedConjuncts].
 regress([Action|R], Cond, CondRes) :-
   effect(Action,Effect),
   regress_on_effects(Cond,[Effect],CondInter), !,
