@@ -38,6 +38,11 @@ regress(Actions, Cond, CondRes) :-
   Cond =.. [impl,Implicant,Implicate],
   !,
   once(regress(Actions, or(not(Implicant),Implicate), CondRes)).
+regress(Actions, some(Var,Type,Cond), CondRes) :-
+  !,
+  type_of_object(Type, TypedObject),
+  substitute(Var, [Cond], TypedObject, [SubstitutedCond]),
+  regress(Actions, SubstitutedCond, CondRes).
 regress([Action|R], Cond, CondRes) :-
   effect(Action,Effect),
   regress_on_effects(Cond,[Effect],CondInter), !,

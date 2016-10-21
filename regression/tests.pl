@@ -53,7 +53,8 @@ test(
 
 
 init_goto_action :-
-  assertz(effect(goto(L1,L2),and(not(at(L1)),at(L2)))).
+  assertz(effect(goto(L1,L2),and(not(at(L1)),at(L2)))),
+  init_location_types.
 init_dropall_action :-
   assertz(effect(dropall,all(o,not(holding(o))))).
 init_clearall_action :-
@@ -62,6 +63,9 @@ init_condeffect_action :-
   assertz(effect(drop(O),impl(fragile(O),broken(O)))).
 cleanup_actions :-
   retractall(effect(_,_)).
+cleanup_actions_and_types :-
+  cleanup_actions,
+  retractall(type_of_object(_,_)).
 
 test(regress_empty_action_list) :-
   regress([], a, a).
@@ -101,6 +105,16 @@ test(
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
   regress([goto(hall,kitchen)], impl(true,at(kitchen)), or(not(true),true)).
+
+test(
+  regress_existential_quantifier,
+  [ nondet,
+    setup(init_goto_action),
+    cleanup(cleanup_actions_and_types)]
+) :-
+  %regress([goto(hall,kitchen)], at(kitchen), R),
+  regress([goto(hall,kitchen)], some(l,location,at(l)), true),
+  regress([goto(kitchen,hall)], some(l,room,at(l)), false).
 
 :- end_tests(regression).
 
