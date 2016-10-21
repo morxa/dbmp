@@ -53,7 +53,7 @@ test(
 
 
 init_goto_action :-
-  assertz(effect(goto(l1,l2),and(not(at(l1)),at(l2)))).
+  assertz(effect(goto(L1,L2),and(not(at(L1)),at(L2)))).
 init_dropall_action :-
   assertz(effect(dropall,all(o,not(holding(o))))).
 init_clearall_action :-
@@ -68,7 +68,9 @@ test(
   regress_simple_goto,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress([goto(l1,l2)], at(l2), true).
+  regress([goto(hall,kitchen)], at(kitchen), true),
+  regress([goto(hall,kitchen)], not(at(hall)), true).
+
 test(
   regress_forall,
   [setup(init_clearall_action),cleanup(cleanup_actions)]
