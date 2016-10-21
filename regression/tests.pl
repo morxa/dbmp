@@ -80,6 +80,7 @@ test(
   regress([clearall], clear(a), true),
   regress([clearall], not(clear(a)), false),
   regress([clearall], other_predicate(a), other_predicate(a)).
+
 test(
   regress_forall_with_negation,
   [setup(init_dropall_action),cleanup(cleanup_actions)]
@@ -88,14 +89,18 @@ test(
   regress([dropall], holding(a), false),
   regress([dropall], other_predicate(a), other_predicate(a)).
 
-% conditional effects: we don't know if the condition is true, so we always
-% assume it's not true, and thus no condition is removed during regression.
 test(
   regress_conditional_effect,
   [setup(init_condeffect_action), cleanup(cleanup_actions)]
 ) :-
   regress([drop(o)], broken(o), broken(o)),
   regress([drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))).
+
+test(
+  regress_implication,
+  [setup(init_goto_action),cleanup(cleanup_actions)]
+) :-
+  regress([goto(hall,kitchen)], impl(true,at(kitchen)), or(not(true),true)).
 
 :- end_tests(regression).
 

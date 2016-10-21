@@ -34,6 +34,10 @@ regress(Actions, Cond, CondRes) :-
   member(Op,[and,or]),
   maplist(regress(Actions),Conjuncts,RegressedConjuncts),
   CondRes =.. [Op|RegressedConjuncts].
+regress(Actions, Cond, CondRes) :-
+  Cond =.. [impl,Implicant,Implicate],
+  !,
+  once(regress(Actions, or(not(Implicant),Implicate), CondRes)).
 regress([Action|R], Cond, CondRes) :-
   effect(Action,Effect),
   regress_on_effects(Cond,[Effect],CondInter), !,
