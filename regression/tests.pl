@@ -24,6 +24,12 @@
 
 :- dynamic effect/2.
 
+
+init_location_types :-
+  assertz(type_of_object(room, kitchen)),
+  assertz(type_of_object(location, kitchen)),
+  assertz(type_of_object(location, hall)).
+
 test(substitute_simple) :-
   substitute(a, [a,b], c, [c,b]).
 
@@ -36,12 +42,22 @@ test(substitute_predicate) :-
 test(substitute_predicate_args) :-
   substitute(a, [a(a)], b, [b(b)]).
 
+test(
+  substitute_with_constraint,
+  [ setup(init_location_types),
+    cleanup(retractall(type_of_object(_,_)))
+  ]
+) :-
+  substitute(_, [goto(kitchen,hall)], location, type_of_object(room),
+    [goto(location,hall)]).
+
+
 init_goto_action :-
-  assertz(effect(goto(L1,L2),and(not(at(L1)),at(L2)))).
+  assertz(effect(goto(l1,l2),and(not(at(l1)),at(l2)))).
 init_dropall_action :-
-  assertz(effect(dropall,all(o,objects,not(holding(o))))).
+  assertz(effect(dropall,all(o,not(holding(o))))).
 init_clearall_action :-
-  assertz(effect(clearall,all(o,objects,clear(o)))).
+  assertz(effect(clearall,all(o,clear(o)))).
 cleanup_actions :-
   retractall(effect(_,_)).
 
@@ -54,7 +70,7 @@ test(
 ) :-
   regress([goto(l1,l2)], at(l2), true).
 test(
-  regress_forall_with_negation,
+  regress_forall,
   [setup(init_clearall_action),cleanup(cleanup_actions)]
 ) :-
   regress([clearall], clear(a), true),

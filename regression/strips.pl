@@ -53,11 +53,16 @@ regress_on_effects(Term, [Effect|R], TermRes) :-
 regress_on_effects(Term, [Term|_], true).
 regress_on_effects(not(Term), [Term|_], false).
 regress_on_effects(Term, [not(Term)|_], false).
-regress_on_effects(Term, [all(X,_,Effect)|R], TermRes) :-
+regress_on_effects(Term, [all(X,Type,Effect)|R], TermRes) :-
   Effect =.. [Predicate|Args],
-  substitute(X,Args,_,NArgs),
+  substitute(X, Args, _, type_of_object(Type), NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
-  regress_on_effects(Term,[QuantifiedEffect|R], TermRes).
+  regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
+regress_on_effects(Term, [all(X,Effect)|R], TermRes) :-
+  Effect =.. [Predicate|Args],
+  substitute(X, Args, _, NArgs),
+  QuantifiedEffect =.. [Predicate|NArgs],
+  regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
 regress_on_effects(Term, [_|R], TermRes) :-
   regress_on_effects(Term, R, TermRes).
 
@@ -67,18 +72,35 @@ regress_on_effects(Term, [_|R], TermRes) :-
 %  Replace all occurrences of Old in Terms by New, giving NewTerms.
 %  This replaces terms recursively, i.e.
 %  substitute(a, [p(a)], b, L) gives L = p(b).
-substitute(_, [], _, []) :- !.
-substitute(Old, [Term|Terms], New, [New|NewTerms]) :-
-  Old == Term,
+substitute(Old, Terms, New, NewTerms) :-
+  substitute(Old, Terms, New, true, NewTerms).
+
+
+%% substitute(+Old, +Terms, +New, +Constraint, -NewTerms)
+%
+%  Replace all occurrences of Old in Terms by New if Constraint is true for the
+%  term to be substituted, giving NewTerms.
+%  This calls Constraint(Term) for each term that is a candidate to be
+%  substituted. Constraint must be callable, i.e. sufficiently instantiated.
+%  As an example, Constraint can be used to restrict substitution to a certain
+%  type of variable. However, any other constraint can be used.
+substitute(_, [], _, _, []) :- !.
+substitute(Old, [Term|Terms], New, Constraint, [New|NewTerms]) :-
+  Old = Term,
+  call(Constraint, Term),
   % Cut here, otherwise the non-substituted list will succeed, too.
   !,
   substitute(Old, Terms, New, NewTerms).
-substitute(Old, [Term|Terms], New, [NewTerm|NewTerms]) :-
+substitute(Old, [Term|Terms], New, Constraint, [NewTerm|NewTerms]) :-
   \+ atom(Term),
   Term =.. Subterms,
-  substitute(Old, Subterms, New, NewSubterms),
+  substitute(Old, Subterms, New, Constraint, NewSubterms),
   !,
   NewTerm =.. NewSubterms,
-  substitute(Old, Terms, New, NewTerms).
-substitute(Old, [Term|Terms], New, [Term|NewTerms]) :-
-  substitute(Old, Terms, New, NewTerms).
+  substitute(Old, Terms, New, Constraint, NewTerms).
+substitute(Old, [Term|Terms], New, Constraint, [Term|NewTerms]) :-
+  substitute(Old, Terms, New, Constraint, NewTerms).
+
+%% true(?Any)
+%  Auxiliary predicate that is always true.
+true(_).
