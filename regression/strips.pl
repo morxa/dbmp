@@ -28,10 +28,10 @@
 %  effect(Action,Effect).
 %  Compares Condition with the effects of all actions. Any term that is an
 %  effect of one of the actions is removed from Condition.
-regress([], Cond, Cond).
+regress([], Cond, Cond) :- !.
 regress(Actions, Cond, CondRes) :-
   Cond =.. [and|Conjuncts],
-  maplist(regress(Actions),Conjuncts,RegressedConjuncts), !,
+  maplist(regress(Actions),Conjuncts,RegressedConjuncts),
   CondRes =.. [and|RegressedConjuncts].
 regress([Action|R], Cond, CondRes) :-
   effect(Action,Effect),
@@ -50,9 +50,9 @@ regress_on_effects(Term, [Effect|R], TermRes) :-
   Effect =.. [and|Conjuncts],
   append(Conjuncts, R, Effects),
   regress_on_effects(Term, Effects, TermRes).
-regress_on_effects(Term, [Term|_], true) :- !.
-regress_on_effects(not(Term), [Term|_], false) :- !.
-regress_on_effects(Term, [not(Term)|_], false) :- !.
+regress_on_effects(Term, [Term|_], true).
+regress_on_effects(not(Term), [Term|_], false).
+regress_on_effects(Term, [not(Term)|_], false).
 regress_on_effects(Term, [all(X,_,Effect)|R], TermRes) :-
   Effect =.. [Predicate|Args],
   substitute(X,Args,_,NArgs),
@@ -66,15 +66,18 @@ regress_on_effects(Term, [_|R], TermRes) :-
 %
 %  Replace all occurrences of Old in Terms by New, giving NewTerms.
 %  This replaces terms recursively, i.e.
-%  substitute(a, [p(a)], b, p(b)) succeeds.
-substitute(_, [], _, []).
+%  substitute(a, [p(a)], b, L) gives L = p(b).
+substitute(_, [], _, []) :- !.
 substitute(Old, [Term|Terms], New, [New|NewTerms]) :-
-  Old == Term, !,
+  Old == Term,
+  % Cut here, otherwise the non-substituted list will succeed, too.
+  !,
   substitute(Old, Terms, New, NewTerms).
 substitute(Old, [Term|Terms], New, [NewTerm|NewTerms]) :-
   \+ atom(Term),
-  Term =.. Subterms, !,
+  Term =.. Subterms,
   substitute(Old, Subterms, New, NewSubterms),
+  !,
   NewTerm =.. NewSubterms,
   substitute(Old, Terms, New, NewTerms).
 substitute(Old, [Term|Terms], New, [Term|NewTerms]) :-
