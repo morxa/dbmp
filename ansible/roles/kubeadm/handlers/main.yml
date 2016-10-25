@@ -1,0 +1,20 @@
+- name: restart etcd
+  service:
+    name: etcd
+    state: restarted
+- name: restart kube-apiserver
+  service:
+    name: kube-apiserver
+    state: restarted
+  notify:
+    - restart kube-controller-manager
+- name: restart kube-controller-manager
+  service:
+    name: kube-controller-manager
+    state: restarted
+  notify:
+    - restart kube-scheduler
+- name: restart kube-scheduler
+  service:
+    name: kube-scheduler
+    state: restarted

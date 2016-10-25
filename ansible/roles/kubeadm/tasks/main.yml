@@ -1,0 +1,32 @@
+- name: install etcd
+  dnf: name=etcd state=latest
+- name: copy etcd config
+  copy:
+    src: etc-etcd-etcd.conf
+    dest: /etc/etcd/etcd.conf
+  notify: restart etcd
+- name: copy kubeadm config
+  copy:
+    src: etc-kubernetes-apiserver
+    dest: /etc/kubernetes/apiserver
+  notify: restart kube-apiserver
+- name: start etcd
+  service:
+    name: etcd
+    enabled: yes
+    state: started
+- name: start kube-apiserver
+  service:
+    name: kube-apiserver
+    enabled: yes
+    state: started
+- name: start kube-controller-manager
+  service:
+    name: kube-controller-manager
+    enabled: yes
+    state: started
+- name: start kube-scheduler
+  service:
+    name: kube-scheduler
+    enabled: yes
+    state: started

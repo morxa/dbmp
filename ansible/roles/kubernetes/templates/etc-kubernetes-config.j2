@@ -1,0 +1,14 @@
+# comma-separated list of master nodes
+KUBE_MASTER="--master=http://
+{%- for host in groups['kubeadm'] -%}
+  {{ hostvars[host]['ansible_hostname'] }}:8080
+  {%- if not loop.last %}
+    ,
+  {%- endif %}
+{%- endfor %}"
+# logging to journald
+KUBE_LOGTOSTDERR="--logtostderr=true"
+# log level 0 enables debugging
+KUBE_LOG_LEVEL="--v=0"
+# Do not allow to run privileged containers
+KUBE_ALLOW_PRIV="--allow-privileged=false"

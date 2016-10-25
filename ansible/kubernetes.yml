@@ -1,0 +1,10 @@
+---
+- hosts: kube
+  roles:
+    - kubernetes
+- hosts: kubeadm
+  roles:
+    - kubeadm
+- hosts: kubelet
+  roles:
+    - kubelet

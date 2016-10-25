@@ -1,0 +1,20 @@
+- name: add kubelet config
+  template:
+    src: etc-kubernetes-kubelet.j2
+    dest: /etc/kubernetes/kubelet
+  notify: restart kubelet
+- name: start kube-proxy
+  service:
+    name: kube-proxy
+    enabled: true
+    state: started
+- name: start kubelet
+  service:
+    name: kubelet
+    enabled: true
+    state: started
+- name: start docker
+  service:
+    name: docker
+    enabled: true
+    state: started
