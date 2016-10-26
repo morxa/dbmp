@@ -16,3 +16,7 @@
     owner: kube
     group: kube
     mode: u=rw,go=r
+- name: copy client CA
+  copy:
+    src: ca.crt
+    dest: /etc/kubernetes/ssl/

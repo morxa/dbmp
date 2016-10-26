@@ -8,6 +8,19 @@
     src: etc-kubernetes-kubeconfig.j2
     dest: /etc/kubernetes/kubeconfig
   notify: restart kubelet
+- name: add client certificate
+  copy:
+    src: "{{ ansible_hostname }}-client.crt"
+    dest: "/etc/kubernetes/ssl/{{ ansible_hostname }}-client.crt"
+  notify: restart kubelet
+- name: add client certificate key
+  copy:
+    src: "{{ ansible_hostname }}-client.key"
+    dest: "/etc/kubernetes/ssl/{{ ansible_hostname }}-client.key"
+    owner: kube
+    group: kube
+    mode: u=rw,go=
+  notify: restart kubelet
 - name: start kube-proxy
   service:
     name: kube-proxy
