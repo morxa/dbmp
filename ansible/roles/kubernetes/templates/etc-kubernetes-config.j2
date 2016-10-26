@@ -1,7 +1,11 @@
 # comma-separated list of master nodes
-KUBE_MASTER="--master=http://
+KUBE_MASTER="--master=
 {%- for host in groups['kubeadm'] -%}
-  {{ hostvars[host]['ansible_hostname'] }}:6443
+  {%- if ansible_hostname == hostvars[host]['ansible_hostname'] -%}
+    http://localhost:8080
+  {%- else -%}
+    https://{{ hostvars[host]['ansible_hostname'] }}:6443
+  {%- endif %}
   {%- if not loop.last %}
     ,
   {%- endif %}

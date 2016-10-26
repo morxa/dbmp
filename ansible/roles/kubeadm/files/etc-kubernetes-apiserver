@@ -1,5 +1,5 @@
 # The address on the local server to listen to.
-KUBE_API_ADDRESS="--address=0.0.0.0"
+KUBE_API_ADDRESS="--bind-address=0.0.0.0 --insecure-bind-address=127.0.0.1"
 
 # Comma separated list of nodes in the etcd cluster
 KUBE_ETCD_SERVERS="--etcd-servers=http://127.0.0.1:2379"
