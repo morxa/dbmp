@@ -22,6 +22,14 @@
     group: kube
     mode: u=rw,go=
   notify: restart kube-apiserver
+- name: install python2-firewall
+  dnf: name=python2-firewall state=latest
+- name: open kube-apiserver port
+  firewalld:
+    port: 6443/tcp
+    permanent: true
+    state: enabled
+    immediate: yes
 - name: start etcd
   service:
     name: etcd
