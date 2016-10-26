@@ -8,4 +8,4 @@ KUBE_ETCD_SERVERS="--etcd-servers=http://127.0.0.1:2379"
 KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=10.254.0.0/16"
 
 # Add other API args here
-KUBE_API_ARGS=""
+KUBE_API_ARGS="--tls-cert-file /etc/kubernetes/ssl/apiserver.crt --tls-private-key-file /etc/kubernetes/ssl/apiserver.key"

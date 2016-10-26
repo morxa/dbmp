@@ -7,7 +7,7 @@ KUBELET_ADDRESS="--address=0.0.0.0"
 KUBELET_HOSTNAME="--hostname-override={{ ansible_hostname }}"
 
 # location of the api-server
-KUBELET_API_SERVER="--api-servers=http://{{ hostvars[groups['kubeadm'][0]]['ansible_hostname']}}:8080"
+KUBELET_API_SERVER="--api-servers=https://{{ hostvars[groups['kubeadm'][0]]['ansible_hostname']}}:6443"
 
-# Add your own!
-#KUBELET_ARGS=""
+# Load kubeconfig
+KUBELET_ARGS="--kubeconfig /etc/kubernetes/kubeconfig"

@@ -10,6 +10,18 @@
     src: etc-kubernetes-apiserver
     dest: /etc/kubernetes/apiserver
   notify: restart kube-apiserver
+- name: create directory for certificate
+  file:
+    path: /etc/kubernetes/ssl
+    state: directory
+- name: copy apiserver certificate key
+  copy:
+    src: apiserver.key
+    dest: /etc/kubernetes/ssl/
+    owner: kube
+    group: kube
+    mode: u=rw,go=
+  notify: restart kube-apiserver
 - name: start etcd
   service:
     name: etcd

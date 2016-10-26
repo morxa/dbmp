@@ -5,3 +5,14 @@
     src: etc-kubernetes-config.j2
     dest: /etc/kubernetes/config
     backup: yes
+- name: create directory for certificate
+  file:
+    path: /etc/kubernetes/ssl
+    state: directory
+- name: copy apiserver certificate
+  copy:
+    src: apiserver.crt
+    dest: /etc/kubernetes/ssl/
+    owner: kube
+    group: kube
+    mode: u=rw,go=r

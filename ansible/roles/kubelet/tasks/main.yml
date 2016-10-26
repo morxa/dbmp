@@ -1,7 +1,12 @@
-- name: add kubelet config
+- name: add kubelet base config
   template:
     src: etc-kubernetes-kubelet.j2
     dest: /etc/kubernetes/kubelet
+  notify: restart kubelet
+- name: add kubelet kubeconfig
+  template:
+    src: etc-kubernetes-kubeconfig.j2
+    dest: /etc/kubernetes/kubeconfig
   notify: restart kubelet
 - name: start kube-proxy
   service:
