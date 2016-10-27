@@ -1,2 +1,3 @@
 ---
 - include: kubernetes.yml
+- include: mongodb.yml

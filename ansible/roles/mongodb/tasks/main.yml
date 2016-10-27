@@ -1,0 +1,13 @@
+- name: install mongodb
+  dnf: name=mongodb state=latest
+  notify: restart mongodb
+- name: add mongodb config
+  template:
+    src: etc-mongod.conf.j2
+    dest: /etc/mongod.conf
+  notify: reload mongodb
+- name: enable mongodb
+  service:
+    name: mongod
+    enabled: yes
+  notify: restart mongodb
