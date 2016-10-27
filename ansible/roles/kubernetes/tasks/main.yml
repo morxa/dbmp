@@ -11,12 +11,12 @@
     state: directory
 - name: copy apiserver certificate
   copy:
-    src: apiserver.crt
-    dest: /etc/kubernetes/ssl/
+    src: certs/kubernetes-apiserver.crt
+    dest: /etc/kubernetes/ssl/apiserver.crt
     owner: kube
     group: kube
     mode: u=rw,go=r
 - name: copy client CA
   copy:
-    src: ca.crt
+    src: certs/ca.crt
     dest: /etc/kubernetes/ssl/

@@ -16,8 +16,8 @@
     state: directory
 - name: copy apiserver certificate key
   copy:
-    src: apiserver.key
-    dest: /etc/kubernetes/ssl/
+    src: certs/kubernetes-apiserver.key
+    dest: /etc/kubernetes/ssl/apiserver.key
     owner: kube
     group: kube
     mode: u=rw,go=

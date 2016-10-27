@@ -10,12 +10,12 @@
   notify: restart kubelet
 - name: add client certificate
   copy:
-    src: "{{ ansible_hostname }}-client.crt"
+    src: "certs/{{ ansible_hostname }}-kubernetes-client.crt"
     dest: "/etc/kubernetes/ssl/{{ ansible_hostname }}-client.crt"
   notify: restart kubelet
 - name: add client certificate key
   copy:
-    src: "{{ ansible_hostname }}-client.key"
+    src: "certs/{{ ansible_hostname }}-kubernetes-client.key"
     dest: "/etc/kubernetes/ssl/{{ ansible_hostname }}-client.key"
     owner: kube
     group: kube
