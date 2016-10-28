@@ -59,6 +59,10 @@ init_dropall_action :-
   assertz(effect(dropall,all(o,not(holding(o))))).
 init_clearall_action :-
   assertz(effect(clearall,all(o,clear(o)))).
+init_typed_clearall_action :-
+  assertz(subtype_of_type(T,T)),
+  assertz(subtype_of_type(cup,object)),
+  assertz(effect(clearall,all(o,object,clear(o)))).
 init_condeffect_action :-
   assertz(effect(drop(O),impl(fragile(O),broken(O)))).
 cleanup_actions :-
@@ -115,6 +119,24 @@ test(
   %regress([goto(hall,kitchen)], at(kitchen), R),
   regress([goto(hall,kitchen)], some(l,location,at(l)), true),
   regress([goto(kitchen,hall)], some(l,room,at(l)), false).
+
+test(
+  regress_universal_quantifier,
+  [setup(init_clearall_action),cleanup(cleanup_actions)]
+) :-
+  regress([clearall], all(c,clear(c)), true).
+
+test(
+  regress_universal_quantifier_with_types,
+  [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
+) :-
+  regress([clearall], all(c,object,clear(c)), true).
+
+tet(
+  regress_universal_quantifier_with_subtypes,
+  [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
+) :-
+  regress([clearall], all(c,cup,clear(c)), true).
 
 :- end_tests(regression).
 
