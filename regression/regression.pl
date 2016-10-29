@@ -66,13 +66,11 @@ regress_on_effects(Term, [not(Term)|_], false).
 regress_on_effects(all(X,Term), [all(Y,Effect)|_], true) :-
   substitute(X, [Term], _, [NewTerm]),
   substitute(Y, [Effect], _,[NewEffect]),
-  NewTerm = NewEffect.
+  regress_on_effects(NewTerm, [NewEffect], true).
 % Note: subtype_of_type must be reflexive.
-regress_on_effects(all(X,TermType,Term), [all(Y,EffectType,Effect)|_], true) :-
+regress_on_effects(all(X,TermType,Term), [all(Y,EffectType,Effect)|R], Res) :-
   subtype_of_type(TermType, EffectType),
-  substitute(X, [Term], _, [NewTerm]),
-  substitute(Y, [Effect], _, [NewEffect]),
-  NewTerm = NewEffect.
+  regress_on_effects(all(X,Term), [all(Y,Effect)|R], Res).
 regress_on_effects(Term, [all(X,Type,Effect)|R], TermRes) :-
   Effect =.. [Predicate|Args],
   substitute(X, Args, _, type_of_object(Type), NArgs),
