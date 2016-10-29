@@ -116,9 +116,7 @@ test(
     setup(init_goto_action),
     cleanup(cleanup_actions_and_types)]
 ) :-
-  %regress([goto(hall,kitchen)], at(kitchen), R),
-  regress([goto(hall,kitchen)], some(l,location,at(l)), true),
-  regress([goto(kitchen,hall)], some(l,room,at(l)), false).
+  regress([goto(hall,kitchen)], some(l,location,at(l)), true).
 
 test(
   regress_universal_quantifier,
