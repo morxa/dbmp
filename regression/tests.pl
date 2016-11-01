@@ -138,6 +138,43 @@ tet(
 
 :- end_tests(regression).
 
+:- begin_tests(simplify).
+:- [simplify].
+
+test(simplify_conjunction) :-
+  assertion(simplify(and(true,true),true)),
+  assertion(simplify(and(a,true),a)),
+  assertion(simplify(and(true,b),b)),
+  assertion(simplify(and(true,false),false)),
+  assertion(simplify(and(false,true),false)).
+
+test(simplify_disjunction) :-
+  assertion(simplify(or(true,true),true)),
+  assertion(simplify(or(a,true),true)),
+  assertion(simplify(or(true,b),true)),
+  assertion(simplify(or(true,false),true)),
+  assertion(simplify(or(false,true),true)).
+
+test(simplify_nested_disjunction) :-
+  assertion(simplify(or(or(true,a),b),true)),
+  assertion(simplify(or(or(or(true,a),b),c),true)),
+  assertion(simplify(or(or(or(or(a,true),b),c),d),true)).
+
+test(simplify_nested_conjunction) :-
+  assertion(simplify(and(and(true,a),b),and(a,b))),
+  assertion(simplify(and(and(and(true,a),b),c),and(a,b,c))),
+  assertion(simplify(and(and(and(and(a,true),b),c),d),and(a,b,c,d))).
+
+test(simplify_negated_literal_in_conjunction) :-
+  assertion(simplify(and(a,not(a)),false)),
+  assertion(simplify(and(not(a),not(not(a))),false)).
+
+test(simplify_implication) :-
+  assertion(simplify(impl(true,a),a)),
+  simplify(and(impl(not(a),b),impl(a,b)), R), format("res: ~w\n", [R]), R = b.
+
+:- end_tests(simplify).
+
 :- initialization run_and_exit.
 
 run_and_exit :-
