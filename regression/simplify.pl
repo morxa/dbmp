@@ -68,9 +68,11 @@ simplify_or_fail(and(), true).
 % or() -> false
 simplify_or_fail(or(), false).
 % and(Term) -> Term
-simplify_or_fail(and(Term), Term).
+simplify_or_fail(and(Term), SimplifiedTerm) :-
+  simplify(Term, SimplifiedTerm).
 % or(Term) -> Term
-simplify_or_fail(or(Term), Term).
+simplify_or_fail(or(Term), SimplifiedTerm) :-
+  simplify(Term, SimplifiedTerm).
 % and(...,Term,...,Term,...) -> and(...,Term,...)
 % or(...,Term,...,Term,...) -> or(...,Term,...)
 simplify_or_fail(Term, SimplifiedTerm) :-
@@ -120,11 +122,8 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   member(Op, [and,or]),
   maplist(simplify,Terms,SimplifiedTerms),
   TermOfSimplifiedSubTerms =.. [Op|SimplifiedTerms],
-  ( TermOfSimplifiedSubTerms \= Term ->
-    simplify(TermOfSimplifiedSubTerms, SimplifiedTerm)
-  ;
-    SimplifiedTerm = Term
-  ).
+  TermOfSimplifiedSubTerms \= Term,
+  simplify(TermOfSimplifiedSubTerms, SimplifiedTerm).
 % and(and(...),...) -> and(...)
 % or(or(...),...) -> or(...)
 simplify_or_fail(Term, SimplifiedTerm) :-
@@ -132,11 +131,8 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   member(Op, [and,or]),
   flatten_on_op(Op, Terms, FlattenedTerms),
   FlattenedTerm =.. [Op|FlattenedTerms],
-  ( Term \= FlattenedTerm ->
-    simplify(FlattenedTerm, SimplifiedTerm)
-  ;
-    SimplifiedTerm = Term
-  ).
+  Term \= FlattenedTerm,
+  simplify(FlattenedTerm, SimplifiedTerm).
 
 % flatten_on_op(+Op, +Terms, -FlattenedTerms)
 %
