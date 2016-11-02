@@ -167,15 +167,20 @@ test(simplify_nested_conjunction) :-
 
 test(simplify_negated_literal_in_conjunction) :-
   assertion(simplify(and(a,not(a)),false)),
-  assertion(simplify(and(not(a),not(not(a))),false)).
+  assertion(simplify(and(not(a),not(not(a))),false)),
+  assertion(simplify(and(a,or(not(a),b)),and(a,b))),
+  assertion(simplify(and(c,or(not(a),b),a),and(c,b,a))),
+  assertion(simplify(and(c,or(d,not(a),b),a),and(c,or(d,b),a))),
+  assertion(simplify(and(not(a),or(a,b)),and(not(a),b))).
 
 test(simplify_remove_negated_literal_in_disjunction) :-
   assertion(simplify(and(or(a,b),or(not(a),b)), b)),
-  assertion(simplify(and(or(a,b,not(c)),or(a,c,b)),or(a,b))).
-
+  assertion(simplify(and(or(a,b,not(c)),or(a,c,b)),or(a,b))),
+  assertion(simplify(and(or(d,c,not(b),a),or(a,b,c,d)),or(a,c,d))).
 test(simplify_implication) :-
   assertion(simplify(impl(true,a),a)),
-  simplify(and(impl(not(a),b),impl(a,b)), b).
+  assertion(simplify(and(impl(not(a),b),impl(a,b)), b)).
+
 
 :- end_tests(simplify).
 

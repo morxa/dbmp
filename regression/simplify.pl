@@ -44,6 +44,8 @@
 %  - impl(Cond,Term) -> or(not(Cond),Term)
 %  - and(or(T1,...,Tn,T,Tn+1,...),or(T1,...,Tn,not(T),Tn+1,...),...)
 %     -> and(or(T1,...,Tn,Tn+1,...),...)
+%  - and(T,or(...,Ti,not(T),Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
+%  - and(not(T),or(...,Ti,T,Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
 %
 %  simplify/2 never fails; if the term cannot be simplified, it stays the same.
 
@@ -162,6 +164,20 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   exclude(=(SubTerm2), NewSubTerms, FilteredNewSubTerms),
   FilteredTerm =.. [and|FilteredNewSubTerms],
   simplify(FilteredTerm, SimplifiedTerm).
+% and(T,or(...,Ti,not(T),Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
+% and(not(T),or(...,Ti,T,Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
+simplify_or_fail(Term, SimplifiedTerm) :-
+  Term =.. [and|SubTerms],
+  member(SubTermToRemove,SubTerms),
+  append(TermPrefix, [SubTermToSimplify|TermSuffix], SubTerms),
+  SubTermToSimplify =.. [or|SubSubTerms],
+  negated_term(SubTermToRemove, NegatedSubTermToRemove),
+  member(NegatedSubTermToRemove, SubSubTerms),
+  exclude(=(NegatedSubTermToRemove), SubSubTerms, FilteredSubSubTerms),
+  SimplifiedSubTerm =.. [or|FilteredSubSubTerms],
+  append(TermPrefix, [SimplifiedSubTerm|TermSuffix], FilteredSubTerms),
+  FilteredTerm =.. [and|FilteredSubTerms],
+  simplify(FilteredTerm, SimplifiedTerm).
 
 % flatten_on_op(+Op, +Terms, -FlattenedTerms)
 %
@@ -176,3 +192,9 @@ flatten_on_op(Op, [Term|RestTerms], FlattenedTerms) :-
   ;
     FlattenedTerms = [Term|FlattenedRestTerms]
   ).
+
+% negated_term(?Term1, ?Term2)
+%
+% True if Term1 is the negation of Term2.
+negated_term(not(Term),Term).
+negated_term(Term,not(Term)).
