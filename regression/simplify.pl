@@ -139,19 +139,28 @@ simplify_or_fail(Term, SimplifiedTerm) :-
 %   -> and(or(T1,...,Tn,Tn+1,...),...)
 simplify_or_fail(Term, SimplifiedTerm) :-
   Term =.. [and|SubTerms],
-  member(SubTerm1, SubTerms),
+  % Determine 2 subterms that are the same except for one literal l.
+  % SubTerm1 must contain l, SubTerm2 must contain not(l).
+  append(TermPrefix1, [SubTerm1|TermSuffix1], SubTerms),
   SubTerm1 =.. [or|SubSubTerms1],
   member(SubTerm2, SubTerms),
   SubTerm2 =.. [or|SubSubTerms2],
   member(SubSubTerm, SubSubTerms1),
   member(not(SubSubTerm), SubSubTerms2),
+  % Remove the literal from the subterms.
   exclude(=(SubSubTerm), SubSubTerms1, FilteredSubSubTerms1),
   exclude(=(not(SubSubTerm)), SubSubTerms2, FilteredSubSubTerms2),
-  FilteredSubSubTerms1 = FilteredSubSubTerms2,
-  exclude(=(SubTerm1), SubTerms, FilteredSubTerms1),
-  exclude(=(SubTerm2), FilteredSubTerms1, FilteredSubTerms2),
+  % The resulting filtered subterms must be identical, but not necessarily in
+  % the same order. The order of the term containing the positive literal is
+  % retained.
+  subset(FilteredSubSubTerms1, FilteredSubSubTerms2),
+  subset(FilteredSubSubTerms2, FilteredSubSubTerms1),
+  % Construct the new term.
   NewSubTerm =.. [or|FilteredSubSubTerms1],
-  FilteredTerm =.. [and,NewSubTerm|FilteredSubTerms2],
+  append(TermPrefix1, [NewSubTerm|TermSuffix1], NewSubTerms),
+  % Remove the second subterm from the newly constructed term.
+  exclude(=(SubTerm2), NewSubTerms, FilteredNewSubTerms),
+  FilteredTerm =.. [and|FilteredNewSubTerms],
   simplify(FilteredTerm, SimplifiedTerm).
 
 % flatten_on_op(+Op, +Terms, -FlattenedTerms)
