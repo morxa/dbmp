@@ -19,6 +19,8 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
+:- module(simplify, [simplify/2]).
+
 
 %% simplify(*Term, -SimplifiedTerm)
 %

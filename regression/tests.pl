@@ -139,7 +139,7 @@ tet(
 :- end_tests(regression).
 
 :- begin_tests(simplify).
-:- [simplify].
+:- use_module(simplify).
 
 test(simplify_conjunction) :-
   assertion(simplify(and(true,true),true)),
