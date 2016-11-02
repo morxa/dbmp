@@ -169,9 +169,13 @@ test(simplify_negated_literal_in_conjunction) :-
   assertion(simplify(and(a,not(a)),false)),
   assertion(simplify(and(not(a),not(not(a))),false)).
 
+test(simplify_remove_negated_literal_in_disjunction) :-
+  assertion(simplify(and(or(a,b),or(not(a),b)), b)),
+  assertion(simplify(and(or(a,b,not(c)),or(a,c,b)),or(a,b))).
+
 test(simplify_implication) :-
   assertion(simplify(impl(true,a),a)),
-  simplify(and(impl(not(a),b),impl(a,b)), R), format("res: ~w\n", [R]), R = b.
+  simplify(and(impl(not(a),b),impl(a,b)), b).
 
 :- end_tests(simplify).
 
