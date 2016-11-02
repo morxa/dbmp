@@ -177,6 +177,10 @@ test(simplify_remove_negated_literal_in_disjunction) :-
   assertion(simplify(and(or(a,b),or(not(a),b)), b)),
   assertion(simplify(and(or(a,b,not(c)),or(a,c,b)),or(a,b))),
   assertion(simplify(and(or(d,c,not(b),a),or(a,b,c,d)),or(a,c,d))).
+
+test(simplify_remove_subset_conjunctions_in_disjunction) :-
+  assertion(simplify(or(and(a,b),and(a,b,c)),and(a,b))),
+  assertion(simplify(or(a,and(a,b)),a)).
 test(simplify_implication) :-
   assertion(simplify(impl(true,a),a)),
   assertion(simplify(and(impl(not(a),b),impl(a,b)), b)).

@@ -48,6 +48,9 @@
 %     -> and(or(T1,...,Tn,Tn+1,...),...)
 %  - and(T,or(...,Ti,not(T),Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
 %  - and(not(T),or(...,Ti,T,Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
+%  - or(and(T1,...,Ti,T,Ti+1,...,Tn),and(T1,...,Ti,Ti+1,...,Tn))
+%    -> or(and(T1,...,Ti,T,Ti+1,...,Tn)
+%  - or(...,T,and(...,T,...),...) -> or(...,T,...)
 %
 %  simplify/2 never fails; if the term cannot be simplified, it stays the same.
 
@@ -180,6 +183,29 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   append(TermPrefix, [SimplifiedSubTerm|TermSuffix], FilteredSubTerms),
   FilteredTerm =.. [and|FilteredSubTerms],
   simplify(FilteredTerm, SimplifiedTerm).
+% or(and(T1,...,Ti,T,Ti+1,...,Tn),and(T1,...,Ti,Ti+1,...,Tn))
+%  -> or(and(T1,...,Ti,T,Ti+1,...,Tn)
+simplify_or_fail(Term, SimplifiedTerm) :-
+  Term =.. [or|SubTerms],
+  member(SubTerm1, SubTerms),
+  SubTerm1 =.. [and|SubSubTerms1],
+  member(SubTerm2, SubTerms),
+  SubTerm1 \= SubTerm2,
+  SubTerm2 =.. [and|SubSubTerms2],
+  subset(SubSubTerms1,SubSubTerms2),
+  exclude(=(SubTerm2), SubTerms, NewSubTerms),
+  NewTerm =.. [or|NewSubTerms],
+  simplify(NewTerm, SimplifiedTerm).
+% or(...,T,and(...,T,...),...) -> or(...,T,...)
+simplify_or_fail(Term, SimplifiedTerm) :-
+  Term =.. [or|SubTerms],
+  member(SubTerm1, SubTerms),
+  member(SubTerm2, SubTerms),
+  SubTerm2 =.. [and|SubSubTerms2],
+  member(SubTerm1,SubSubTerms2),
+  exclude(=(SubTerm2), SubTerms, NewSubTerms),
+  NewTerm =.. [or|NewSubTerms],
+  simplify(NewTerm, SimplifiedTerm).
 
 % flatten_on_op(+Op, +Terms, -FlattenedTerms)
 %
