@@ -9,14 +9,8 @@
   file:
     path: /etc/kubernetes/ssl
     state: directory
-- name: copy apiserver certificate
-  copy:
-    src: certs/kubernetes-apiserver.crt
-    dest: /etc/kubernetes/ssl/apiserver.crt
-    owner: kube
-    group: kube
-    mode: u=rw,go=r
-- name: copy client CA
+- name: copy CA certificate
   copy:
     src: certs/ca.crt
-    dest: /etc/kubernetes/ssl/
+    dest: /etc/kubernetes/ssl/ca.crt
+    mode: u=rw,go=r

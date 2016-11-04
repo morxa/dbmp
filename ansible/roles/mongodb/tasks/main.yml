@@ -6,6 +6,20 @@
     src: etc-mongod.conf.j2
     dest: /etc/mongod.conf
   notify: restart mongodb
+- name: create directory used for mongodb certificates
+  file:
+    path: /etc/mongodb/ssl
+    state: directory
+- name: copy CA certificate
+  copy:
+    src: certs/ca.crt
+    dest: /etc/mongodb/ssl/ca.pem
+  notify: restart mongodb
+- name: copy mongodb server certificate
+  copy:
+    src: certs/{{ ansible_hostname }}-mongodb-server.pem
+    dest: /etc/mongodb/ssl/server.pem
+  notify: restart mongodb
 - name: enable mongodb
   service:
     name: mongod

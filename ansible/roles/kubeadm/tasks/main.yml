@@ -14,9 +14,16 @@
   file:
     path: /etc/kubernetes/ssl
     state: directory
+- name: copy apiserver certificate
+  copy:
+    src: "certs/{{ ansible_hostname }}-kubernetes-apiserver.crt"
+    dest: /etc/kubernetes/ssl/apiserver.crt
+    owner: kube
+    group: kube
+    mode: u=rw,go=
 - name: copy apiserver certificate key
   copy:
-    src: certs/kubernetes-apiserver.key
+    src: "certs/{{ ansible_hostname }}-kubernetes-apiserver.key"
     dest: /etc/kubernetes/ssl/apiserver.key
     owner: kube
     group: kube

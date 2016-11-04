@@ -206,10 +206,10 @@ logRotate = reopen
 #sslOnNormalPorts = true
 
 # Set the SSL operation mode (disabled|allowSSL|preferSSL|requireSSL)
-# sslMode = arg
+sslMode = requireSSL
 
 # PEM file for ssl
-#sslPEMKeyFile = arg
+sslPEMKeyFile = /etc/mongodb/ssl/mongodb.pem
 
 # PEM file password
 #sslPEMKeyPassword = arg
@@ -221,7 +221,7 @@ logRotate = reopen
 #sslClusterPassword = arg
 
 # Certificate Authority file for SSL
-#sslCAFile = arg
+sslCAFile = /etc/mongodb/ssl/ca.pem
 
 # Certificate Revocation List file for SSL
 #sslCRLFile = arg
