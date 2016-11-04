@@ -101,14 +101,14 @@ test(
   regress_conditional_effect,
   [setup(init_condeffect_action), cleanup(cleanup_actions)]
 ) :-
-  regress([drop(o)], broken(o), broken(o)),
+  regress([drop(o)], broken(o), or(fragile(o),broken(o))),
   regress([drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))).
 
 test(
   regress_implication,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress([goto(hall,kitchen)], impl(true,at(kitchen)), or(not(true),true)).
+  regress([goto(hall,kitchen)], impl(true,at(kitchen)), true).
 
 test(
   regress_existential_quantifier,

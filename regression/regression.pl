@@ -21,6 +21,8 @@
 
 :- use_module(library(apply)).
 
+:- use_module(simplify).
+
 %% regress(+ActionList, +Condition, -RegressedCondition)
 %
 %  Regresses the formula Condition with ActionList, giving RegressedCondition.
@@ -45,8 +47,8 @@ regress(Actions, some(Var,Type,Cond), CondRes) :-
   regress(Actions, SubstitutedCond, CondRes).
 regress([Action|R], Cond, CondRes) :-
   effect(Action,Effect),
-  regress_on_effects(Cond,[Effect],CondInter), !,
-  regress(R,CondInter,CondRes).
+  once(regress_on_effects(Cond,[Effect],CondInter)),
+  once(regress(R,CondInter,CondRes)).
 
 %% regress_on_effects(+Term, +EffectList, -RegressedTerm)
 %
@@ -55,35 +57,38 @@ regress([Action|R], Cond, CondRes) :-
 %  negated Term/Effect.
 %  This also considers effects of the form and(Effect1,Effect2) and
 %  all(var,type,Effect).
-regress_on_effects(Term, [], Term).
-regress_on_effects(Term, [Effect|R], TermRes) :-
+regress_on_effects(Term, Effects, SimplifiedRegressedTerm) :-
+  regress_on_effects_(Term, Effects, RegressedTerm),
+  simplify(RegressedTerm, SimplifiedRegressedTerm).
+regress_on_effects_(Term, [], Term).
+regress_on_effects_(Term, [Effect|R], TermRes) :-
   Effect =.. [and|Conjuncts],
   append(Conjuncts, R, Effects),
   regress_on_effects(Term, Effects, TermRes).
-regress_on_effects(Term, [Term|_], true).
-regress_on_effects(not(Term), [Term|_], false).
-regress_on_effects(Term, [not(Term)|_], false).
-regress_on_effects(all(X,Term), [all(Y,Effect)|_], true) :-
+regress_on_effects_(Term, [Term|_], true).
+regress_on_effects_(not(Term), [Term|_], false).
+regress_on_effects_(Term, [not(Term)|_], false).
+regress_on_effects_(all(X,Term), [all(Y,Effect)|_], true) :-
   substitute(X, [Term], _, [NewTerm]),
   substitute(Y, [Effect], _,[NewEffect]),
   regress_on_effects(NewTerm, [NewEffect], true).
 % Note: subtype_of_type must be reflexive.
-regress_on_effects(all(X,TermType,Term), [all(Y,EffectType,Effect)|R], Res) :-
+regress_on_effects_(all(X,TermType,Term), [all(Y,EffectType,Effect)|R], Res) :-
   subtype_of_type(TermType, EffectType),
   regress_on_effects(all(X,Term), [all(Y,Effect)|R], Res).
-regress_on_effects(Term, [all(X,Type,Effect)|R], TermRes) :-
+regress_on_effects_(Term, [all(X,Type,Effect)|R], TermRes) :-
   Effect =.. [Predicate|Args],
   substitute(X, Args, _, type_of_object(Type), NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
   regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
-regress_on_effects(Term, [all(X,Effect)|R], TermRes) :-
+regress_on_effects_(Term, [all(X,Effect)|R], TermRes) :-
   Effect =.. [Predicate|Args],
   substitute(X, Args, _, NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
   regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
 % conditional effect: regress Term for both cases (Cond true/false). The
 % resulting term is a disjunction of both cases.
-regress_on_effects(Term, [impl(Cond,Effect)|Effects], TermRes) :-
+regress_on_effects_(Term, [impl(Cond,Effect)|Effects], TermRes) :-
   % cut here because we don't want to skip the cond effect if regression fails
   !,
   regress_on_effects(Term, [Effect|Effects], TermResIfCond),
@@ -93,7 +98,7 @@ regress_on_effects(Term, [impl(Cond,Effect)|Effects], TermRes) :-
   !,
   TermRes = or(and(CondRes,TermResIfCond),and(NegCondRes,TermResIfNotCond)).
 
-regress_on_effects(Term, [_|R], TermRes) :-
+regress_on_effects_(Term, [_|R], TermRes) :-
   regress_on_effects(Term, R, TermRes).
 
 
