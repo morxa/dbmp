@@ -19,6 +19,9 @@
   copy:
     src: certs/{{ ansible_hostname }}-mongodb-server.pem
     dest: /etc/mongodb/ssl/server.pem
+    owner: root
+    group: mongodb
+    mode: u=rw,g=r,o=
   notify: restart mongodb
 - name: enable mongodb
   service:
