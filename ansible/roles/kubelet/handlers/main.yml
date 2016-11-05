@@ -2,3 +2,7 @@
   service:
     name: kubelet
     state: restarted
+- name: restart kube-proxy
+  service:
+    name: kube-proxy
+    state: restarted

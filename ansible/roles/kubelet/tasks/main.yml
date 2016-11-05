@@ -3,11 +3,18 @@
     src: etc-kubernetes-kubelet.j2
     dest: /etc/kubernetes/kubelet
   notify: restart kubelet
+- name: add kube-proxy config
+  copy:
+    src: etc-kubernetes-proxy
+    dest: /etc/kubernetes/proxy
+  notify: restart kube-proxy
 - name: add kubelet kubeconfig
   template:
     src: etc-kubernetes-kubeconfig.j2
     dest: /etc/kubernetes/kubeconfig
-  notify: restart kubelet
+  notify:
+    - restart kubelet
+    - restart kube-proxy
 - name: add client certificate
   copy:
     src: "certs/{{ ansible_hostname }}-kubernetes-client.crt"
