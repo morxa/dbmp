@@ -1,9 +1,9 @@
 - name: install mongodb
   dnf: name=mongodb state=latest
   notify: restart mongodb
-- name: add mongodb config
+- name: add temporal mongodb config to add users
   template:
-    src: etc-mongod.conf.j2
+    src: etc-mongod.conf.temp.j2
     dest: /etc/mongod.conf
   notify: restart mongodb
 - name: create directory used for mongodb certificates
@@ -39,21 +39,11 @@
 - name: flush handlers
   meta: flush_handlers
 - include_vars: mongo_users.yml
-- name: add admin users
-  command: >
-    mongo --eval
-    'db.getSiblingDB("$external").runCommand(
-      {
-        createUser: "{{ item.user }}",
-        roles: [ { role: "useAdminAnyDatabase", db: "admin" } ],
-      })'
-  with_items: "{{ mongo_users.admin }}"
 - name: add database users
-  command:  >
-    mongo --eval
-    'db.getSiblingDB("$external").runCommand(
-      {
-        createUser: "{{ item.user }}",
-        roles: {{ item.roles }}
-      })'
-  with_items: "{{ mongo_users.user }}"
+  command:  mongo --eval 'db.createUser( {{ item }} )'
+  with_items: "{{ mongo_users }}"
+- name: add mongodb config
+  template:
+    src: etc-mongod.conf.j2
+    dest: /etc/mongod.conf
+  notify: restart mongodb
