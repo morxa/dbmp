@@ -31,6 +31,14 @@
     group: kube
     mode: u=r,go=
   notify: restart kubelet
+- name: install python2-firewall
+  dnf: name=python2-firewall state=latest
+- name: open kubelet port
+  firewalld:
+    port: 10250/tcp
+    permanent: true
+    state: enabled
+    immediate: yes
 - name: start kube-proxy
   service:
     name: kube-proxy
