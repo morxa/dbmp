@@ -28,3 +28,24 @@
     name: mongod
     enabled: yes
   notify: restart mongodb
+- name: flush handlers
+  meta: flush_handlers
+- include_vars: mongo_users.yml
+- name: add admin users
+  command: >
+    mongo --eval
+    'db.getSiblingDB("$external").runCommand(
+      {
+        createUser: "{{ item.user }}",
+        roles: [ { role: "useAdminAnyDatabase", db: "admin" } ],
+      })'
+  with_items: "{{ mongo_users.admin }}"
+- name: add database users
+  command:  >
+    mongo --eval
+    'db.getSiblingDB("$external").runCommand(
+      {
+        createUser: "{{ item.user }}",
+        roles: {{ item.roles }}
+      })'
+  with_items: "{{ mongo_users.user }}"
