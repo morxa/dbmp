@@ -23,6 +23,14 @@
     group: mongodb
     mode: u=rw,g=r,o=
   notify: restart mongodb
+- name: install python2-firewall
+  dnf: name=python2-firewall state=latest
+- name: open mongodb port
+  firewalld:
+    port: 27017/tcp
+    permanent: true
+    state: enabled
+    immediate: yes
 - name: enable mongodb
   service:
     name: mongod
