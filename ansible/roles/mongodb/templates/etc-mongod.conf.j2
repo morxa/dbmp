@@ -3,7 +3,7 @@
 ##
 
 # Comma separated list of ip addresses to listen on (all local ips by default)
-bind_ip = 127.0.0.1
+bind_ip = 0.0.0.0
 
 # Specify port number (27017 by default)
 #port = 27017
@@ -64,13 +64,13 @@ logRotate = reopen
 #httpinterface = true
 
 # Authentication mode used for cluster authentication. Alternatives are (keyFile|sendKeyFile|sendX509|x509) (keyFile by default)
-#clusterAuthMode = arg
+clusterAuthMode = x509
 
 # Disable listening on unix sockets (false by default)
 #nounixsocket = true
 
 # Run with/without security (without by default)
-#auth = true
+auth = true
 #noauth = true
 
 # Enable IPv6 support (disabled by default)
@@ -206,7 +206,7 @@ logRotate = reopen
 #sslOnNormalPorts = true
 
 # Set the SSL operation mode (disabled|allowSSL|preferSSL|requireSSL)
-sslMode = requireSSL
+sslMode = preferSSL
 
 # PEM file for ssl
 sslPEMKeyFile = /etc/mongodb/ssl/server.pem
