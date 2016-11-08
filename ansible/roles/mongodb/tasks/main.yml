@@ -39,8 +39,33 @@
 - name: flush handlers
   meta: flush_handlers
 - include_vars: mongo_users.yml
+- name: check which users exist
+  command: "mongo --eval \"db.system.users.find({ user: '{{ item.user }}' }).count()\" admin"
+  register: mongo_user_query
+  changed_when: False
+  with_items: "{{ mongo_users }}"
+- name: gather existing users
+  set_fact:
+    existing_mongo_users: "{{ existing_mongo_users|default([]) + [ item.item.user ] }}"
+  when: item.stdout_lines[-1] == "1"
+  with_items: "{{ mongo_user_query.results }}"
+- debug: var=existing_mongo_users
 - name: add database users
-  command:  mongo --eval 'db.createUser( {{ item }} )'
+  command: >
+    mongo --eval
+    "db.createUser({ user: '{{ item.user }}',
+                    pwd: '{{ item.pwd }}',
+                    roles: {{ item.roles }} })" admin
+  when: item.user not in existing_mongo_users|default([])
+  with_items: "{{ mongo_users }}"
+- name: update existing database users
+  command: >
+    mongo --eval
+    "db.updateUser('{{ item.user }}',
+                    { pwd: '{{ item.pwd }}',
+                      roles: {{ item.roles }}
+                    })" admin
+  when: item.user in existing_mongo_users|default([])
   with_items: "{{ mongo_users }}"
 - name: add mongodb config
   template:
