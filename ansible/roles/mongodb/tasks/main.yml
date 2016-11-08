@@ -39,6 +39,9 @@
 - name: flush handlers
   meta: flush_handlers
 - include_vars: mongo_users.yml
+- name: remove all mongo users
+  command: "mongo --eval \"db.runCommand({ dropAllUsersFromDatabase: 1 })\" admin"
+  when: remove_all_mongo_users|default(false)
 - name: check which users exist
   command: "mongo --eval \"db.system.users.find({ user: '{{ item.user }}' }).count()\" admin"
   register: mongo_user_query
