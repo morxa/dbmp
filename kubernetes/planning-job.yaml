@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: planner-worker
+spec:
+  template:
+    metadata:
+      name: planner-worker
+    spec:
+      containers:
+      - name: planner-worker
+        image: morxa/planner
+        command: ["amqp-consume"]
+        args: [
+          "--url=amqp://$(RABBITMQ_SERVICE_SERVICE_HOST)",
+          "-q", "planning_problems", "-c", "1",
+          "worker.py"
+        ]
+        volumeMounts:
+          - name: mongo-certs
+            mountPath: /secrets/mongo-certs
+            readOnly: true
+        env:
+          - name: PLANDB_USER
+            valueFrom:
+              secretKeyRef:
+                name: plan-db
+                key: dbuser.txt
+          - name: PLANDB_PWD
+            valueFrom:
+              secretKeyRef:
+                name: plan-db
+                key: pwd.txt
+          - name: PLANDB_HOST
+            value: enterprise
+      volumes:
+        - name: mongo-certs
+          secret:
+            secretName: mongo-certs
+      restartPolicy: Never
