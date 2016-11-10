@@ -62,6 +62,12 @@
     permanent: true
     state: enabled
     immediate: yes
+- name: open cadvisor port
+  firewalld:
+    port: 4194/tcp
+    permanent: true
+    state: enabled
+    immediate: yes
 - name: start kube-proxy
   service:
     name: kube-proxy
