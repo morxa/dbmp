@@ -1,0 +1,8 @@
+[Unit]
+Description=Automatically stop Kubelet if user logs in
+After=kubelet.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/kubernetes-login-controller.sh
+User=kube
