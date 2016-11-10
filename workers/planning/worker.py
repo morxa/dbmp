@@ -20,21 +20,12 @@
 """
 PDDL worker which takes a job definition for a planning job, executes the
 planner, saves the result to the database, and exits.
-The worker expects exactly two arguments:
-    - domain: the name of the domain
-    - problem: the name of the problem
-Both names must exist in the database. The worker expects the arguments in
-stdin, e.g. to run the worker with the domain dom and the problem prob, you run:
-    echo 'dom prob' | worker.py
-You cannot pass the arguments on the command line, i.e. the following will not
-work:
-    worker.py dom prob # gets stuck reading from stdin, arguments are ignored
 """
 
+import argparse
 import os
 import pymongo
 import subprocess
-import sys
 
 class Error(Exception):
     """Base class for errors in this module."""
@@ -133,19 +124,19 @@ class FFPlanner(Planner):
         return solution_file.read()
 
 def main():
-    args = sys.stdin.read().split()
-    assert len(args) == 2, \
-        'Exactly two arguments expected, given {}.'.format(len(args))
-    domain = args[0]
-    problem = args[1]
-    print('Starting job for domain {} and problem {}'.format(domain, problem))
+    parser = argparse.ArgumentParser(
+        description='Planning worker that plans one problem and saves the '
+                    'result in the database.')
+    parser.add_argument('domain', help='the name of the domain')
+    parser.add_argument('problem', help='the name of the problem')
+    args = parser.parse_args()
     db_connector = DatabaseConnector()
     domain_file = open('domain.pddl', 'w')
-    domain_string = db_connector.get_domain(domain)
+    domain_string = db_connector.get_domain(args.domain)
     domain_file.write(domain_string)
     domain_file.close()
     problem_file = open('problem.pddl', 'w')
-    problem_string = db_connector.get_problem(problem)
+    problem_string = db_connector.get_problem(args.problem)
     problem_file.write(problem_string)
     problem_file.close()
     planner = Planner.factory('domain.pddl', 'problem.pddl')
@@ -156,7 +147,7 @@ def main():
     else:
         print('Planner was successful. Uploading results.')
         solution = planner.get_solution()
-        db_connector.upload_solution(problem, solution)
+        db_connector.upload_solution(args.problem, solution)
 
 
 
