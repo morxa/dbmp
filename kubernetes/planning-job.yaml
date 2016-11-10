@@ -1,7 +1,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: planner-worker
+  name: planner-worker-$LOWERDOMAIN-$LOWERPROBLEM
+  labels:
+    jobgroup: planning-tasks
 spec:
   template:
     metadata:
@@ -10,12 +12,8 @@ spec:
       containers:
       - name: planner-worker
         image: morxa/planner
-        command: ["amqp-consume"]
-        args: [
-          "--url=amqp://$(RABBITMQ_SERVICE_HOST)",
-          "-q", "planning_problems", "-c", "1",
-          "worker.py"
-        ]
+        command: ["worker.py"]
+        args: ["$DOMAIN", "$PROBLEM"]
         volumeMounts:
           - name: mongo-certs
             mountPath: /secrets/mongo-certs
@@ -33,6 +31,13 @@ spec:
                 key: pwd.txt
           - name: PLANDB_HOST
             value: enterprise
+        resources:
+          requests:
+            cpu: "1"
+            memory: "8G"
+          limits:
+            cpu: "1"
+            memory: "8G"
       volumes:
         - name: mongo-certs
           secret:
