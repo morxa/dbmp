@@ -12,7 +12,7 @@ spec:
         image: morxa/planner
         command: ["amqp-consume"]
         args: [
-          "--url=amqp://$(RABBITMQ_SERVICE_SERVICE_HOST)",
+          "--url=amqp://$(RABBITMQ_SERVICE_HOST)",
           "-q", "planning_problems", "-c", "1",
           "worker.py"
         ]
