@@ -102,28 +102,50 @@ def get_domain_of_problem(problem_string):
         'first non-empty line "{}".'.format(line)
     return match.group(1)
 
+def start_job(job_template, domain, problem):
+    template_file = open(job_template, 'r')
+    job_string = template_file.read()\
+        .replace('$DOMAIN', domain)\
+        .replace('$PROBLEM', problem)\
+        .replace('$LOWERDOMAIN', domain.lower())\
+        .replace('$LOWERPROBLEM', problem.lower())
+    print(job_string)
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Upload a PDDL domain or problem file to the database')
+        description='Upload a PDDL domain or problem file to the database,'
+                    ' and optionally start a Kubernetes job.')
     parser.add_argument('-H', '--db-host', default='localhost',
                         help='the database hostname')
     parser.add_argument('-u', '--db-user', default='planmgr',
                         help='the database username')
     parser.add_argument('-p', '--db-passwd',
                         help='the database password')
+    parser.add_argument('--start-job', action='store_true',
+                        help='start a Kubernetes job for the given problem')
+    parser.add_argument('-t', '--kubernetes-template',
+                        help='the job template for the Kubernetes job')
+    parser.add_argument('--skip-upload', action='store_true',
+                        help='do not upload the problem')
     parser.add_argument('--domainfile', help='the domain file to add')
     parser.add_argument('--domain', help='the domain the problems belong to')
-    parser.add_argument('problems', metavar='problemfile', nargs='*',
+    parser.add_argument('--problem', action='append', dest='problems',
+                        help='Additional problem to start a job for')
+    parser.add_argument('problemfiles', metavar='problemfile', nargs='*',
                         help='the problem files to add')
     args = parser.parse_args()
-    if not args.db_passwd:
-        print('Please enter the database password:')
-        args.db_passwd = getpass.getpass()
-    client = pymongo.MongoClient(host=args.db_host)
-    database = client.macro_planning
-    database.authenticate(args.db_user, args.db_passwd)
-    domain_coll = client.macro_planning.domains
-    problem_coll = client.macro_planning.problems
+    if args.problems:
+        problems = args.problems
+    else:
+        problems = []
+    if not args.skip_upload:
+        if not args.db_passwd:
+            args.db_passwd = getpass.getpass()
+        client = pymongo.MongoClient(host=args.db_host)
+        database = client.macro_planning
+        database.authenticate(args.db_user, args.db_passwd)
+        domain_coll = client.macro_planning.domains
+        problem_coll = client.macro_planning.problems
     if args.domainfile:
         domainfile = open(args.domainfile, 'r')
         domain_string = domainfile.read()
@@ -132,16 +154,15 @@ def main():
             assert domain == args.domain, \
                 'Domain "{}" in domain file does not match ' \
                 'given domain "{}".'.format(domain, args.domain)
-        assert domain_coll.find({ 'name': domain }).count() == 0, \
-            'Domain "{}" already exists in the database.'.format(domain)
-        print('Adding domain "{}" to the database.'.format(domain))
-        domain_coll.insert({ 'name': domain, 'raw': domain_string})
+        if not args.skip_upload:
+            assert domain_coll.find({ 'name': domain }).count() == 0, \
+                'Domain "{}" already exists in the database.'.format(domain)
+            domain_coll.insert({ 'name': domain, 'raw': domain_string})
     else:
         assert args.domain, \
             'You need to specify a domain file or a domain name.'
         domain = args.domain
-    for problempath in args.problems:
-        print('Adding problem: {}.'.format(problempath))
+    for problempath in args.problemfiles:
         problemfile = open(problempath, 'r')
         problem_string = problemfile.read()
         problem = get_problemname(problem_string)
@@ -149,14 +170,19 @@ def main():
         assert problem_domain == domain, \
             'Domain "{}" in problem "{}" does not match ' \
             'given domain name "{}".'.format(problem_domain, problem, domain)
-        assert domain_coll.find({ 'name': domain }).count() > 0, \
-            'Missing domain "{}" in database for problem "{}".'.format(
-                domain, problem)
-        assert problem_coll.find({ 'name': problem }).count() == 0, \
-            'Problem "{}" already exists in database.'.format(problem)
-        problem_coll.insert(
-            {'name': problem, 'domain': domain, 'raw': problem_string}
-        )
+        if not args.skip_upload:
+            assert domain_coll.find({ 'name': domain }).count() > 0, \
+                'Missing domain "{}" in database for problem "{}".'.format(
+                    domain, problem)
+            assert problem_coll.find({ 'name': problem }).count() == 0, \
+                'Problem "{}" already exists in database.'.format(problem)
+            problem_coll.insert(
+                {'name': problem, 'domain': domain, 'raw': problem_string}
+            )
+        problems.append(problem)
+    for problem in problems:
+        print('---')
+        start_job(args.kubernetes_template, domain, problem)
 
 if __name__ == '__main__':
     main()
