@@ -1,0 +1,1 @@
+export KUBECTL_PARAMS="--server=https://{{ hostvars[groups['kubeadm'][0]]['ansible_hostname'] }}:6443 --certificate-authority=/etc/kubernetes/ssl/ca.crt --client-certificate=/etc/kubernetes/ssl/{{ ansible_hostname }}-client.crt --client-key=/etc/kubernetes/ssl/{{ ansible_hostname }}-client.key"

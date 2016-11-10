@@ -6,3 +6,9 @@
   service:
     name: kube-proxy
     state: restarted
+- name: reload systemd services
+  command: systemctl daemon-reload
+- name: restart login-controller
+  service:
+    name: kubernetes-login-controller
+    state: restarted

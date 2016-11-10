@@ -31,6 +31,29 @@
     group: kube
     mode: u=r,go=
   notify: restart kubelet
+- name: add script to automatically stop kubelet on user login
+  copy:
+    src: login-controller/kubernetes-login-controller.sh
+    dest: /usr/local/bin/
+    owner: root
+    group: root
+    mode: 0755
+  notify: restart login-controller
+- name: add systemd unit file for login controller
+  copy:
+    src: login-controller/kubernetes-login-controller.service
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: 0755
+  notify:
+    - reload systemd services
+    - restart login-controller
+- name: add config file for login controller
+  template:
+    src: login-controller.conf.j2
+    dest: /etc/kubernetes/login-controller.conf
+  notify: restart login-controller
 - name: install python2-firewall
   dnf: name=python2-firewall state=latest
 - name: open kubelet port
@@ -52,5 +75,10 @@
 - name: start docker
   service:
     name: docker
+    enabled: true
+    state: started
+- name: start login-controller
+  service:
+    name: kubernetes-login-controller
     enabled: true
     state: started
