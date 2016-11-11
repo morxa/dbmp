@@ -11,6 +11,8 @@ set -euo pipefail
 KUBECTL_PARAMS=${KUBECTL_PARAMS:-""}
 KUBELET_NAME=${KUBELET_NAME:-$(hostname -s)}
 ENABLE_LOGIN_CONTROLLER=1
+# override $HOME which is set by PAM and points to the user's home
+HOME=/
 
 if [ -f /etc/kubernetes/login-controller.conf ]; then
   source /etc/kubernetes/login-controller.conf
