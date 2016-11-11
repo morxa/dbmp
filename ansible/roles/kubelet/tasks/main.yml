@@ -31,6 +31,9 @@
     group: kube
     mode: u=r,go=
   notify: restart kubelet
+- name: install jq
+  dnf: name=jq state=latest
+  notify: restart login-controller
 - name: add script to automatically stop kubelet on user login
   copy:
     src: login-controller/kubernetes-login-controller.sh
