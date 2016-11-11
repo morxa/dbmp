@@ -10,17 +10,20 @@ set -euo pipefail
 
 KUBECTL_PARAMS=${KUBECTL_PARAMS:-""}
 KUBELET_NAME=${KUBELET_NAME:-$(hostname -s)}
+ENABLE_LOGIN_CONTROLLER=1
 
 if [ -f /etc/kubernetes/login-controller.conf ]; then
   source /etc/kubernetes/login-controller.conf
+fi
+
+if [ "$ENABLE_LOGIN_CONTROLLER" -ne 1 ] ; then
+  exit 0
 fi
 
 enable_node () {
   if [ "$( get_status )" -eq 0 ] ; then
     echo "enabling node $KUBELET_NAME"
     kubectl $KUBECTL_PARAMS uncordon $KUBELET_NAME
-  else
-    echo "$KUBELET_NAME is already enabled"
   fi
 }
 
@@ -28,8 +31,6 @@ disable_node () {
   if [ "$( get_status )" -eq 1 ] ; then
     echo "disabling node $KUBELET_NAME"
     kubectl $KUBECTL_PARAMS drain $KUBELET_NAME --force
-  else
-    echo "$KUBELET_NAME is already disabled"
   fi
 }
 
@@ -44,17 +45,17 @@ get_status () {
   fi
 }
 
+if [ -z ${PAM_TYPE+0} ] || [ -z ${PAM_USER+0} ] ; then
+  echo "PAM_TYPE or PAM_USER is not set or empty."
+  exit 1
+fi
 
-while true; do
-  user_count=$(who -u | wc -l)
-  echo "$user_count user(s) are logged in."
-  if [ "$user_count" -gt 0 ] ; then
-    disable_node
-  else
+if [ "$PAM_TYPE" = "close_session" ] ; then
+  user_count=$( who -u | grep -c -v "^root" || true)
+  if [ "$user_count" -eq 0 ] ; then
     enable_node
   fi
-
-  sleep 10
-done
-
+elif [ "$PAM_TYPE" = "open_session" ] && [ "$PAM_USER" != "root" ] ; then
+  disable_node
+fi
 

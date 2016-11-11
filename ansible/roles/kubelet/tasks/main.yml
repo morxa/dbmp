@@ -33,7 +33,6 @@
   notify: restart kubelet
 - name: install jq
   dnf: name=jq state=latest
-  notify: restart login-controller
 - name: add script to automatically stop kubelet on user login
   copy:
     src: login-controller/kubernetes-login-controller.sh
@@ -41,22 +40,18 @@
     owner: root
     group: root
     mode: 0755
-  notify: restart login-controller
-- name: add systemd unit file for login controller
-  copy:
-    src: login-controller/kubernetes-login-controller.service
-    dest: /etc/systemd/system/
-    owner: root
-    group: root
-    mode: 0755
-  notify:
-    - reload systemd services
-    - restart login-controller
+- name: add PAM config to call login controller on login/logout
+  lineinfile:
+    dest: /etc/pam.d/postlogin
+    regexp: ".*kubernetes-login-controller.*"
+    line: >
+      session     optional      pam_exec.so
+      /usr/bin/systemd-cat -t kubernetes-login-controller
+      /usr/local/bin/kubernetes-login-controller.sh
 - name: add config file for login controller
   template:
     src: login-controller.conf.j2
     dest: /etc/kubernetes/login-controller.conf
-  notify: restart login-controller
 - name: install python2-firewall
   dnf: name=python2-firewall state=latest
 - name: open kubelet port
@@ -84,10 +79,5 @@
 - name: start docker
   service:
     name: docker
-    enabled: true
-    state: started
-- name: start login-controller
-  service:
-    name: kubernetes-login-controller
     enabled: true
     state: started
