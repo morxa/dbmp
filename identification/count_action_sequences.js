@@ -16,36 +16,88 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
-/* map function */
+/* The Map part of MapReduce.
+ * This function finds all action sequences of length 2 to maxSequenceLength
+ * and determines common parameters in each sequence.
+ * It emits (key,value) pairs, where the key is the action sequences (without
+ * parameters), and the value is the most specific parameterAssignment possible.
+ * The parameter assignment is defined by increasing parameter indices.
+ * As an example, for the action sequence [pick-up,stack], a possible value for
+ * the parameters is [ [1], [1, 2] ], meaning that the first argument of stack
+ * is the same as the (first) argument of pick-up.
+ */
 var findSequencesInPlan = function() {
-  var maxSequenceLength = 4
-  var countedSequences = {}
   for (var i = 0; i < this.actions.length - 1; i++) {
     for (var l = 2; l <= maxSequenceLength; l++) {
       if (i + l > this.actions.length) {
         break;
       }
+      // create a new action sequence
       var sequence = [];
+      var actions = [];
+      var parameterAssignment = [];
+      var nextParam = 1;
       for (var j = 0; j < l; j++) {
-        sequence.push(this.actions[i + j].operator)
+        sequence.push(this.actions[i+j].operator)
+        // compare this action's parameters with the parameters of the previous
+        // actions
+        actionParams = [];
+        actionParamLoop:
+        for (var k = 0; k < this.actions[i+j].parameters.length; k++) {
+          // loop over actions in this sequence prior to this action
+          for (var m = 0; m < j; m++) {
+            // loop over that action's parameters
+            for (var n = 0; n < this.actions[i+m].parameters.length; n++) {
+              if (this.actions[i+m].parameters[n] ==
+                  this.actions[i+j].parameters[k]) {
+                actionParams.push(parameterAssignment[m][n]);
+                continue actionParamLoop;
+              }
+            }
+          }
+          actionParams.push(nextParam++);
+        }
+        parameterAssignment.push(actionParams);
       }
-      if (countedSequences.hasOwnProperty(sequence)) {
-        countedSequences[sequence] += 1;
-      } else {
-        countedSequences[sequence] = 1;
-      }
+      emit(sequence, parameterAssignment);
     }
-  }
-  for (var key in countedSequences) {
-    emit(key, countedSequences[key])
   }
 }
 
+/* The Reduce part of MapReduce.
+ * This function counts all occurences of each parameter assignment.
+ * It collects them in a dictionary that contains the count of the parameter
+ * assignment and the parameter assignment itself.
+ */
 var countSequences = function(key, vals) {
-  totalCount = 0;
-  for (i = 0; i < vals.length; i++) {
-    totalCount += vals[i];
+  parameterAssignments = {};
+  for (var i = 0; i < vals.length; i++) {
+    if (parameterAssignments.hasOwnProperty(vals[i])) {
+      parameterAssignments[vals[i]]['count'] += 1;
+    } else {
+      parameterAssignments[vals[i]] = { 'parameters': vals[i]};
+      parameterAssignments[vals[i]]['count'] = 1;
+    }
   }
-  return totalCount;
+  return parameterAssignments;
+}
+
+/* The Finalize part of MapReduce.
+ * This function does some data cleanup on the result. It changes the dictionary
+ * with stringified parameter assignment as keys into a list, e.g.:
+ * { '1,1,2': { count: 4, parameters: [ [1], [1, 2] ] } }
+ * => [ { count: 4, parameters: [ [1], [1, 2] ] } ]
+ */
+var cleanupResult = function(key, actionSequence) {
+  cleanedResult = [];
+  Object.keys(actionSequence).forEach(
+      function(seqKey, index) {
+        cleanedResult.push(
+            { 'parameters': actionSequence[seqKey]['parameters'],
+              'count': actionSequence[seqKey]['count']
+            }
+        )
+      })
+  return cleanedResult;
 }
 
