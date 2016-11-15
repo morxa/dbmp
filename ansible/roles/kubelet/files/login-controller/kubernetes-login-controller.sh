@@ -26,6 +26,9 @@ enable_node () {
   if [ "$( get_status )" -eq 0 ] ; then
     echo "enabling node $KUBELET_NAME"
     kubectl $KUBECTL_PARAMS uncordon $KUBELET_NAME
+    # turn off swap because otherwise the containers will use it all the time,
+    # cf. http://stackoverflow.com/questions/40553541/disable-swap-on-a-kubelet
+    /usr/sbin/swapoff -a
   fi
 }
 
@@ -33,6 +36,7 @@ disable_node () {
   if [ "$( get_status )" -eq 1 ] ; then
     echo "disabling node $KUBELET_NAME"
     kubectl $KUBECTL_PARAMS drain $KUBELET_NAME --force
+    /usr/sbin/swapon -a
   fi
 }
 
