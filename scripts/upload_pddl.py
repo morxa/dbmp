@@ -22,6 +22,7 @@ Upload a domain file or a problem file to the database
 """
 
 import argparse
+import configparser
 import getpass
 import pymongo
 import re
@@ -115,12 +116,11 @@ def main():
     parser = argparse.ArgumentParser(
         description='Upload a PDDL domain or problem file to the database,'
                     ' and optionally start a Kubernetes job.')
-    parser.add_argument('-H', '--db-host', default='localhost',
-                        help='the database hostname')
-    parser.add_argument('-u', '--db-user', default='planmgr',
-                        help='the database username')
-    parser.add_argument('-p', '--db-passwd',
-                        help='the database password')
+    parser.add_argument('-c', '--config-file',
+                        help='config file to read database info from')
+    parser.add_argument('-H', '--db-host', help='the database hostname')
+    parser.add_argument('-u', '--db-user', help='the database username')
+    parser.add_argument('-p', '--db-passwd', help='the database password')
     parser.add_argument('--start-job', action='store_true',
                         help='start a Kubernetes job for the given problem')
     parser.add_argument('-t', '--kubernetes-template',
@@ -134,16 +134,35 @@ def main():
     parser.add_argument('problemfiles', metavar='problemfile', nargs='*',
                         help='the problem files to add')
     args = parser.parse_args()
+    db_host = 'localhost'
+    db_user = 'planner'
+    db_passwd = ''
+    if args.config_file:
+        config = configparser.ConfigParser()
+        config.read(args.config_file)
+        if 'plan_database' in config:
+            if 'host' in config['plan_database']:
+                db_host = config['plan_database']['host']
+            if 'user' in config['plan_database']:
+                db_user = config['plan_database']['user']
+            if 'passwd' in config['plan_database']:
+                db_passwd = config['plan_database']['passwd']
+    if args.db_host:
+        db_host = args.db_host
+    if args.db_user:
+        db_user = args.db_user
+    if args.db_passwd:
+        db_passwd = db_passwd
     if args.problems:
         problems = args.problems
     else:
         problems = []
     if not args.skip_upload:
-        if not args.db_passwd:
-            args.db_passwd = getpass.getpass()
-        client = pymongo.MongoClient(host=args.db_host)
+        if not db_passwd:
+            db_passwd = getpass.getpass()
+        client = pymongo.MongoClient(host=db_host)
         database = client.macro_planning
-        database.authenticate(args.db_user, args.db_passwd)
+        database.authenticate(db_user, db_passwd)
         domain_coll = client.macro_planning.domains
         problem_coll = client.macro_planning.problems
     if args.domainfile:
@@ -181,8 +200,8 @@ def main():
             )
         problems.append(problem)
     for problem in problems:
-        print('---')
         start_job(args.kubernetes_template, domain, problem)
+        print('---')
 
 if __name__ == '__main__':
     main()
