@@ -25,6 +25,7 @@ planner, saves the result to the database, and exits.
 import argparse
 import os
 import pymongo
+import resource
 import subprocess
 
 class Error(Exception):
@@ -84,15 +85,18 @@ class DatabaseConnector(object):
             'The problem "{}" could not be found ' \
             'in the database.'.format(problem_name)
         return res['raw']
-    def upload_solution(self, problem, solution_string):
+    def upload_solution(self, domain, problem, solution_string, resources):
         """Upload the solution given as string to the database.
 
         Args:
+            domain: The name of the domain.
             problem: The name of the problem the solution belongs to.
             solution_string: The solution given as string.
+            resources: resources used by the planner.
         """
         self.db.solutions.insert_one(
-            { 'problem': problem, 'raw': solution_string })
+                { 'domain': domain, 'problem': problem,
+                  'raw': solution_string, 'resources': resources })
 
 class Planner(object):
     def __init__(self, domain, problem):
@@ -104,6 +108,9 @@ class Planner(object):
     def get_solution(self):
         """Get the solution as a string."""
         raise NotImplementedError
+    def get_resources(self):
+        """Get the resources the planner needed to find a solution."""
+        return resource.getrusage(resource.RUSAGE_CHILDREN)
     def factory(domain, problem):
         return FFPlanner(domain, problem)
     factory = staticmethod(factory)
@@ -146,8 +153,9 @@ def main():
         print('output:\n' + result.stdout)
     else:
         print('Planner was successful. Uploading results.')
-        solution = planner.get_solution()
-        db_connector.upload_solution(args.problem, solution)
+        db_connector.upload_solution(args.domain, args.problem,
+                                     planner.get_solution(),
+                                     planner.get_resources())
 
 
 
