@@ -19,8 +19,8 @@ MAINTAINER Till Hofmann <hofmann@kbsg.rwth-aachen.de>
 RUN dnf -y --refresh install 'dnf-command(copr)' && \
     dnf -y copr enable thofmann/planner && \
     dnf -y --refresh install \
+      fast-downward \
       fast-forward \
-      librabbitmq-tools \
       python3-pymongo \
     && \
     dnf clean all

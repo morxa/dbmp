@@ -23,6 +23,7 @@ planner, saves the result to the database, and exits.
 """
 
 import argparse
+import glob
 import os
 import pymongo
 import resource
@@ -111,8 +112,13 @@ class Planner(object):
     def get_resources(self):
         """Get the resources the planner needed to find a solution."""
         return resource.getrusage(resource.RUSAGE_CHILDREN)
-    def factory(domain, problem):
-        return FFPlanner(domain, problem)
+    def factory(domain, problem, planner='ff'):
+        if planner in ['ff', 'fastforward', 'fast-forward']:
+            return FFPlanner(domain, problem)
+        elif planner in ['fd', 'fastdownward', 'fast-downward']:
+            return FDPlanner(domain, problem)
+        else:
+            raise NotImplementedError
     factory = staticmethod(factory)
 
 class FFPlanner(Planner):
@@ -130,10 +136,30 @@ class FFPlanner(Planner):
         solution_file = open('problem.pddl.soln', 'r')
         return solution_file.read()
 
+class FDPlanner(Planner):
+    def __init__(self, domain, problem):
+        super().__init__(domain, problem)
+    def run(self):
+        result = subprocess.run(
+            ['fast-downward', '--alias', 'seq-sat-lama-2011',
+                self.domain, self.problem]
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+        return result
+    def get_solution(self):
+        """Get the last solution, which is always the best solution."""
+        solutions = glob.glob('sas_plan*')
+        solutions.sort()
+        solution_file = open(solutions[-1], 'r')
+        return solution_file.read()
+
 def main():
     parser = argparse.ArgumentParser(
         description='Planning worker that plans one problem and saves the '
                     'result in the database.')
+    parser.add_argument('-p', '--planner', default='ff',
+                        help='the planner to use')
     parser.add_argument('domain', help='the name of the domain')
     parser.add_argument('problem', help='the name of the problem')
     args = parser.parse_args()
@@ -146,7 +172,7 @@ def main():
     problem_string = db_connector.get_problem(args.problem)
     problem_file.write(problem_string)
     problem_file.close()
-    planner = Planner.factory('domain.pddl', 'problem.pddl')
+    planner = Planner.factory('domain.pddl', 'problem.pddl', args.planner)
     result = planner.run()
     if result.returncode != 0:
         print('Planner failed with return code {}'.format(result.returncode))
