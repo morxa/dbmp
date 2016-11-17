@@ -103,13 +103,14 @@ def get_domain_of_problem(problem_string):
         'first non-empty line "{}".'.format(line)
     return match.group(1)
 
-def start_job(job_template, domain, problem):
+def start_job(planner, job_template, domain, problem):
     template_file = open(job_template, 'r')
     job_string = template_file.read()\
         .replace('$DOMAIN', domain)\
         .replace('$PROBLEM', problem)\
         .replace('$LOWERDOMAIN', domain.lower())\
-        .replace('$LOWERPROBLEM', problem.lower())
+        .replace('$LOWERPROBLEM', problem.lower())\
+        .replace('$PLANNER', planner)
     print(job_string)
 
 def main():
@@ -131,6 +132,7 @@ def main():
     parser.add_argument('--domain', help='the domain the problems belong to')
     parser.add_argument('--problem', action='append', dest='problems',
                         help='Additional problem to start a job for')
+    parser.add_argument('--planner', default='ff', help='the planner to use')
     parser.add_argument('problemfiles', metavar='problemfile', nargs='*',
                         help='the problem files to add')
     args = parser.parse_args()
@@ -200,7 +202,7 @@ def main():
             )
         problems.append(problem)
     for problem in problems:
-        start_job(args.kubernetes_template, domain, problem)
+        start_job(args.planner, args.kubernetes_template, domain, problem)
         print('---')
 
 if __name__ == '__main__':
