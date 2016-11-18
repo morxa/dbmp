@@ -38,13 +38,16 @@ class NoSolutionFoundError(Error):
     pass
 
 class DatabaseConnector(object):
-    def __init__(self):
+    def __init__(self, use_for_macros):
         """Initialize the connection to the database.
 
         All connection parameters can be defined with environment variables:
             - PLANDB_HOST: the host name of the plan database
             - PLANDB_USER: the user name
             - PLANDB_PWD: the password
+
+        Args:
+            use_for_macros: Set to true if the results shall be used for macros.
         """
         client = pymongo.MongoClient(
             host=os.environ.get('PLANDB_HOST', 'localhost'),
@@ -56,6 +59,7 @@ class DatabaseConnector(object):
         user = os.environ.get('PLANDB_USER', 'planner')
         pwd = os.environ.get('PLANDB_PWD', 'planner')
         self.db.authenticate(user, pwd)
+        self.use_for_macros = use_for_macros
     def get_domain(self, domain_name):
         """Get the domain with the given domain name from the database.
 
@@ -101,7 +105,8 @@ class DatabaseConnector(object):
         """
         self.db.solutions.insert_one(
                 { 'domain': domain, 'problem': problem,
-                  'raw': solution_string, 'resources': resources })
+                  'raw': solution_string, 'resources': resources,
+                  'use_for_macros': self.use_for_macros })
     def report_failure(self, domain, problem, error, output):
         """Report failure for the given domain and problem to the database.
 
@@ -190,10 +195,13 @@ def main():
                     'result in the database.')
     parser.add_argument('-p', '--planner', default='ff',
                         help='the planner to use')
+    parser.add_argument('--use-for-macros', action='store_true',
+                        help='Whether the results can be used for macro '
+                             'generation.')
     parser.add_argument('domain', help='the name of the domain')
     parser.add_argument('problem', help='the name of the problem')
     args = parser.parse_args()
-    db_connector = DatabaseConnector()
+    db_connector = DatabaseConnector(use_for_macros=args.use_for_macros)
     domain_file = open('domain.pddl', 'w')
     domain_string = db_connector.get_domain(args.domain)
     domain_file.write(domain_string)
