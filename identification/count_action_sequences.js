@@ -59,7 +59,12 @@ var findSequencesInPlan = function() {
         }
         parameterAssignment.push(actionParams);
       }
-      emit(sequence, parameterAssignment);
+      var val = { totalCount: 1 };
+      val[parameterAssignment] = {
+        'parameters': parameterAssignment,
+        'count': 1
+      };
+      emit(sequence, val);
     }
   }
 }
@@ -70,14 +75,18 @@ var findSequencesInPlan = function() {
  * assignment and the parameter assignment itself.
  */
 var countSequences = function(key, vals) {
-  parameterAssignments = {};
+  parameterAssignments = { totalCount: 0 };
   for (var i = 0; i < vals.length; i++) {
-    if (parameterAssignments.hasOwnProperty(vals[i])) {
-      parameterAssignments[vals[i]]['count'] += 1;
-    } else {
-      parameterAssignments[vals[i]] = { 'parameters': vals[i]};
-      parameterAssignments[vals[i]]['count'] = 1;
-    }
+    parameterAssignments['totalCount'] += vals[i]['totalCount'];
+    Object.keys(vals[i]).forEach(
+      function(paramKey, index) {
+        if (parameterAssignments.hasOwnProperty(paramKey)) {
+          parameterAssignments[paramKey]['count'] += vals[i][paramKey]['count'];
+        } else {
+          parameterAssignments[paramKey] = vals[i][paramKey];
+        }
+      }
+    )
   }
   return parameterAssignments;
 }
@@ -85,16 +94,22 @@ var countSequences = function(key, vals) {
 /* The Finalize part of MapReduce.
  * This function does some data cleanup on the result. It changes the dictionary
  * with stringified parameter assignment as keys into a list, e.g.:
- * { '1,1,2': { count: 4, parameters: [ [1], [1, 2] ] } }
- * => [ { count: 4, parameters: [ [1], [1, 2] ] } ]
+ * { totalCount: 12, '1,1,2': { count: 4, parameters: [ [1], [1, 2] ] } }
+ * => { totalCount: 12, parameters: [{ count: 4, assignment: [ [1], [1, 2] ] }]}
  */
 var cleanupResult = function(key, actionSequence) {
-  cleanedResult = [];
+  cleanedResult = {
+    totalCount: actionSequence['totalCount'],
+    parameters: []
+  };
   Object.keys(actionSequence).forEach(
       function(seqKey, index) {
-        cleanedResult.push(
-            { 'parameters': actionSequence[seqKey]['parameters'],
-              'count': actionSequence[seqKey]['count']
+        if (seqKey == 'totalCount') {
+          return;
+        }
+        cleanedResult['parameters'].push(
+            { 'assignment': actionSequence[seqKey]['parameters'],
+              'count': actionSequence[seqKey]['count'],
             }
         )
       })
