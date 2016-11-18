@@ -13,7 +13,8 @@ spec:
       - name: planner-worker
         image: morxa/planner
         command: ["worker.py"]
-        args: ["--planner", "$PLANNER", "$DOMAIN", "$PROBLEM"]
+        args: ["--use-for-macros", "--planner", "$PLANNER",
+               "$DOMAIN", "$PROBLEM"]
         volumeMounts:
           - name: mongo-certs
             mountPath: /secrets/mongo-certs
