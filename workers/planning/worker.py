@@ -112,6 +112,9 @@ class Planner(object):
     def get_resources(self):
         """Get the resources the planner needed to find a solution."""
         return resource.getrusage(resource.RUSAGE_CHILDREN)
+    def get_success_return_codes(self):
+        """Get a list of return codes that indicate success."""
+        raise NotImplementedError
     def factory(domain, problem, planner='ff'):
         if planner in ['ff', 'fastforward', 'fast-forward']:
             return FFPlanner(domain, problem)
@@ -132,6 +135,9 @@ class FFPlanner(Planner):
         )
         #print('Planner returned with return code {}'.format(result.returncode))
         return result
+    def get_success_return_codes(self):
+        """Get a list of return codes that indicate success."""
+        return [0]
     def get_solution(self):
         solution_file = open('problem.pddl.soln', 'r')
         return solution_file.read()
@@ -147,6 +153,9 @@ class FDPlanner(Planner):
             universal_newlines=True,
         )
         return result
+    def get_success_return_codes(self):
+        """Get a list of return codes that indicate success."""
+        return [0, 6, 7, 8]
     def get_solution(self):
         """Get the last solution, which is always the best solution."""
         solutions = glob.glob('sas_plan*')
@@ -174,9 +183,9 @@ def main():
     problem_file.close()
     planner = Planner.factory('domain.pddl', 'problem.pddl', args.planner)
     result = planner.run()
-    if result.returncode != 0:
+    if result.returncode not in planner.get_success_return_codes():
+        print('Planner output:\n' + result.stdout)
         print('Planner failed with return code {}'.format(result.returncode))
-        print('output:\n' + result.stdout)
     else:
         print('Planner was successful. Uploading results.')
         db_connector.upload_solution(args.domain, args.problem,
