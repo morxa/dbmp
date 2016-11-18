@@ -121,9 +121,10 @@ class DatabaseConnector(object):
                   'error': error, 'output': output })
 
 class Planner(object):
-    def __init__(self, domain, problem):
+    def __init__(self, domain, problem, time_limit):
         self.domain = domain
         self.problem = problem
+        self.time_limit = time_limit
     def run(self):
         """Run the planner."""
         raise NotImplementedError
@@ -136,18 +137,18 @@ class Planner(object):
     def get_success_return_codes(self):
         """Get a list of return codes that indicate success."""
         raise NotImplementedError
-    def factory(domain, problem, planner='ff'):
+    def factory(domain, problem, planner='ff', time_limit=30*60):
         if planner in ['ff', 'fastforward', 'fast-forward']:
-            return FFPlanner(domain, problem)
+            return FFPlanner(domain, problem, time_limit)
         elif planner in ['fd', 'fastdownward', 'fast-downward']:
-            return FDPlanner(domain, problem)
+            return FDPlanner(domain, problem, time_limit)
         else:
             raise NotImplementedError
     factory = staticmethod(factory)
 
 class FFPlanner(Planner):
-    def __init__(self, domain, problem):
-        super().__init__(domain, problem)
+    def __init__(self, domain, problem, time_limit):
+        super().__init__(domain, problem, time_limit)
     def run(self):
         result = subprocess.run(
             ['ff', '-o', self.domain, '-f', self.problem],
@@ -164,12 +165,13 @@ class FFPlanner(Planner):
         return solution_file.read()
 
 class FDPlanner(Planner):
-    def __init__(self, domain, problem):
-        super().__init__(domain, problem)
+    def __init__(self, domain, problem, time_limit):
+        super().__init__(domain, problem, time_limit)
     def run(self):
         result = subprocess.run(
             ['fast-downward',
-             '--overall-memory-limit', '4G', '--overall-time-limit', '30m',
+             '--overall-memory-limit', '4G',
+             '--overall-time-limit', str(self.time_limit),
              '--alias', 'seq-sat-lama-2011',
              self.domain, self.problem],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -198,6 +200,8 @@ def main():
     parser.add_argument('--use-for-macros', action='store_true',
                         help='Whether the results can be used for macro '
                              'generation.')
+    parser.add_argument('--time-limit', type=int, default=30*60,
+                        help='the time limit (in secs)')
     parser.add_argument('domain', help='the name of the domain')
     parser.add_argument('problem', help='the name of the problem')
     args = parser.parse_args()
@@ -210,7 +214,13 @@ def main():
     problem_string = db_connector.get_problem(args.problem)
     problem_file.write(problem_string)
     problem_file.close()
-    planner = Planner.factory('domain.pddl', 'problem.pddl', args.planner)
+    planner = Planner.factory('domain.pddl', 'problem.pddl', args.planner,
+                              args.time_limit)
+    if args.time_limit:
+        # set time soft limit to time_limit + 60s to allow some overhead
+        resource.setrlimit(
+            resource.RLIMIT_CPU,
+            (args.time_limit + 60, resource.getrlimit(resource.RLIMIT_CPU)[1]))
     result = planner.run()
     if result.returncode not in planner.get_success_return_codes():
         print('Planner failed with return code {}'.format(result.returncode))
