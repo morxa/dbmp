@@ -23,6 +23,7 @@ planner, saves the result to the database, and exits.
 """
 
 import argparse
+import datetime
 import glob
 import os
 import pymongo
@@ -94,7 +95,8 @@ class DatabaseConnector(object):
             'The problem "{}" could not be found ' \
             'in the database.'.format(problem_name)
         return res['raw']
-    def upload_solution(self, domain, problem, solution_string, resources):
+    def upload_solution(self, domain, problem, solution_string, resources,
+            start_time):
         """Upload the solution given as string to the database.
 
         Args:
@@ -102,12 +104,15 @@ class DatabaseConnector(object):
             problem: The name of the problem the solution belongs to.
             solution_string: The solution given as string.
             resources: resources used by the planner.
+            start_time: The time when the job started.
         """
         self.db.solutions.insert_one(
                 { 'domain': domain, 'problem': problem,
                   'raw': solution_string, 'resources': resources,
-                  'use_for_macros': self.use_for_macros })
-    def report_failure(self, domain, problem, error, output):
+                  'use_for_macros': self.use_for_macros,
+                  'start_time': start_time,
+                  'end_time': datetime.datetime.utcnow()})
+    def report_failure(self, domain, problem, error, output, start_time):
         """Report failure for the given domain and problem to the database.
 
         Args:
@@ -115,10 +120,13 @@ class DatabaseConnector(object):
             problem: The name of the problem.
             error: The error that occurred.
             output: The planner's stdout + stderr.
+            start_time: The time when the job was started.
         """
         self.db.solutions.insert_one(
                 { 'domain': domain, 'problem': problem,
-                  'error': error, 'output': output })
+                  'error': error, 'output': output,
+                  'start_time': start_time,
+                  'end_time': datetime.datetime.utcnow()})
 
 class Planner(object):
     def __init__(self, domain, problem, time_limit):
@@ -221,23 +229,27 @@ def main():
         resource.setrlimit(
             resource.RLIMIT_CPU,
             (args.time_limit + 60, resource.getrlimit(resource.RLIMIT_CPU)[1]))
+    start_time = datetime.datetime.utcnow()
     result = planner.run()
     if result.returncode not in planner.get_success_return_codes():
         print('Planner failed with return code {}'.format(result.returncode))
         db_connector.report_failure(args.domain, args.problem,
-                                    result.returncode, result.stdout)
+                                    result.returncode, result.stdout,
+                                    start_time)
     else:
         try:
             solution = planner.get_solution()
             print('Planner was successful. Uploading results.')
             db_connector.upload_solution(args.domain, args.problem,
                                          planner.get_solution(),
-                                         planner.get_resources())
+                                         planner.get_resources(),
+                                         start_time)
         except NoSolutionFoundError:
             print('Planner output:\n' + result.stdout)
             print('Could not find a solution. Planner failed.')
             db_connector.report_failure(args.domain, args.problem,
-                                        'no solution found', result.stdout)
+                                        'no solution found', result.stdout,
+                                        start_time)
 
 if __name__ == '__main__':
     main()
