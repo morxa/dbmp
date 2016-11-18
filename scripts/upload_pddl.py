@@ -43,8 +43,8 @@ def get_domainname(domain_string):
         AssertionError: The domain string does not contain a domain name.
     """
     for line in domain_string.splitlines():
-        # Skip empty lines.
-        if re.match(r'^\s*$', line):
+        # Skip empty lines and commented lines.
+        if re.match(r'^\s*$', line) or re.match(r'^;', line):
             continue
         match = re.search('\(domain ([^)]+)\)', line)
         assert match is not None, \
@@ -68,8 +68,8 @@ def get_problemname(problem_string):
         AssertionError: The problem name could not be found.
     """
     for line in problem_string.splitlines():
-        # Skip empty lines.
-        if re.match(r'^\s*$', line):
+        # Skip empty lines and commented lines.
+        if re.match(r'^\s*$', line) or re.match(r'^;', line):
             continue
         match = re.search('\(problem ([^)]+)\)', line)
         assert match is not None, \
