@@ -169,8 +169,11 @@ class FFPlanner(Planner):
         """Get a list of return codes that indicate success."""
         return [0]
     def get_solution(self):
-        solution_file = open('problem.pddl.soln', 'r')
-        return solution_file.read()
+        try:
+            solution_file = open('problem.pddl.soln', 'r')
+            return solution_file.read()
+        except IOError:
+            raise NoSolutionFoundError
 
 class FDPlanner(Planner):
     def __init__(self, domain, problem, time_limit):
@@ -231,25 +234,20 @@ def main():
             (args.time_limit + 60, resource.getrlimit(resource.RLIMIT_CPU)[1]))
     start_time = datetime.datetime.utcnow()
     result = planner.run()
-    if result.returncode not in planner.get_success_return_codes():
-        print('Planner failed with return code {}'.format(result.returncode))
+    try:
+        solution = planner.get_solution()
+        print('Planner was successful. Uploading results.')
+        db_connector.upload_solution(args.domain, args.problem,
+                                     planner.get_solution(),
+                                     planner.get_resources(),
+                                     start_time)
+    except NoSolutionFoundError:
+        print('Planner output:\n' + result.stdout)
+        print('Could not find a solution. Planner failed.'
+              'Planner return code: {}'.format(result.returncode))
         db_connector.report_failure(args.domain, args.problem,
-                                    result.returncode, result.stdout,
+                                    'no solution found', result.stdout,
                                     start_time)
-    else:
-        try:
-            solution = planner.get_solution()
-            print('Planner was successful. Uploading results.')
-            db_connector.upload_solution(args.domain, args.problem,
-                                         planner.get_solution(),
-                                         planner.get_resources(),
-                                         start_time)
-        except NoSolutionFoundError:
-            print('Planner output:\n' + result.stdout)
-            print('Could not find a solution. Planner failed.')
-            db_connector.report_failure(args.domain, args.problem,
-                                        'no solution found', result.stdout,
-                                        start_time)
 
 if __name__ == '__main__':
     main()
