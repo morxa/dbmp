@@ -125,6 +125,10 @@ def main():
             else:
                 print('Could not find problem {}, skipping!'.format(solution))
     for solution in solution_entries:
+        if 'error' in solution:
+            print('Planner failed on problem {} with error "{}", skipping!'\
+                    .format(solution['problem'], solution['error']))
+            continue
         if 'actions' in solution and not args.force:
             print('Solution {} is already parsed, '
                   'skipping!'.format(solution['_id']))
