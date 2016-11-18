@@ -33,6 +33,10 @@ class Error(Exception):
     """Base class for errors in this module."""
     pass
 
+class NoSolutionFoundError(Error):
+    """Error thrown when no solution was found."""
+    pass
+
 class DatabaseConnector(object):
     def __init__(self):
         """Initialize the connection to the database.
@@ -98,6 +102,18 @@ class DatabaseConnector(object):
         self.db.solutions.insert_one(
                 { 'domain': domain, 'problem': problem,
                   'raw': solution_string, 'resources': resources })
+    def report_failure(self, domain, problem, error, output):
+        """Report failure for the given domain and problem to the database.
+
+        Args:
+            domain: The name of the domain.
+            problem: The name of the problem.
+            error: The error that occurred.
+            output: The planner's stdout + stderr.
+        """
+        self.db.solutions.insert_one(
+                { 'domain': domain, 'problem': problem,
+                  'error': error, 'output': output })
 
 class Planner(object):
     def __init__(self, domain, problem):
@@ -162,8 +178,11 @@ class FDPlanner(Planner):
         """Get the last solution, which is always the best solution."""
         solutions = glob.glob('sas_plan*')
         solutions.sort()
-        solution_file = open(solutions[-1], 'r')
-        return solution_file.read()
+        if solutions:
+            solution_file = open(solutions[-1], 'r')
+            return solution_file.read()
+        else:
+            raise NoSolutionFoundError
 
 def main():
     parser = argparse.ArgumentParser(
@@ -186,16 +205,21 @@ def main():
     planner = Planner.factory('domain.pddl', 'problem.pddl', args.planner)
     result = planner.run()
     if result.returncode not in planner.get_success_return_codes():
-        print('Planner output:\n' + result.stdout)
         print('Planner failed with return code {}'.format(result.returncode))
+        db_connector.report_failure(args.domain, args.problem,
+                                    result.returncode, result.stdout)
     else:
-        print('Planner was successful. Uploading results.')
-        db_connector.upload_solution(args.domain, args.problem,
-                                     planner.get_solution(),
-                                     planner.get_resources())
-
-
-
+        try:
+            solution = planner.get_solution()
+            print('Planner was successful. Uploading results.')
+            db_connector.upload_solution(args.domain, args.problem,
+                                         planner.get_solution(),
+                                         planner.get_resources())
+        except NoSolutionFoundError:
+            print('Planner output:\n' + result.stdout)
+            print('Could not find a solution. Planner failed.')
+            db_connector.report_failure(args.domain, args.problem,
+                                        'no solution found', result.stdout)
 
 if __name__ == '__main__':
     main()
