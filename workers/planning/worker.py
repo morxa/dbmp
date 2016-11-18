@@ -147,8 +147,10 @@ class FDPlanner(Planner):
         super().__init__(domain, problem)
     def run(self):
         result = subprocess.run(
-            ['fast-downward', '--alias', 'seq-sat-lama-2011',
-                self.domain, self.problem]
+            ['fast-downward',
+             '--overall-memory-limit', '4G', '--overall-time-limit', '30m',
+             '--alias', 'seq-sat-lama-2011',
+             self.domain, self.problem],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             universal_newlines=True,
         )
