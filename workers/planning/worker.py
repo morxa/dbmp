@@ -27,6 +27,7 @@ import datetime
 import glob
 import os
 import pymongo
+import re
 import resource
 import subprocess
 
@@ -37,6 +38,30 @@ class Error(Exception):
 class NoSolutionFoundError(Error):
     """Error thrown when no solution was found."""
     pass
+
+def memory_limit_in_bytes(memory_string):
+    """Translate the given memory limit as string into an int limit in bytes.
+
+    Args:
+        memory_string: The memory limit as string.
+    Returns:
+        The memory limit as integer (in bytes).
+    """
+    match = re.fullmatch('(?i)(\d+)([kmg])?', memory_string)
+    assert match, 'Invalid memory limit "{}"'.format(memory_string)
+    number = int(match.group(1))
+    suffix = match.group(2).lower()
+    if suffix:
+        assert suffix in ['k', 'm', 'g'], \
+                'Invalid memory limit "{}"'.format(memory_string)
+        if suffix == 'k':
+            return number * 1024
+        elif suffix == 'm':
+            return number * 1024 ** 2
+        elif suffix == 'g':
+            return number * 1024 ** 3
+    else:
+        return number
 
 class DatabaseConnector(object):
     def __init__(self, use_for_macros):
@@ -129,10 +154,11 @@ class DatabaseConnector(object):
                   'end_time': datetime.datetime.utcnow()})
 
 class Planner(object):
-    def __init__(self, domain, problem, time_limit):
+    def __init__(self, domain, problem, time_limit, memory_limit):
         self.domain = domain
         self.problem = problem
         self.time_limit = time_limit
+        self.memory_limit = memory_limit
     def run(self):
         """Run the planner."""
         raise NotImplementedError
@@ -145,18 +171,21 @@ class Planner(object):
     def get_success_return_codes(self):
         """Get a list of return codes that indicate success."""
         raise NotImplementedError
-    def factory(domain, problem, planner='ff', time_limit=30*60):
+    def obeys_limits(self):
+        """Whether this planner has its own resource manager to obey limits."""
+        return False
+    def factory(domain, problem, planner, time_limit, memory_limit):
         if planner in ['ff', 'fastforward', 'fast-forward']:
-            return FFPlanner(domain, problem, time_limit)
+            return FFPlanner(domain, problem, time_limit, memory_limit)
         elif planner in ['fd', 'fastdownward', 'fast-downward']:
-            return FDPlanner(domain, problem, time_limit)
+            return FDPlanner(domain, problem, time_limit, memory_limit)
         else:
             raise NotImplementedError
     factory = staticmethod(factory)
 
 class FFPlanner(Planner):
-    def __init__(self, domain, problem, time_limit):
-        super().__init__(domain, problem, time_limit)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
     def run(self):
         result = subprocess.run(
             ['ff', '-o', self.domain, '-f', self.problem],
@@ -176,12 +205,12 @@ class FFPlanner(Planner):
             raise NoSolutionFoundError
 
 class FDPlanner(Planner):
-    def __init__(self, domain, problem, time_limit):
-        super().__init__(domain, problem, time_limit)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
     def run(self):
         result = subprocess.run(
             ['fast-downward',
-             '--overall-memory-limit', '4G',
+             '--overall-memory-limit', str(self.memory_limit),
              '--overall-time-limit', str(self.time_limit),
              '--alias', 'seq-sat-lama-2011',
              self.domain, self.problem],
@@ -201,6 +230,9 @@ class FDPlanner(Planner):
             return solution_file.read()
         else:
             raise NoSolutionFoundError
+    def obeys_limits(self):
+        """Whether this planner has its own resource manager to obey limits."""
+        return True
 
 def main():
     parser = argparse.ArgumentParser(
@@ -213,6 +245,9 @@ def main():
                              'generation.')
     parser.add_argument('--time-limit', type=int, default=30*60,
                         help='the time limit (in secs)')
+    parser.add_argument('--memory-limit', type=str, default='4g',
+                        help='the memory limit (in bytes). '
+                             'You can use the suffixes k,m,g, e.g. "4g"')
     parser.add_argument('domain', help='the name of the domain')
     parser.add_argument('problem', help='the name of the problem')
     args = parser.parse_args()
@@ -225,13 +260,24 @@ def main():
     problem_string = db_connector.get_problem(args.problem)
     problem_file.write(problem_string)
     problem_file.close()
+    if args.memory_limit:
+        memory_limit = memory_limit_in_bytes(args.memory_limit)
     planner = Planner.factory('domain.pddl', 'problem.pddl', args.planner,
-                              args.time_limit)
-    if args.time_limit:
+                              args.time_limit, memory_limit)
+    if args.time_limit and not planner.obeys_limits():
         # set time soft limit to time_limit + 60s to allow some overhead
+        # only set the time limit if the planner doesn't manage limits itself
         resource.setrlimit(
             resource.RLIMIT_CPU,
             (args.time_limit + 60, resource.getrlimit(resource.RLIMIT_CPU)[1]))
+    if memory_limit and not planner.obeys_limits():
+        # set memory soft limit to memory + 10M to allow some overhead
+        # only set the memory limit if the planner doesn't manage limits itself
+        resource.setrlimit(
+            resource.RLIMIT_AS,
+            (memory_limit + 10 * 1024 ** 2,
+             resource.getrlimit(resource.RLIMIT_AS)[1]))
+
     start_time = datetime.datetime.utcnow()
     result = planner.run()
     try:
@@ -243,8 +289,8 @@ def main():
                                      start_time)
     except NoSolutionFoundError:
         print('Planner output:\n' + result.stdout)
-        print('Could not find a solution. Planner failed.'
-              'Planner return code: {}'.format(result.returncode))
+        print('Could not find a solution. Planner failed, '
+              'return code: {}'.format(result.returncode))
         db_connector.report_failure(args.domain, args.problem,
                                     'no solution found', result.stdout,
                                     start_time)
