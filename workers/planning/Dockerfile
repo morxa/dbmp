@@ -21,6 +21,7 @@ RUN dnf -y --refresh install 'dnf-command(copr)' && \
     dnf -y --refresh install \
       fast-downward \
       fast-forward \
+      macroff \
       python3-pymongo \
     && \
     dnf clean all

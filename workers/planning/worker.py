@@ -184,6 +184,8 @@ class Planner(object):
             return FFPlanner(domain, problem, time_limit, memory_limit)
         elif planner in ['fd', 'fastdownward', 'fast-downward']:
             return FDPlanner(domain, problem, time_limit, memory_limit)
+        elif planner in ['macroff', 'macro-ff']:
+            return MacroFFPlanner(domain, problem, time_limit, memory_limit)
         else:
             raise NotImplementedError
     factory = staticmethod(factory)
@@ -191,9 +193,10 @@ class Planner(object):
 class FFPlanner(Planner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.exec = 'ff'
     def run(self):
         result = subprocess.run(
-            ['ff', '-o', self.domain, '-f', self.problem],
+            [self.exec, '-o', self.domain, '-f', self.problem],
             **self.common_kwargs
         )
         return result
@@ -206,6 +209,11 @@ class FFPlanner(Planner):
             return solution_file.read()
         except IOError:
             raise NoSolutionFoundError
+
+class MacroFFPlanner(FFPlanner):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exec = 'macroff'
 
 class FDPlanner(Planner):
     def __init__(self, *args, **kwargs):
