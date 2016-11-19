@@ -124,6 +124,10 @@ def main():
     parser.add_argument('-p', '--db-passwd', help='the database password')
     parser.add_argument('--start-job', action='store_true',
                         help='start a Kubernetes job for the given problem')
+    parser.add_argument('--all-missing', action='store_true',
+                        help='start jobs for all problems without a solution')
+    parser.add_argument('--all-failed', action='store_true',
+                        help='start jobs for all problems that failed before')
     parser.add_argument('-t', '--kubernetes-template',
                         help='the job template for the Kubernetes job')
     parser.add_argument('--skip-upload', action='store_true',
@@ -156,9 +160,9 @@ def main():
     if args.db_passwd:
         db_passwd = db_passwd
     if args.problems:
-        problems = args.problems
+        problems = set(args.problems)
     else:
-        problems = []
+        problems = set()
     if not args.skip_upload:
         if not db_passwd:
             db_passwd = getpass.getpass()
@@ -167,6 +171,7 @@ def main():
         database.authenticate(db_user, db_passwd)
         domain_coll = client.macro_planning.domains
         problem_coll = client.macro_planning.problems
+        solution_coll = client.macro_planning.solutions
     if args.domainfile:
         domainfile = open(args.domainfile, 'r')
         domain_string = domainfile.read()
@@ -200,7 +205,21 @@ def main():
             problem_coll.insert(
                 {'name': problem, 'domain': domain, 'raw': problem_string}
             )
-        problems.append(problem)
+        problems.add(problem)
+    if args.all_missing or args.all_failed:
+        all_problems = list(
+            problem_coll.find({ 'domain': domain }, { 'name': True }))
+    if args.all_missing:
+        for problem in all_problems:
+            if not solution_coll.find_one(
+                    { 'domain': domain, 'problem': problem['name'] }):
+                problems.add(problem['name'])
+    if args.all_failed:
+        for problem in all_problems:
+            if solution_coll.find_one(
+                    { 'domain': domain, 'problem': problem['name'],
+                      'raw': { '$exists': False }}):
+                problems.add(problem['name'])
     for problem in problems:
         start_job(args.planner, args.kubernetes_template, domain, problem)
         print('---')
