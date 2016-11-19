@@ -39,27 +39,25 @@ class NoSolutionFoundError(Error):
     """Error thrown when no solution was found."""
     pass
 
-def memory_limit_in_bytes(memory_string):
-    """Translate the given memory limit as string into an int limit in bytes.
+def memory_limit_in_megabytes(memory_string):
+    """Translate the given memory limit as string into an int limit in MBs.
 
     Args:
         memory_string: The memory limit as string.
     Returns:
-        The memory limit as integer (in bytes).
+        The memory limit as integer (in megabytes).
     """
-    match = re.fullmatch('(?i)(\d+)([kmg])?', memory_string)
+    match = re.fullmatch('(?i)(\d+)([mg])?', memory_string)
     assert match, 'Invalid memory limit "{}"'.format(memory_string)
     number = int(match.group(1))
     suffix = match.group(2).lower()
     if suffix:
-        assert suffix in ['k', 'm', 'g'], \
+        assert suffix in ['m', 'g'], \
                 'Invalid memory limit "{}"'.format(memory_string)
-        if suffix == 'k':
-            return number * 1024
-        elif suffix == 'm':
-            return number * 1024 ** 2
+        if suffix == 'm':
+            return number
         elif suffix == 'g':
-            return number * 1024 ** 3
+            return number * 1024
     else:
         return number
 
@@ -271,7 +269,7 @@ def main():
     problem_file.write(problem_string)
     problem_file.close()
     if args.memory_limit:
-        memory_limit = memory_limit_in_bytes(args.memory_limit)
+        memory_limit = memory_limit_in_megabytes(args.memory_limit)
     planner = Planner.factory('domain.pddl', 'problem.pddl', args.planner,
                               args.time_limit, memory_limit)
     if args.time_limit and not planner.obeys_limits():
@@ -285,7 +283,7 @@ def main():
         # only set the memory limit if the planner doesn't manage limits itself
         resource.setrlimit(
             resource.RLIMIT_AS,
-            (memory_limit + 10 * 1024 ** 2,
+            ((memory_limit + 10) * 1024 ** 2,
              resource.getrlimit(resource.RLIMIT_AS)[1]))
 
     start_time = datetime.datetime.utcnow()
