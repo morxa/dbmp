@@ -177,13 +177,13 @@ class Planner(object):
     def obeys_limits(self):
         """Whether this planner has its own resource manager to obey limits."""
         return False
-    def factory(domain, problem, planner, time_limit, memory_limit):
+    def factory(planner, *args, **kwargs):
         if planner in ['ff', 'fastforward', 'fast-forward']:
-            return FFPlanner(domain, problem, time_limit, memory_limit)
+            return FFPlanner(*args, **kwargs)
         elif planner in ['fd', 'fastdownward', 'fast-downward']:
-            return FDPlanner(domain, problem, time_limit, memory_limit)
+            return FDPlanner(*args, **kwargs)
         elif planner in ['macroff', 'macro-ff']:
-            return MacroFFPlanner(domain, problem, time_limit, memory_limit)
+            return MacroFFPlanner(*args, **kwargs)
         else:
             raise NotImplementedError
     factory = staticmethod(factory)
@@ -270,7 +270,7 @@ def main():
     problem_file.close()
     if args.memory_limit:
         memory_limit = memory_limit_in_megabytes(args.memory_limit)
-    planner = Planner.factory('domain.pddl', 'problem.pddl', args.planner,
+    planner = Planner.factory(args.planner, 'domain.pddl', 'problem.pddl',
                               args.time_limit, memory_limit)
     if args.time_limit and not planner.obeys_limits():
         # set time soft limit to time_limit + 60s to allow some overhead
