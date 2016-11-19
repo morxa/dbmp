@@ -159,6 +159,11 @@ class Planner(object):
         self.problem = problem
         self.time_limit = time_limit
         self.memory_limit = memory_limit
+        self.common_kwargs = {
+            'stdout': subprocess.PIPE,
+            'stderr': subprocess.STDOUT,
+            'universal_newlines': True,
+        }
     def run(self):
         """Run the planner."""
         raise NotImplementedError
@@ -189,10 +194,8 @@ class FFPlanner(Planner):
     def run(self):
         result = subprocess.run(
             ['ff', '-o', self.domain, '-f', self.problem],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            universal_newlines=True,
+            **self.common_kwargs
         )
-        #print('Planner returned with return code {}'.format(result.returncode))
         return result
     def get_success_return_codes(self):
         """Get a list of return codes that indicate success."""
@@ -214,8 +217,7 @@ class FDPlanner(Planner):
              '--overall-time-limit', str(self.time_limit),
              '--alias', 'seq-sat-lama-2011',
              self.domain, self.problem],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            universal_newlines=True,
+            **self.common_kwargs
         )
         return result
     def get_success_return_codes(self):
