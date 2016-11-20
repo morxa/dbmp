@@ -156,6 +156,8 @@ class Planner(object):
             return FDPlanner(*args, **kwargs)
         elif planner in ['macroff', 'macro-ff']:
             return MacroFFPlanner(*args, **kwargs)
+        elif planner == 'marvin':
+            return MarvinPlanner(*args, **kwargs)
         else:
             raise NotImplementedError
     factory = staticmethod(factory)
@@ -213,6 +215,20 @@ class FDPlanner(Planner):
     def obeys_limits(self):
         """Whether this planner has its own resource manager to obey limits."""
         return True
+
+class MarvinPlanner(Planner):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    def run(self):
+        self.result = subprocess.run(
+            ['marvin', self.domain, self.problem],
+            **self.common_kwargs)
+        return self.result
+    def get_solution(self):
+        stdout_lines = self.result.stdout.splitlines()
+        for i, line in enumerate(stdout_lines):
+            if re.match(';+\s*Solution Found.*', line):
+                return '\n'.join(stdout_lines[i:])
 
 def main():
     parser = argparse.ArgumentParser(
