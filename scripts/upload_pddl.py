@@ -124,6 +124,8 @@ def main():
     parser.add_argument('-p', '--db-passwd', help='the database password')
     parser.add_argument('--start-job', action='store_true',
                         help='start a Kubernetes job for the given problem')
+    parser.add_argument('-a', '--all', action='store_true',
+                        help='start jobs for all problems in the domain')
     parser.add_argument('--all-missing', action='store_true',
                         help='start jobs for all problems without a solution')
     parser.add_argument('--all-failed', action='store_true',
@@ -206,9 +208,12 @@ def main():
                 {'name': problem, 'domain': domain, 'raw': problem_string}
             )
         problems.add(problem)
-    if args.all_missing or args.all_failed:
+    if args.all or args.all_missing or args.all_failed:
         all_problems = list(
             problem_coll.find({ 'domain': domain }, { 'name': True }))
+    if args.all:
+        for problem in all_problems:
+            problems.add(problem['name'])
     if args.all_missing:
         for problem in all_problems:
             if not solution_coll.find_one(
