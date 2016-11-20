@@ -62,16 +62,13 @@ def memory_limit_in_megabytes(memory_string):
         return number
 
 class DatabaseConnector(object):
-    def __init__(self, use_for_macros):
+    def __init__(self):
         """Initialize the connection to the database.
 
         All connection parameters can be defined with environment variables:
             - PLANDB_HOST: the host name of the plan database
             - PLANDB_USER: the user name
             - PLANDB_PWD: the password
-
-        Args:
-            use_for_macros: Set to true if the results shall be used for macros.
         """
         client = pymongo.MongoClient(
             host=os.environ.get('PLANDB_HOST', 'localhost'),
@@ -83,7 +80,6 @@ class DatabaseConnector(object):
         user = os.environ.get('PLANDB_USER', 'planner')
         pwd = os.environ.get('PLANDB_PWD', 'planner')
         self.db.authenticate(user, pwd)
-        self.use_for_macros = use_for_macros
     def get_domain(self, domain_name):
         """Get the domain with the given domain name from the database.
 
@@ -125,7 +121,6 @@ class DatabaseConnector(object):
             result: All keyword arguments are inserted into the database.
         """
         result['end_time'] = datetime.datetime.utcnow()
-        result['use_for_macros'] = self.use_for_macros
         self.db.solutions.insert_one(result)
 
 class Planner(object):
@@ -236,7 +231,7 @@ def main():
     parser.add_argument('domain', help='the name of the domain')
     parser.add_argument('problem', help='the name of the problem')
     args = parser.parse_args()
-    db_connector = DatabaseConnector(use_for_macros=args.use_for_macros)
+    db_connector = DatabaseConnector()
     domain_file = open('domain.pddl', 'w')
     domain_string = db_connector.get_domain(args.domain)
     domain_file.write(domain_string)
@@ -271,7 +266,7 @@ def main():
         db_connector.upload_result(
                 planner=args.planner, domain=args.domain, problem=args.problem,
                 raw=planner.get_solution(), resources=planner.get_resources(),
-                start_time=start_time)
+                start_time=start_time, use_for_macros=args.use_for_macros)
     except NoSolutionFoundError:
         print('Planner output:\n' + result.stdout)
         print('Could not find a solution. Planner failed, '
