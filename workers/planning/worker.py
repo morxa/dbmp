@@ -165,10 +165,9 @@ class Planner(object):
 class FFPlanner(Planner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.exec = 'ff'
     def run(self):
         result = subprocess.run(
-            [self.exec, '-o', self.domain, '-f', self.problem],
+            ['ff', '-o', self.domain, '-f', self.problem],
             **self.common_kwargs
         )
         return result
@@ -185,7 +184,11 @@ class FFPlanner(Planner):
 class MacroFFPlanner(FFPlanner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.exec = 'macroff'
+    def run(self):
+        result = subprocess.run(
+            ['macroff', '-m', 'C', '-o', self.domain, '-f', self.problem],
+            **self.common_kwargs
+        )
 
 class FDPlanner(Planner):
     def __init__(self, *args, **kwargs):
