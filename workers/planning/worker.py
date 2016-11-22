@@ -233,6 +233,7 @@ class MarvinPlanner(Planner):
         for i, line in enumerate(stdout_lines):
             if re.match(';+\s*Solution Found.*', line):
                 return '\n'.join(stdout_lines[i:])
+        raise NoSolutionFoundError
 
 def main():
     parser = argparse.ArgumentParser(
