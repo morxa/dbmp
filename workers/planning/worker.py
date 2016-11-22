@@ -114,6 +114,23 @@ class DatabaseConnector(object):
             'The problem "{}" could not be found ' \
             'in the database.'.format(problem_name)
         return res['raw']
+    def get_macros(self, macro_name):
+        """Get the macros with the given name.
+
+        Args:
+            macro_name: The name of the macro to fetch.
+
+        Returns:
+            The macros represented as one string.
+
+        Raises:
+            AssertionError: The macro could not be found.
+        """
+        res = self.db.macros.find_one({'name': macro_name })
+        assert res, \
+            'The macro "{}" could not be found ' \
+            'in the database.'.format(macro_name)
+        return res['raw']
     def upload_result(self, **result):
         """Upload the given result to the database.
 
@@ -156,6 +173,8 @@ class Planner(object):
             return FDPlanner(*args, **kwargs)
         elif planner in ['macroff', 'macro-ff']:
             return MacroFFPlanner(*args, **kwargs)
+        elif planner in ['macroff-solep', 'macro-ff-solep']:
+            return MacroFFSolEPlanner(*args, **kwargs)
         elif planner == 'marvin':
             return MarvinPlanner(*args, **kwargs)
         else:
@@ -187,6 +206,17 @@ class MacroFFPlanner(FFPlanner):
     def run(self):
         result = subprocess.run(
             ['macroff', '-m', 'C', '-o', self.domain, '-f', self.problem],
+            **self.common_kwargs
+        )
+        return result
+
+class MacroFFSolEPlanner(FFPlanner):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    def run(self):
+        result = subprocess.run(
+            ['macroff', '-q', 'macros.pddl',
+             '-o', self.domain, '-f', self.problem],
             **self.common_kwargs
         )
         return result
@@ -249,6 +279,10 @@ def main():
     parser.add_argument('--memory-limit', type=str, default='4g',
                         help='the memory limit (in bytes). '
                              'You can use the suffixes k,m,g, e.g. "4g"')
+    parser.add_argument('--macros', type=str,
+                        help='The macros to be used by the planner. '
+                             'The file must exist in the database. '
+                             'Currently only valid for macro-ff-solep.')
     parser.add_argument('domain', help='the name of the domain')
     parser.add_argument('problem', help='the name of the problem')
     args = parser.parse_args()
@@ -261,6 +295,15 @@ def main():
     problem_string = db_connector.get_problem(args.problem)
     problem_file.write(problem_string)
     problem_file.close()
+    if args.macros:
+        macro_file = open('macros.pddl', 'w')
+        macro_string = db_connector.get_macros(args.macros)
+        macro_file.write(macro_string)
+        macro_file.close()
+    if args.planner in ['macroff-solep', 'macro-ff-solep']:
+        assert args.macros, \
+            'You need to provide a name for the macro definition ' \
+            'for planner {}'.format(args.planner)
     if args.memory_limit:
         memory_limit = memory_limit_in_megabytes(args.memory_limit)
     planner = Planner.factory(args.planner, 'domain.pddl', 'problem.pddl',
