@@ -189,6 +189,7 @@ class MacroFFPlanner(FFPlanner):
             ['macroff', '-m', 'C', '-o', self.domain, '-f', self.problem],
             **self.common_kwargs
         )
+        return result
 
 class FDPlanner(Planner):
     def __init__(self, *args, **kwargs):
