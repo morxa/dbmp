@@ -145,11 +145,12 @@ test(
 ) :-
   regress([clearall], all(c,object,clear(c)), true).
 
-tet(
+test(
   regress_universal_quantifier_with_subtypes,
   [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
 ) :-
   regress([clearall], all(c,cup,clear(c)), true).
+
 
 :- end_tests(regression).
 
