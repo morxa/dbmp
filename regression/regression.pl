@@ -31,11 +31,12 @@
 %  Compares Condition with the effects of all actions. Any term that is an
 %  effect of one of the actions is removed from Condition.
 regress([], Cond, Cond) :- !.
-regress(Actions, Cond, CondRes) :-
+regress(Actions, Cond, SimplifiedCondRes) :-
   Cond =.. [Op|Conjuncts],
   member(Op,[and,or]),
   maplist(regress(Actions),Conjuncts,RegressedConjuncts),
-  CondRes =.. [Op|RegressedConjuncts].
+  CondRes =.. [Op|RegressedConjuncts],
+  simplify(CondRes, SimplifiedCondRes).
 regress(Actions, Cond, CondRes) :-
   Cond =.. [impl,Implicant,Implicate],
   !,
