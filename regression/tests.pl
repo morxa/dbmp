@@ -85,6 +85,12 @@ test(
   regress([goto(hall,kitchen)], not(at(hall)), true).
 
 test(
+  regress_action_sequence,
+  [setup(init_goto_action),cleanup(cleanup_actions)]
+) :-
+  regress([goto(hall,kitchen),goto(kitchen,office)], at(office), true).
+
+test(
   regress_forall,
   [setup(init_clearall_action),cleanup(cleanup_actions)]
 ) :-
