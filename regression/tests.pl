@@ -65,6 +65,9 @@ init_typed_clearall_action :-
   assertz(effect(clearall,all(o,object,clear(o)))).
 init_condeffect_action :-
   assertz(effect(drop(O),impl(fragile(O),broken(O)))).
+init_fix_action :-
+  assertz(effect(fix_green(C),impl(green(C),fixed(C)))),
+  assertz(effect(fix_other(C),impl(not(green(C)),fixed(C)))).
 cleanup_actions :-
   retractall(effect(_,_)).
 cleanup_actions_and_types :-
@@ -103,6 +106,12 @@ test(
 ) :-
   regress([drop(o)], broken(o), or(fragile(o),broken(o))),
   regress([drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))).
+
+test(
+  regress_conditional_effect_with_two_cases,
+  [setup(init_fix_action),cleanup(cleanup_actions)]
+) :-
+  regress([fix_green(c),fix_other(c)], fixed(c), true).
 
 test(
   regress_implication,
