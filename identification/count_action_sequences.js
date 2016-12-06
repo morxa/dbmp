@@ -116,3 +116,15 @@ var cleanupResult = function(key, actionSequence) {
   return cleanedResult;
 }
 
+
+function get_macros(domain, max_length, out) {
+  db.solutions.mapReduce(
+      findSequencesInPlan,
+      countSequences,
+      { out: out,
+        query: { "domain": domain, "use_for_macros": true },
+        finalize: cleanupResult,
+        scope: { maxSequenceLength: max_length }
+      }
+  )
+}
