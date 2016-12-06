@@ -10,4 +10,4 @@ KUBELET_HOSTNAME="--hostname-override={{ ansible_hostname }}"
 KUBELET_API_SERVER="--api-servers=https://{{ hostvars[groups['kubeadm'][0]]['ansible_hostname']}}:6443"
 
 # Load kubeconfig
-KUBELET_ARGS="--kubeconfig /etc/kubernetes/kubeconfig"
+KUBELET_ARGS="--kubeconfig /etc/kubernetes/kubeconfig --system-reserved='cpu=200m,memory=1G'"
