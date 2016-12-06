@@ -206,6 +206,48 @@ test(simplify_implication) :-
 
 :- end_tests(simplify).
 
+:- begin_tests(pddl_parser).
+:- use_module(pddl_parser).
+
+test(preprocessing) :-
+  assertion(preprocess_pddl(
+              "(define (domain blocksworld))",
+              ["(", "define", "(", "domain", "blocksworld", ")", ")"])),
+  assertion(preprocess_pddl(
+              "( define(  domain  blocksworld  ) )",
+              ["(", "define", "(", "domain", "blocksworld", ")", ")"])).
+
+test(domain_name) :-
+  parse_pddl_domain("(define (domain blocksworld))", ParserResult),
+  assertion(member((domain, "blocksworld"), ParserResult)).
+
+test(requirements) :-
+  parse_pddl_domain("(define (domain d) (:requirements :adl :action-costs))",
+                    ParserResult),
+  assertion(member((requirements, [":adl", ":action-costs"]), ParserResult)),
+  % we do NOT validate requirements, i.e., we can have arbitrary requirements.
+  parse_pddl_domain("(define (domain d) (:requirements :nonexistent-req))",
+                    ParserResult2),
+  assertion(member((requirements, [":nonexistent-req"]), ParserResult2)).
+
+test(predicates) :-
+  parse_pddl_domain("(define (domain d) (:predicates (at ?l - location)))",
+                    ParserResult),
+  assertion(member((predicates, [("at",[("location",["?l"])])]), ParserResult)),
+  parse_pddl_domain("(define (domain d) (:predicates (on ?x ?y - block)))",
+                    ParserResult2),
+  assertion(member( (predicates, [("on",[("block",["?x", "?y"])])]) ,
+                    ParserResult2)),
+  parse_pddl_domain("(define (domain d)
+    (:predicates (at ?l - location) (on ?x ?y - block)))",
+                    ParserResult3),
+  assertion(member( (predicates,
+                      [("at", [("location", ["?l"])]),
+                       ("on",[("block",["?x", "?y"])])]) ,
+                    ParserResult3)).
+
+:- end_tests(pddl_parser).
+
 :- initialization run_and_exit.
 
 run_and_exit :-
