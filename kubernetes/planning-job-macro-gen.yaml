@@ -7,7 +7,7 @@ metadata:
     planner: $PLANNER
     domain: $LOWERDOMAIN
     problem: $LOWERPROBLEM
-    phase: evaluation
+    phase: macro-generation
 spec:
   template:
     metadata:
@@ -17,8 +17,8 @@ spec:
       - name: planner-worker
         image: morxa/planner
         command: ["worker.py"]
-        args: ["--planner", "$PLANNER",
-               "--memory-limit", "4G", "--time-limit", "1800",
+        args: ["--use-for-macros", "--planner", "$PLANNER",
+               "--memory-limit", "7G", "--time-limit", "3600",
                "$DOMAIN", "$PROBLEM"]
         volumeMounts:
           - name: mongo-certs
@@ -40,10 +40,10 @@ spec:
         resources:
           requests:
             cpu: "1"
-            memory: "4G"
+            memory: "7G"
           limits:
             cpu: "1"
-            memory: "5G"
+            memory: "8G"
       volumes:
         - name: mongo-certs
           secret:
