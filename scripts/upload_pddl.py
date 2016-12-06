@@ -217,7 +217,8 @@ def main():
     if args.all_missing:
         for problem in all_problems:
             if not solution_coll.find_one(
-                    { 'domain': domain, 'problem': problem['name'] }):
+                    { 'domain': domain, 'problem': problem['name'],
+                      'planner': args.planner}):
                 problems.add(problem['name'])
     if args.all_failed:
         for problem in all_problems:
