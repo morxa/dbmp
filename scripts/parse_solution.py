@@ -48,7 +48,7 @@ def parse_solution(raw_solution):
     actions = []
     for line in lines:
         if line == '' or re.match(r'^;', line): continue
-        inside_parentheses = re.match('\((.*)\)', line.lower()).group(1)
+        inside_parentheses = re.match('.*\((.*)\).*', line.lower()).group(1)
         split_line = re.split('\s+', inside_parentheses)
         operator = split_line[0]
         parameters = split_line[1:]
