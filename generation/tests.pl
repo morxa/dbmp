@@ -368,6 +368,10 @@ test(two_actions) :-
         ParserResult)
     ).
 
+test(load_domain_file) :-
+  parse_pddl_domain_file("test_data/domain.pddl", ParserResult),
+  assertion(member((domain, "blocksworld"), ParserResult)).
+
 :- end_tests(pddl_parser).
 
 :- initialization run_and_exit.

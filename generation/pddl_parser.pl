@@ -19,7 +19,8 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
-:- module(pddl_parser, [parse_pddl_domain/2, preprocess_pddl/2]).
+:- module(pddl_parser,
+  [parse_pddl_domain/2, parse_pddl_domain_file/2, preprocess_pddl/2]).
 
 
 %% preprocess_pddl(*String, -PreprocessedStringList)
@@ -168,3 +169,46 @@ variable(Var) --> [Var], {string_chars(Var,['?'|_])}.
 parse_pddl_domain(DomainString, ParsedDomain) :-
   preprocess_pddl(DomainString, PreprocessedDomain),
   once(pddl_domain(ParsedDomain, PreprocessedDomain, [])).
+
+%% read_file(*Filename, -Strings)
+%
+%  Read the given file name in a list of strings.
+read_file(Filename, Strings) :-
+  setup_call_cleanup(
+    open(Filename, read, Stream),
+    read_stream_string(Stream, Strings),
+    close(Stream)
+  ).
+
+%% read_stream_string(+Stream, -Strings)
+%
+%  Read a list of strings froom the given Stream.
+read_stream_string(Stream, Strings) :-
+  read_line_to_string(Stream, String),
+  ( String == end_of_file -> Strings = []
+  ;
+    read_stream_string(Stream, RStrings),
+    Strings = [String|RStrings]
+  ).
+
+%% preprocess_string_list(*Lines, PreprocessedLines)
+%
+%  Preprocess the given list of Strings by splitting the strings into atomic
+%  strings expected by the parser. See preprocess_pddl/2 for more info.
+preprocess_string_list([], []).
+preprocess_string_list([Line|RLines], PreprocessedLines) :-
+  preprocess_pddl(Line, PreprocessedLine),
+  preprocess_string_list(RLines, PreprocessedRLines),
+  append(PreprocessedLine, PreprocessedRLines, PreprocessedLines).
+
+%% parse_pddl_domain_file(*Filename, ParsedDomain)
+%
+%  Parse the given PDDL Domain file into a structured domain representation.
+%  ParsedDomain is unified with a list of pairs, where each pair is of the form
+%  (key,value), e.g. (domain, "blocksworld").
+%  See also parse_pddl_domain/2.
+parse_pddl_domain_file(Filename, ParsedDomain) :-
+  read_file(Filename, FileContent),
+  preprocess_string_list(FileContent, PreprocessedDomain),
+  exclude(=(""), PreprocessedDomain, FilteredDomain),
+  once(pddl_domain(ParsedDomain, FilteredDomain, [])).
