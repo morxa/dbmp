@@ -87,9 +87,10 @@ predicate_list([]) --> [].
 predicate_list([(PredicateName,PredicateTypes)|Predicates]) -->
   ["("], [PredicateName], typed_list(PredicateTypes), [")"],
   predicate_list(Predicates).
-actions_defs([]) --> [].
-actions_defs((actions, [Action|Actions])) -->
-  action_def(Action), actions_defs(Actions).
+actions_defs((actions,Actions)) --> action_list(Actions).
+action_list([]) --> [].
+action_list([Action|Actions]) -->
+  action_def(Action), action_list(Actions).
 action_def([Name,Params,Precondition,Effect]) -->
   ["(", ":action"], [Name],
   [":parameters"], ["("], typed_list(Params), [")"],

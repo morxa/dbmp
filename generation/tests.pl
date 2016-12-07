@@ -342,6 +342,32 @@ test(action_goto) :-
         ParserResult)
     ).
 
+test(two_actions) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (cond2 ?y) \c
+      )
+      (:action resetx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (not (cond2 ?y)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[
+          ["setx",
+            [("var",["?x", "?y"])], cond1('?x'), cond2('?y')],
+          ["resetx",
+            [("var",["?x", "?y"])], cond1('?x'), not(cond2('?y'))]
+          ]),
+        ParserResult)
+    ).
+
 :- end_tests(pddl_parser).
 
 :- initialization run_and_exit.
