@@ -41,6 +41,8 @@ regress(Actions, Cond, CondRes) :-
   Cond =.. [impl,Implicant,Implicate],
   !,
   once(regress(Actions, or(not(Implicant),Implicate), CondRes)).
+% TODO this expects exactly one var, but PDDL allows lists of vars
+% also rename the operator
 regress(Actions, some(Var,Type,Cond), CondRes) :-
   !,
   type_of_object(Type, TypedObject),
@@ -89,6 +91,7 @@ regress_on_effects_(Term, [all(X,Effect)|R], TermRes) :-
   regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
 % conditional effect: regress Term for both cases (Cond true/false). The
 % resulting term is a disjunction of both cases.
+% TODO rename operator to imply
 regress_on_effects_(Term, [impl(Cond,Effect)|Effects], TermRes) :-
   % cut here because we don't want to skip the cond effect if regression fails
   !,

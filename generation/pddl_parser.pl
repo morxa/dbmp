@@ -22,7 +22,6 @@
 :- module(pddl_parser, [parse_pddl_domain/2, preprocess_pddl/2]).
 
 
-
 %% preprocess_pddl(*String, -PreprocessedStringList)
 %
 %  Preprocess the given domain by splitting the domain into a list of operators.
@@ -69,7 +68,7 @@ domain_body(
   types_def(Types),
   constants_def(Constants),
   predicates_def(Predicates),
-  action_defs(Actions).
+  actions_defs(Actions).
 domain_name_def((domain, N)) --> ["(", "domain"], [N], [")"].
 require_def((requirements, [])) --> [].
 require_def((requirements,Reqs)) -->
@@ -88,15 +87,71 @@ predicate_list([]) --> [].
 predicate_list([(PredicateName,PredicateTypes)|Predicates]) -->
   ["("], [PredicateName], typed_list(PredicateTypes), [")"],
   predicate_list(Predicates).
-% TODO: add action definitions. Currently, we only accept domains with no
-% actions.
-action_defs((actions, [])) --> [].
+actions_defs([]) --> [].
+actions_defs((actions, [Action|Actions])) -->
+  action_def(Action), actions_defs(Actions).
+action_def([Name,Params,Precondition,Effect]) -->
+  ["(", ":action"], [Name],
+  [":parameters"], ["("], typed_list(Params), [")"],
+  [":precondition"], goal_description(Precondition),
+  [":effect"], effect(Effect),
+  [")"].
+
+goal_description(Formula) --> atomic_formula(Formula).
+goal_description(Goal) -->
+  ["(", "and"], goal_description_list(GoalList), [")"],
+  { Goal =.. [and|GoalList] }.
+goal_description(Goal) -->
+  ["(", "or"], goal_description_list(GoalList), [")"],
+  { Goal =.. [or|GoalList] }.
+goal_description(not(Goal)) --> ["(", "not"], goal_description(Goal), [")"].
+goal_description(imply(Cond,Goal)) -->
+  ["(", "imply"], goal_description(Cond), goal_description(Goal), [")"].
+goal_description(exists(VarList,Goal)) -->
+  ["(", "exists"],
+  ["("], typed_list(VarList), [")"],
+  goal_description(Goal), [")"].
+% Note: different operator name to distinguish from Prolog forall/2.
+goal_description(all(VarList,Goal)) -->
+  ["(", "forall"],
+  ["("], typed_list(VarList), [")"],
+  goal_description(Goal), [")"].
+
+goal_description_list([Goal]) --> goal_description(Goal).
+goal_description_list([Goal|GoalList]) -->
+  goal_description(Goal), goal_description_list(GoalList).
+
+effect(Effect) --> atomic_formula(Effect).
+effect(not(Effect)) -->
+  ["(", "not"], atomic_formula(Effect), [")"].
+effect(Effect) -->
+  ["(", "and"], effect_list(Effects), [")"],
+  { Effect =.. [and|Effects] }.
+effect_list([Effect]) --> effect(Effect).
+effect_list([Effect|Effects]) --> effect(Effect), effect_list(Effects).
+
+atomic_formula(Formula) -->
+  ["("], predicate(Predicate), term_list(Terms), [")"],
+  {Formula =.. [Predicate|Terms]}.
+term_list([]) --> [].
+term_list([Term|Terms]) --> term(Term), term_list(Terms).
+% TODO We might need some constraints on the symbols used for terms and
+% predicates.
+predicate(PredicateAtom) -->
+  [Predicate],
+  { atom_string(PredicateAtom, Predicate),
+    \+ member(PredicateAtom, [not,and,or,forall,imply])}.
+term(TermAtom) -->
+  [Term],
+  { atom_string(TermAtom, Term),
+    \+ member(TermAtom, ['(', ')'])}.
+
 requirement(R) --> [R], {string_chars(R,[':'|_])}.
 requirements_list([]) --> [].
 requirements_list([R|L2]) --> requirement(R), requirements_list(L2).
 types_list([]) --> [].
 types_list([Type|T2]) --> type(Type), types_list(T2).
-type(T) --> [T].
+type(T) --> [T], { \+ member(T, ["(", ")"]) }.
 typed_list([]) --> [].
 typed_list([TypedVars|Types]) --> typed_vars(TypedVars), typed_list(Types).
 typed_vars((Type, [Var])) --> variable(Var), ["-"], type(Type).

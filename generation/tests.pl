@@ -246,6 +246,102 @@ test(predicates) :-
                        ("on",[("block",["?x", "?y"])])]) ,
                     ParserResult3)).
 
+test(simple_action) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (cond2 ?x) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx", [("var",["?x"])], cond1('?x'), cond2('?x')]]),
+        ParserResult)
+    ).
+test(action_with_two_parameters) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (cond2 ?y) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx", [("var",["?x", "?y"])], cond1('?x'), cond2('?y')]]),
+        ParserResult)
+    ).
+test(action_with_negated_precondition) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (not (cond1 ?x)) \c
+        :effect (cond2 ?y) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx",
+          [("var",["?x", "?y"])], not(cond1('?x')), cond2('?y')]]),
+        ParserResult)
+    ).
+test(action_with_negated_effect) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (not (cond2 ?y)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx",
+          [("var",["?x", "?y"])], cond1('?x'), not(cond2('?y'))]]),
+        ParserResult)
+    ).
+test(action_with_conjunctive_effect) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (and (cond1 ?y) (cond2 ?y)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx",
+          [("var",["?x", "?y"])], cond1('?x'), and(cond1('?y'),cond2('?y'))]]),
+        ParserResult)
+    ).
+test(action_goto) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action goto \c
+        :parameters (?from ?to - location) \c
+        :precondition (at ?from) \c
+        :effect (and (not (at ?from)) (at ?to)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["goto",
+          [("location",["?from", "?to"])], at('?from'),
+          and(not(at('?from')),at('?to'))]]),
+        ParserResult)
+    ).
+
 :- end_tests(pddl_parser).
 
 :- initialization run_and_exit.
