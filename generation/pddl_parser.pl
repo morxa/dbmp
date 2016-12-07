@@ -212,3 +212,50 @@ parse_pddl_domain_file(Filename, ParsedDomain) :-
   preprocess_string_list(FileContent, PreprocessedDomain),
   exclude(=(""), PreprocessedDomain, FilteredDomain),
   once(pddl_domain(ParsedDomain, FilteredDomain, [])).
+
+%% assert_domain_facts(*Domain)
+%
+%   assertz/1 all facts from the given domain. This asserts the following facts:
+%   - domain:name/1 : the name of the domain
+%   - domain:requirements/1 : the list of requirements
+%   - domain:requires/1 : each requirement
+%   - domain:types/1 : the list of types
+%   - domain:type/1 : each type of the domain
+%   - domain:constants/1 : all constants of the domain
+%   - domain:predicate/1 : each predicate of the domain
+%   - domain:predicate_parameters/2 : the parameters of each predicate
+%   - domain:action/1 : each action name of the domain
+%   - domain:action_parameters/2 : all parameters of each action
+%   - domain:action_precondition/2 : the precondition of each action
+%   - domain:action_effect/2 : the effect of each action
+assert_domain_facts(Domain) :-
+  member((domain,DomainName), Domain),
+  assertz(domain:name(DomainName)),
+  member((requirements,Requirements), Domain),
+  assertz(domain:requirements(Requirements)),
+  forall(
+    member(Requirement, Requirements),
+    assertz(domain:requires(Requirement))),
+  member((types,Types), Domain),
+  assertz(domain:types(Types)),
+  forall(
+    member(Type, Types),
+    assertz(domain:type(Type))),
+  member((constants,Constants), Domain),
+  assertz(domain:constants(Constants)),
+  member((predicates,Predicates), Domain),
+  forall(
+    member((PredicateName,PredicateParams), Predicates),
+    ( assertz(domain:predicate(PredicateName)),
+      assertz(domain:predicate_parameters(PredicateName, PredicateParams))
+    )
+  ),
+  member((actions,Actions), Domain),
+  forall(
+    member([ActionName,ActionParams,ActionPrecondition,ActionEffect], Actions),
+    ( assertz(domain:action(ActionName)),
+      assertz(domain:action_parameters(ActionName, ActionParams)),
+      assertz(domain:action_precondition(ActionName, ActionPrecondition)),
+      assertz(domain:action_effect(ActionName, ActionEffect))
+    )
+  ).
