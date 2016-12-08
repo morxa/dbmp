@@ -22,13 +22,10 @@
 :- begin_tests(regression).
 :- [regression].
 
-:- dynamic effect/2.
-
-
 init_location_types :-
-  assertz(type_of_object(room, kitchen)),
-  assertz(type_of_object(location, kitchen)),
-  assertz(type_of_object(location, hall)).
+  assertz(domain:type_of_object(room, kitchen)),
+  assertz(domain:type_of_object(location, kitchen)),
+  assertz(domain:type_of_object(location, hall)).
 
 test(substitute_simple) :-
   substitute(a, [a,b], c, [c,b]).
@@ -48,28 +45,28 @@ test(
     cleanup(retractall(type_of_object(_,_)))
   ]
 ) :-
-  substitute(_, [goto(kitchen,hall)], location, type_of_object(room),
+  substitute(_, [goto(kitchen,hall)], location, domain:type_of_object(room),
     [goto(location,hall)]).
 
 
 init_goto_action :-
-  assertz(effect(goto(L1,L2),and(not(at(L1)),at(L2)))),
+  assertz(domain:action_effect(goto(L1,L2),and(not(at(L1)),at(L2)))),
   init_location_types.
 init_dropall_action :-
-  assertz(effect(dropall,all(o,not(holding(o))))).
+  assertz(domain:action_effect(dropall,all(o,not(holding(o))))).
 init_clearall_action :-
-  assertz(effect(clearall,all(o,clear(o)))).
+  assertz(domain:action_effect(clearall,all(o,clear(o)))).
 init_typed_clearall_action :-
-  assertz(subtype_of_type(T,T)),
-  assertz(subtype_of_type(cup,object)),
-  assertz(effect(clearall,all(o,object,clear(o)))).
+  assertz(domain:subtype_of_type(T,T)),
+  assertz(domain:subtype_of_type(cup,object)),
+  assertz(domain:action_effect(clearall,all(o,object,clear(o)))).
 init_condeffect_action :-
-  assertz(effect(drop(O),impl(fragile(O),broken(O)))).
+  assertz(domain:action_effect(drop(O),impl(fragile(O),broken(O)))).
 init_fix_action :-
-  assertz(effect(fix_green(C),impl(green(C),fixed(C)))),
-  assertz(effect(fix_other(C),impl(not(green(C)),fixed(C)))).
+  assertz(domain:action_effect(fix_green(C),impl(green(C),fixed(C)))),
+  assertz(domain:action_effect(fix_other(C),impl(not(green(C)),fixed(C)))).
 cleanup_actions :-
-  retractall(effect(_,_)).
+  retractall(domain:action_effect(_,_)).
 cleanup_actions_and_types :-
   cleanup_actions,
   retractall(type_of_object(_,_)).

@@ -27,7 +27,7 @@
 %
 %  Regresses the formula Condition with ActionList, giving RegressedCondition.
 %  For each action, the action's effect must be declared with
-%  effect(Action,Effect).
+%  domain:action_effect(Action,Effect).
 %  Compares Condition with the effects of all actions. Any term that is an
 %  effect of one of the actions is removed from Condition.
 regress([], Cond, Cond) :- !.
@@ -45,11 +45,11 @@ regress(Actions, Cond, CondRes) :-
 % also rename the operator
 regress(Actions, some(Var,Type,Cond), CondRes) :-
   !,
-  type_of_object(Type, TypedObject),
+  domain:type_of_object(Type, TypedObject),
   substitute(Var, [Cond], TypedObject, [SubstitutedCond]),
   regress(Actions, SubstitutedCond, CondRes).
 regress([Action|R], Cond, CondRes) :-
-  effect(Action,Effect),
+  domain:action_effect(Action,Effect),
   once(regress_on_effects(Cond,[Effect],CondInter)),
   once(regress(R,CondInter,CondRes)).
 
@@ -77,11 +77,11 @@ regress_on_effects_(all(X,Term), [all(Y,Effect)|_], true) :-
   regress_on_effects(NewTerm, [NewEffect], true).
 % Note: subtype_of_type must be reflexive.
 regress_on_effects_(all(X,TermType,Term), [all(Y,EffectType,Effect)|R], Res) :-
-  subtype_of_type(TermType, EffectType),
+  domain:subtype_of_type(TermType, EffectType),
   regress_on_effects(all(X,Term), [all(Y,Effect)|R], Res).
 regress_on_effects_(Term, [all(X,Type,Effect)|R], TermRes) :-
   Effect =.. [Predicate|Args],
-  substitute(X, Args, _, type_of_object(Type), NArgs),
+  substitute(X, Args, _, domain:type_of_object(Type), NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
   regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
 regress_on_effects_(Term, [all(X,Effect)|R], TermRes) :-
