@@ -238,3 +238,55 @@ flatten_on_op(Op, [Term|RestTerms], FlattenedTerms) :-
 % True if Term1 is the negation of Term2.
 negated_term(not(Term),Term).
 negated_term(Term,not(Term)).
+
+
+:- begin_tests(simplify).
+
+test(simplify_conjunction) :-
+  assertion(simplify(and(true,true),true)),
+  assertion(simplify(and(a,true),a)),
+  assertion(simplify(and(true,b),b)),
+  assertion(simplify(and(true,false),false)),
+  assertion(simplify(and(false,true),false)).
+
+test(simplify_disjunction) :-
+  assertion(simplify(or(true,true),true)),
+  assertion(simplify(or(a,true),true)),
+  assertion(simplify(or(true,b),true)),
+  assertion(simplify(or(true,false),true)),
+  assertion(simplify(or(false,true),true)).
+
+test(simplify_nested_disjunction) :-
+  assertion(simplify(or(or(true,a),b),true)),
+  assertion(simplify(or(or(or(true,a),b),c),true)),
+  assertion(simplify(or(or(or(or(a,true),b),c),d),true)).
+
+test(simplify_nested_conjunction) :-
+  assertion(simplify(and(and(true,a),b),and(a,b))),
+  assertion(simplify(and(and(and(true,a),b),c),and(a,b,c))),
+  assertion(simplify(and(and(and(and(a,true),b),c),d),and(a,b,c,d))).
+
+test(simplify_negated_literal_in_conjunction) :-
+  assertion(simplify(and(a,not(a)),false)),
+  assertion(simplify(and(not(a),not(not(a))),false)),
+  assertion(simplify(and(a,or(not(a),b)),and(a,b))),
+  assertion(simplify(and(c,or(not(a),b),a),and(c,b,a))),
+  assertion(simplify(and(c,or(d,not(a),b),a),and(c,or(d,b),a))),
+  assertion(simplify(and(not(a),or(a,b)),and(not(a),b))).
+
+test(simplify_remove_negated_literal_in_disjunction) :-
+  assertion(simplify(and(or(a,b),or(not(a),b)), b)),
+  assertion(simplify(and(or(a,b,not(c)),or(a,c,b)),or(a,b))),
+  assertion(simplify(and(or(d,c,not(b),a),or(a,b,c,d)),or(a,c,d))).
+
+test(simplify_remove_subset_conjunctions_in_disjunction) :-
+  assertion(simplify(or(and(a,b),and(a,b,c)),and(a,b))),
+  assertion(simplify(or(a,and(a,b)),a)).
+test(simplify_remove_negated_conjunct_in_disjunction) :-
+  assertion(simplify(or(a,and(not(a),b)),or(a,b))).
+test(simplify_implication) :-
+  assertion(simplify(impl(true,a),a)),
+  assertion(simplify(and(impl(not(a),b),impl(a,b)), b)).
+
+
+:- end_tests(simplify).

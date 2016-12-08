@@ -259,3 +259,172 @@ assert_domain_facts(Domain) :-
       assertz(domain:action_effect(ActionName, ActionEffect))
     )
   ).
+
+
+:- begin_tests(pddl_parser).
+
+test(preprocessing) :-
+  assertion(preprocess_pddl(
+              "(define (domain blocksworld))",
+              ["(", "define", "(", "domain", "blocksworld", ")", ")"])),
+  assertion(preprocess_pddl(
+              "( define(  domain  blocksworld  ) )",
+              ["(", "define", "(", "domain", "blocksworld", ")", ")"])).
+
+test(domain_name) :-
+  parse_pddl_domain("(define (domain blocksworld))", ParserResult),
+  assertion(member((domain, "blocksworld"), ParserResult)).
+
+test(requirements) :-
+  parse_pddl_domain("(define (domain d) (:requirements :adl :action-costs))",
+                    ParserResult),
+  assertion(member((requirements, [":adl", ":action-costs"]), ParserResult)),
+  % we do NOT validate requirements, i.e., we can have arbitrary requirements.
+  parse_pddl_domain("(define (domain d) (:requirements :nonexistent-req))",
+                    ParserResult2),
+  assertion(member((requirements, [":nonexistent-req"]), ParserResult2)).
+
+test(predicates) :-
+  parse_pddl_domain("(define (domain d) (:predicates (at ?l - location)))",
+                    ParserResult),
+  assertion(member((predicates, [("at",[("location",["?l"])])]), ParserResult)),
+  parse_pddl_domain("(define (domain d) (:predicates (on ?x ?y - block)))",
+                    ParserResult2),
+  assertion(member( (predicates, [("on",[("block",["?x", "?y"])])]) ,
+                    ParserResult2)),
+  parse_pddl_domain("(define (domain d)
+    (:predicates (at ?l - location) (on ?x ?y - block)))",
+                    ParserResult3),
+  assertion(member( (predicates,
+                      [("at", [("location", ["?l"])]),
+                       ("on",[("block",["?x", "?y"])])]) ,
+                    ParserResult3)).
+
+test(simple_action) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (cond2 ?x) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx", [("var",["?x"])], cond1('?x'), cond2('?x')]]),
+        ParserResult)
+    ).
+test(action_with_two_parameters) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (cond2 ?y) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx", [("var",["?x", "?y"])], cond1('?x'), cond2('?y')]]),
+        ParserResult)
+    ).
+test(action_with_negated_precondition) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (not (cond1 ?x)) \c
+        :effect (cond2 ?y) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx",
+          [("var",["?x", "?y"])], not(cond1('?x')), cond2('?y')]]),
+        ParserResult)
+    ).
+test(action_with_negated_effect) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (not (cond2 ?y)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx",
+          [("var",["?x", "?y"])], cond1('?x'), not(cond2('?y'))]]),
+        ParserResult)
+    ).
+test(action_with_conjunctive_effect) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (and (cond1 ?y) (cond2 ?y)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx",
+          [("var",["?x", "?y"])], cond1('?x'), and(cond1('?y'),cond2('?y'))]]),
+        ParserResult)
+    ).
+test(action_goto) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action goto \c
+        :parameters (?from ?to - location) \c
+        :precondition (at ?from) \c
+        :effect (and (not (at ?from)) (at ?to)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["goto",
+          [("location",["?from", "?to"])], at('?from'),
+          and(not(at('?from')),at('?to'))]]),
+        ParserResult)
+    ).
+
+test(two_actions) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (cond2 ?y) \c
+      )
+      (:action resetx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (not (cond2 ?y)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[
+          ["setx",
+            [("var",["?x", "?y"])], cond1('?x'), cond2('?y')],
+          ["resetx",
+            [("var",["?x", "?y"])], cond1('?x'), not(cond2('?y'))]
+          ]),
+        ParserResult)
+    ).
+
+test(load_domain_file) :-
+  parse_pddl_domain_file("test_data/domain.pddl", ParserResult),
+  assertion(member((domain, "blocksworld"), ParserResult)).
+
+:- end_tests(pddl_parser).
+

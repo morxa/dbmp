@@ -143,3 +143,135 @@ substitute(Old, [Term|Terms], New, Constraint, [Term|NewTerms]) :-
 %% true(?Any)
 %  Auxiliary predicate that is always true.
 true(_).
+
+
+:- begin_tests(regression).
+
+init_location_types :-
+  assertz(domain:type_of_object(room, kitchen)),
+  assertz(domain:type_of_object(location, kitchen)),
+  assertz(domain:type_of_object(location, hall)).
+
+test(substitute_simple) :-
+  substitute(a, [a,b], c, [c,b]).
+
+test(substitute_args) :-
+  substitute(a, [p(a), p(p(a))], b, [p(b), p(p(b))]).
+
+test(substitute_predicate) :-
+  substitute(a, [a(b)], b, [b(b)]).
+
+test(substitute_predicate_args) :-
+  substitute(a, [a(a)], b, [b(b)]).
+
+test(
+  substitute_with_constraint,
+  [ setup(init_location_types),
+    cleanup(retractall(type_of_object(_,_)))
+  ]
+) :-
+  substitute(_, [goto(kitchen,hall)], location, domain:type_of_object(room),
+    [goto(location,hall)]).
+
+
+init_goto_action :-
+  assertz(domain:action_effect(goto(L1,L2),and(not(at(L1)),at(L2)))),
+  init_location_types.
+init_dropall_action :-
+  assertz(domain:action_effect(dropall,all(o,not(holding(o))))).
+init_clearall_action :-
+  assertz(domain:action_effect(clearall,all(o,clear(o)))).
+init_typed_clearall_action :-
+  assertz(domain:subtype_of_type(T,T)),
+  assertz(domain:subtype_of_type(cup,object)),
+  assertz(domain:action_effect(clearall,all(o,object,clear(o)))).
+init_condeffect_action :-
+  assertz(domain:action_effect(drop(O),impl(fragile(O),broken(O)))).
+init_fix_action :-
+  assertz(domain:action_effect(fix_green(C),impl(green(C),fixed(C)))),
+  assertz(domain:action_effect(fix_other(C),impl(not(green(C)),fixed(C)))).
+cleanup_actions :-
+  retractall(domain:action_effect(_,_)).
+cleanup_actions_and_types :-
+  cleanup_actions,
+  retractall(type_of_object(_,_)).
+
+test(regress_empty_action_list) :-
+  regress([], a, a).
+
+test(
+  regress_simple_goto,
+  [setup(init_goto_action),cleanup(cleanup_actions)]
+) :-
+  regress([goto(hall,kitchen)], at(kitchen), true),
+  regress([goto(hall,kitchen)], not(at(hall)), true).
+
+test(
+  regress_action_sequence,
+  [setup(init_goto_action),cleanup(cleanup_actions)]
+) :-
+  regress([goto(hall,kitchen),goto(kitchen,office)], at(office), true).
+
+test(
+  regress_forall,
+  [setup(init_clearall_action),cleanup(cleanup_actions)]
+) :-
+  regress([clearall], clear(a), true),
+  regress([clearall], not(clear(a)), false),
+  regress([clearall], other_predicate(a), other_predicate(a)).
+
+test(
+  regress_forall_with_negation,
+  [setup(init_dropall_action),cleanup(cleanup_actions)]
+) :-
+  regress([dropall], not(holding(a)), true),
+  regress([dropall], holding(a), false),
+  regress([dropall], other_predicate(a), other_predicate(a)).
+
+test(
+  regress_conditional_effect,
+  [setup(init_condeffect_action), cleanup(cleanup_actions)]
+) :-
+  regress([drop(o)], broken(o), or(fragile(o),broken(o))),
+  regress([drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))).
+
+test(
+  regress_conditional_effect_with_two_cases,
+  [setup(init_fix_action),cleanup(cleanup_actions)]
+) :-
+  regress([fix_green(c),fix_other(c)], fixed(c), true).
+
+test(
+  regress_implication,
+  [setup(init_goto_action),cleanup(cleanup_actions)]
+) :-
+  regress([goto(hall,kitchen)], impl(true,at(kitchen)), true).
+
+test(
+  regress_existential_quantifier,
+  [ nondet,
+    setup(init_goto_action),
+    cleanup(cleanup_actions_and_types)]
+) :-
+  regress([goto(hall,kitchen)], some(l,location,at(l)), true).
+
+test(
+  regress_universal_quantifier,
+  [setup(init_clearall_action),cleanup(cleanup_actions)]
+) :-
+  regress([clearall], all(c,clear(c)), true).
+
+test(
+  regress_universal_quantifier_with_types,
+  [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
+) :-
+  regress([clearall], all(c,object,clear(c)), true).
+
+test(
+  regress_universal_quantifier_with_subtypes,
+  [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
+) :-
+  regress([clearall], all(c,cup,clear(c)), true).
+
+
+:- end_tests(regression).
