@@ -181,6 +181,16 @@ test(nested_quantified) :-
     [(block,[a]),(table,[t1])], on(a,t1))).
 :- end_tests(effect_collision).
 
+:- begin_tests(merge_effects).
+test(single_effect) :-
+  assertion(merge_effects([a],a)),
+  assertion(merge_effects([holding(a)],holding(a))).
+test(two_effects) :-
+  assertion(merge_effects([holding(a),holding(b)], and(holding(a),holding(b)))).
+test(three_effects) :-
+  assertion(merge_effects([e1,e2,e3], and(e1,e2,e3))).
+:- end_tests(merge_effects).
+
 :- begin_tests(action_effects).
 test(
   single_action,
