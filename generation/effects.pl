@@ -140,6 +140,8 @@ effect_collision(Effects, ParameterTypes, Formula) :-
 effect_collision(Effects,  ParameterTypes, Formula) :-
   member(all(_,_,QuantifiedEffect),Effects),
   effect_collision([QuantifiedEffect], ParameterTypes, Formula).
+effect_collision(Effects, ParameterTypes, imply(_, Formula)) :-
+  effect_collision(Effects, ParameterTypes, Formula).
 
 %% negated_formula(?F1, ?F2)
 %
@@ -187,6 +189,9 @@ test(nested_quantified) :-
     [(table,[d])], clean(d))),
   assertion(effect_collision([all(t,table,all(b,block,on(b,t)))],
     [(block,[a]),(table,[t1])], on(a,t1))).
+test(conditional_effect_with_same_nonconditional_effect) :-
+  assertion(effect_collision([effect], [], imply(cond,effect))),
+  assertion(\+ effect_collision([effect1], [], imply(cond,effect2))).
 :- end_tests(effect_collision).
 
 :- begin_tests(merge_effects).
