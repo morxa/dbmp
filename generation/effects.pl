@@ -21,7 +21,7 @@
 
 :- module(effects, [compute_effect/2]).
 
-:- use_module(regression).
+:- use_module(substitute).
 :- use_module(library(lambda)).
 
 %% compute_effect(*Actions, -Effect)

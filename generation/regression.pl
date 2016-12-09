@@ -19,9 +19,10 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
+:- module(regression, [regress/3]).
 :- use_module(library(apply)).
-
 :- use_module(simplify).
+:- use_module(substitute).
 
 %% regress(+ActionList, +Condition, -RegressedCondition)
 %
@@ -106,73 +107,12 @@ regress_on_effects_(Term, [_|R], TermRes) :-
   regress_on_effects(Term, R, TermRes).
 
 
-%% substitute(+Old, +Terms, +New, -NewTerms)
-%
-%  Replace all occurrences of Old in Terms by New, giving NewTerms.
-%  This replaces terms recursively, i.e.
-%  substitute(a, [p(a)], b, L) gives L = p(b).
-substitute(Old, Terms, New, NewTerms) :-
-  substitute(Old, Terms, New, true, NewTerms).
-
-
-%% substitute(+Old, +Terms, +New, +Constraint, -NewTerms)
-%
-%  Replace all occurrences of Old in Terms by New if Constraint is true for the
-%  term to be substituted, giving NewTerms.
-%  This calls Constraint(Term) for each term that is a candidate to be
-%  substituted. Constraint must be callable, i.e. sufficiently instantiated.
-%  As an example, Constraint can be used to restrict substitution to a certain
-%  type of variable. However, any other constraint can be used.
-substitute(_, [], _, _, []) :- !.
-substitute(Old, [Term|Terms], New, Constraint, [New|NewTerms]) :-
-  Old = Term,
-  call(Constraint, Term),
-  % Cut here, otherwise the non-substituted list will succeed, too.
-  !,
-  substitute(Old, Terms, New, NewTerms).
-substitute(Old, [Term|Terms], New, Constraint, [NewTerm|NewTerms]) :-
-  \+ atom(Term),
-  Term =.. Subterms,
-  substitute(Old, Subterms, New, Constraint, NewSubterms),
-  !,
-  NewTerm =.. NewSubterms,
-  substitute(Old, Terms, New, Constraint, NewTerms).
-substitute(Old, [Term|Terms], New, Constraint, [Term|NewTerms]) :-
-  substitute(Old, Terms, New, Constraint, NewTerms).
-
-%% true(?Any)
-%  Auxiliary predicate that is always true.
-true(_).
-
-
 :- begin_tests(regression).
 
 init_location_types :-
   assertz(domain:type_of_object(room, kitchen)),
   assertz(domain:type_of_object(location, kitchen)),
   assertz(domain:type_of_object(location, hall)).
-
-test(substitute_simple) :-
-  substitute(a, [a,b], c, [c,b]).
-
-test(substitute_args) :-
-  substitute(a, [p(a), p(p(a))], b, [p(b), p(p(b))]).
-
-test(substitute_predicate) :-
-  substitute(a, [a(b)], b, [b(b)]).
-
-test(substitute_predicate_args) :-
-  substitute(a, [a(a)], b, [b(b)]).
-
-test(
-  substitute_with_constraint,
-  [ setup(init_location_types),
-    cleanup(retractall(type_of_object(_,_)))
-  ]
-) :-
-  substitute(_, [goto(kitchen,hall)], location, domain:type_of_object(room),
-    [goto(location,hall)]).
-
 
 init_goto_action :-
   assertz(domain:action_effect(goto(L1,L2),and(not(at(L1)),at(L2)))),
