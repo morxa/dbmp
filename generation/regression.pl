@@ -134,7 +134,8 @@ cleanup_actions :-
   retractall(domain:action_effect(_,_)).
 cleanup_actions_and_types :-
   cleanup_actions,
-  retractall(type_of_object(_,_)).
+  retractall(type_of_object(_,_)),
+  retractall(domain:subtype_of_type(_,_)).
 
 test(regress_empty_action_list) :-
   regress([], a, a).

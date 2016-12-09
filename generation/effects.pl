@@ -24,6 +24,8 @@
 :- use_module(substitute).
 :- use_module(library(lambda)).
 
+:- dynamic domain:subtype_of_type/2.
+
 %% compute_effect(*Actions, -Effect)
 %
 %  Compute the effect of the given list of Actions. Actions are expected to be
@@ -126,7 +128,7 @@ effect_collision(Effects, _, Formula) :-
 effect_collision(Effects, ParameterTypes, Formula) :-
   member(all(Var,Type,QuantifiedEffect),Effects),
   member((TypeInFormula, Params), ParameterTypes),
-  domain:subtype_of_type(TypeInFormula, Type),
+  ( TypeInFormula = Type ; domain:subtype_of_type(TypeInFormula, Type)),
   member(Param, Params),
   substitute(Var, [QuantifiedEffect], Param, [SubstitutedEffect]),
   effect_collision([SubstitutedEffect], ParameterTypes, Formula).
