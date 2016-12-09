@@ -106,6 +106,11 @@ split_effect(Effect, Effects) :-
   split_effect(QuantifiedEffect, QuantifiedEffects),
   maplist(\X^(=([all,Var,Type,X])),QuantifiedEffects,EffectUnivs),
   maplist(=..(), Effects, EffectUnivs).
+split_effect(Effect, Effects) :-
+  Effect =.. [imply,Cond,CondEffect],
+  split_effect(CondEffect, CondEffects),
+  maplist(\X^(=([imply,Cond,X])), CondEffects, EffectUnivs),
+  maplist(=..(), Effects, EffectUnivs).
 
 %% atomic_formula(+A)
 %
@@ -151,6 +156,9 @@ test(conjunction) :-
   assertion(split_effect(and(a,b),[a,b])).
 test(nested_conjunction) :-
   assertion(split_effect(and(a,and(b,c),d),[a,b,c,d])).
+test(conditional_effect) :-
+  assertion(split_effect(imply(cond,and(eff1,eff2)),
+    [imply(cond,eff1),imply(cond,eff2)])).
 :- end_tests(split_effects).
 
 :- begin_tests(effect_collision).
