@@ -53,10 +53,8 @@ merge_effects(Effects, Effect) :-
 %  (ActionName,ParameterAssignment), where ParameterAssignment is a list of
 %  pairs reassigned parameters, e.g. [(a,b)] denotes that parameter a was
 %  renamed to parameter b.
-add_action_effects([(Action,ParameterAssignment)], Effects) :-
-  domain:action_effect(Action, Effect),
-  reassign_parameters(Effect, ParameterAssignment, ReassignedEffect),
-  split_effect(ReassignedEffect, Effects).
+
+add_action_effects([], []).
 add_action_effects([(Action,ParameterAssignment)|RActions], ResultingEffects) :-
   add_action_effects(RActions, RestEffects),
   domain:action_effect(Action, ActionEffect),
@@ -214,9 +212,15 @@ test(three_effects) :-
 :- begin_tests(action_effects).
 test(
   single_action,
-  [setup(assertz(domain:action_effect(pick_up(b),holding(b))))]
+  [setup(maplist(call,
+    [assertz(domain:action_effect(pick_up,holding(b))),
+     assertz(domain:action_parameters(pick_up,[(block,[b])]))])),
+   cleanup(maplist(call,
+    [retractall(domain:action_effect(_,_)),
+     retractall(domain:action_parameters(_,_))]))
+  ]
 ) :-
-  assertion(add_action_effects([(pick_up(b),[])],[holding(b)])).
+  assertion(add_action_effects([(pick_up,[])],[holding(b)])).
 test(
   simple_reassignment,
   [setup(maplist(call,
@@ -232,7 +236,7 @@ test(
   forall_effect,
   [setup(maplist(call,
     [assertz(domain:action_effect(dropall,all(b,block,not(holding(b))))),
-     assertz(domain:action_parameters(drop,[])),
+     assertz(domain:action_parameters(dropall,[])),
      assertz(domain:action_effect(pickup,holding(b))),
      assertz(domain:action_parameters(pickup,[(block,[b])]))
     ])),
