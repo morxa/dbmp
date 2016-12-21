@@ -247,4 +247,36 @@ test(
 ) :-
   assertion(add_action_effects(
     [(pickup,[(b,c)]),(dropall,[])],[all(b,block,not(holding(b)))])).
+test(
+  action_repetition,
+  [setup(maplist(call,
+    [assertz(domain:action_effect(drop,not(holding(b)))),
+     assertz(domain:action_effect(pickup,holding(b))),
+     assertz(domain:action_parameters(drop,[(block,[b])])),
+     assertz(domain:action_parameters(pickup,[(block,[b])]))
+    ])),
+   cleanup(maplist(call,
+    [retractall(domain:action_effect(_,_)),
+     retractall(domain:action_parameters(_,_))]))
+  ]
+) :-
+  assertion(add_action_effects(
+    [(pickup,[]),(drop,[]),(pickup,[])],
+    [holding(b)])).
+test(
+  action_repetition_with_reasssignment,
+  [setup(maplist(call,
+    [assertz(domain:action_effect(drop,not(holding(b)))),
+     assertz(domain:action_effect(pickup,holding(b))),
+     assertz(domain:action_parameters(drop,[(block,[b])])),
+     assertz(domain:action_parameters(pickup,[(block,[b])]))
+    ])),
+   cleanup(maplist(call,
+    [retractall(domain:action_effect(_,_)),
+     retractall(domain:action_parameters(_,_))]))
+  ]
+) :-
+  assertion(add_action_effects(
+    [(pickup,[]),(drop,[]),(pickup,[(b,a)]),(drop,[(b,a)]),(pickup,[(b,a)])],
+    [not(holding(b)),holding(a)])).
 :- end_tests(action_effects).
