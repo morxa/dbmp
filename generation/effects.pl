@@ -62,6 +62,7 @@ add_action_effects([(Action,ParameterAssignment)|RActions], ResultingEffects) :-
   domain:action_parameters(Action, ParameterTypes),
   reassign_types(ParameterTypes, ParameterAssignment, ReassignedParameterTypes),
   split_effect(ReassignedEffect, ActionEffects),
+  check_for_cond_effects(ActionEffects),
   exclude(effect_collision(RestEffects, ReassignedParameterTypes),
           ActionEffects,
           FilteredActionEffects),
@@ -149,6 +150,21 @@ effect_collision(Effects, ParameterTypes, imply(Condition, Formula)) :-
 %  True if F1 is the negation of F2.
 negated_formula(F,not(F)).
 negated_formula(not(F),F).
+
+%% check_for_cond_effects(-Effects)
+%
+%  We currently do not support conditional effects in macros. Thus, if Effects
+%  contains a conditional effect, print an error message and fail.  Otherwise,
+%  silently succeed.
+check_for_cond_effects(Effects) :-
+  \+ member(when(_,_), Effects), !.
+check_for_cond_effects(Effects) :-
+  member(when(_,_), Effects), !,
+  format('Error: ~w contains a conditional effect. \c
+         Conditional effects are currently not supported.', [Effects]),
+  fail.
+
+
 
 :- begin_tests(split_effects).
 test(atomic) :-
@@ -279,4 +295,17 @@ test(
   assertion(add_action_effects(
     [(pickup,[]),(drop,[]),(pickup,[(b,a)]),(drop,[(b,a)]),(pickup,[(b,a)])],
     [not(holding(b)),holding(a)])).
+test(
+  action_with_cond_effect_fails,
+  [setup(maplist(call,
+    [assertz(domain:action_effect(drop,when(holding(b),not(holding(b))))),
+     assertz(domain:action_parameters(drop,[(block,[b])]))
+    ])),
+   cleanup(maplist(call,
+    [retractall(domain:action_effect(_,_)),
+     retractall(domain:action_parameters(_,_))]))
+  ]
+) :-
+  assertion(\+ with_output_to(string(Output), add_action_effects([(drop,[])], _))),
+  print(Output).
 :- end_tests(action_effects).
