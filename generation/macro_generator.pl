@@ -1,0 +1,173 @@
+#! /usr/bin/env swipl
+
+/**
+ *  macro_generator.pl - Generate macro actions from action sequences
+ *
+ *  Created:  Fri 09 Dec 2016 16:49:27 CET
+ *  Copyright  2016  Till Hofmann <hofmann@kbsg.rwth-aachen.de>
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Library General Public License for more details.
+ *
+ *  Read the full text in the LICENSE.GPL file in the doc directory.
+ */
+
+ %:- module(macro_generation, [generate_macro/2]).
+
+:- use_module(pddl_parser).
+:- use_module(effects).
+:- use_module(regression).
+
+:- use_module(library(lambda)).
+
+
+%% compute_parameters(+Actions, +Assignments, -Parameters)
+%
+%  Compute the collected Parameters of the list of Actions while reassigning
+%  parameters according to the Assignment. For each action in the list,
+%  domain:action_parameters/2 is used to get the action's parameters.
+%  Assignments is a list of assignments, each list item is the assignment for
+%  the corresponding action in Actions. The result is undefined if Actions and
+%  Assignments do not have the same length. The resulting Parameters do not
+%  contain any duplicates.
+compute_parameters([], [], []).
+compute_parameters(
+  [Action|Actions], [Assignment|Assignments], UniqueParameters
+) :-
+  domain:action_parameters(Action, ActionParameters),
+  get_reassigned_parameters(ActionParameters, Assignment,
+    ReassignedActionParameters),
+  compute_parameters(Actions, Assignments, RemainingParameters),
+  append(ReassignedActionParameters, RemainingParameters, Parameters),
+  remove_duplicate_parameters(Parameters, UniqueParameters).
+
+%% get_unique_reassigned_parameters(+Parameters, +Assignment, -UniqueParameters)
+%
+%  Reassign Parameters according to Assignment and remove any duplicates to
+%  obtain UniqueParameters. The behavior is the same as
+%  get_reassigned_parameters/3, except that all duplicate parameters are
+%  removed.
+get_unique_reassigned_parameters(
+  Parameters, Assignment, UniqueReassignedParameters
+) :-
+  get_reassigned_parameters(Parameters, Assignment, ReassignedParameters),
+  remove_duplicate_parameters(
+    ReassignedParameters, UniqueReassignedParameters).
+%% get_reassigned_parameters(+Parameters, +Assignment, -ReassignedParameters)
+%
+%  Assign the typed list of Parameters with Assignment to obtain
+%  ReassignedParameters. This does not check for any duplicates in the
+%  Parameters or duplicates that are created through reassignment.
+get_reassigned_parameters([], _, []).
+get_reassigned_parameters(
+  [(Type,[])|R],
+  Assignment,
+  [(Type,[])|ReassignedParameters]
+) :-
+  get_reassigned_parameters(R, Assignment, ReassignedParameters).
+get_reassigned_parameters(
+  [(Type,[Parameter|Parameters])|R],
+  Assignment,
+  [(Type,[ReassignedParameter|ReassignedParameters])|ReassignedR]
+) :-
+  ( member((Parameter, ReassignedParameter), Assignment)
+    -> true
+  ;
+    ReassignedParameter = Parameter
+  ),
+  get_reassigned_parameters(
+    [(Type,Parameters)|R], Assignment,
+    [(Type,ReassignedParameters)|ReassignedR]).
+
+%% remove_duplicate_parameters(+TypedParameters, UniqueParameters)
+%
+%  Remove all duplicate parameters from the typed parameter list
+%  TypedParameters. TypedParameters is expected to be a list of pairs, where
+%  each pair consists of a type name and a list of parameters with that type.
+%  This predicate does NOT check whether there are parameters of different type
+%  with the same name. Such parameters will be treated as different.
+remove_duplicate_parameters(TypedParameters, UniqueParameters) :-
+  remove_duplicate_parameters(TypedParameters, [], UniqueParameters).
+%% remove_duplicate_parameters(+TypedParameters, WorkingList, Result)
+%
+%  Helper predicate for remove_duplicate_parameters/2. WorkingList is the
+%  currently computed list of unique parameters. When calling this predicate,
+%  WorkingList should be set to the empty set.
+remove_duplicate_parameters([], Parameters, Parameters).
+remove_duplicate_parameters(
+  [(_,[])|R], CurrentParameters, ResultingParameters
+) :-
+  remove_duplicate_parameters(R, CurrentParameters, ResultingParameters).
+remove_duplicate_parameters(
+  [(Type,[Parameter|Parameters])|R],
+  CurrentParameters,
+  ResultingParameters
+) :-
+  member((Type,TypedParameters),CurrentParameters),
+  member(Parameter,TypedParameters),
+  remove_duplicate_parameters(
+    [(Type,Parameters)|R], CurrentParameters, ResultingParameters).
+remove_duplicate_parameters(
+  [(Type,[Parameter|Parameters])|R],
+  CurrentParameters,
+  ResultingParameters
+) :-
+  member((Type,TypedParameters),CurrentParameters),
+  \+ member(Parameter,TypedParameters),
+  exclude(=((Type,TypedParameters)), CurrentParameters, FilteredParameters),
+  append(TypedParameters,[Parameter],NewTypedParameters),
+  append(FilteredParameters, [(Type,NewTypedParameters)], NewCurrentParameters),
+  remove_duplicate_parameters(
+    [(Type,Parameters)|R],
+    NewCurrentParameters,
+    ResultingParameters).
+remove_duplicate_parameters(
+  [(Type,[Parameter|Parameters])|R],
+  CurrentParameters,
+  ResultingParameters
+) :-
+  \+ member((Type,_),CurrentParameters),
+  append(CurrentParameters, [(Type,[Parameter])], NewParameters),
+  remove_duplicate_parameters(
+    [(Type,Parameters)|R],
+    NewParameters,
+    ResultingParameters).
+
+
+:- begin_tests(remove_duplicate_parameters).
+test(no_duplicates) :-
+  assertion(remove_duplicate_parameters([(typeA,[a,b])], [(typeA,[a,b])])).
+test(one_type_one_duplicate) :-
+  assertion(remove_duplicate_parameters([(typeA,[a,b,a])], [(typeA,[a,b])])).
+test(two_types_no_duplicates) :-
+  assertion(remove_duplicate_parameters(
+    [(typeA,[a,b]),(typeB,[c,d])], [(typeA,[a,b]),(typeB,[c,d])])).
+test(two_types_with_same_parameter) :-
+  assertion(remove_duplicate_parameters(
+    [(typeA,[a,b]),(typeB,[b,c])], [(typeA,[a,b]),(typeB,[b,c])])).
+test(split_duplicate_types) :-
+  assertion(remove_duplicate_parameters(
+    [(typeA,[a,b]),(typeA,[b,c])], [(typeA, [a,b,c])])).
+:- end_tests(remove_duplicate_parameters).
+
+:- begin_tests(parameter_assignment).
+test(empty_action_list) :-
+  assertion(get_reassigned_parameters([], [], [])).
+
+test(no_reassignment) :-
+  assertion(get_unique_reassigned_parameters(
+    [("block", ["?y"])], [], [("block", ["?y"])])).
+test(simple_reassignment) :-
+  assertion(get_unique_reassigned_parameters(
+    [("block",["?y"])], [("?y","?z")], [("block", ["?z"])])).
+test(two_params) :-
+  assertion(get_unique_reassigned_parameters(
+    [("block",["?y", "?z"])], [("?y","?z")], [("block", ["?z"])])).
+:- end_tests(parameter_assignment).
