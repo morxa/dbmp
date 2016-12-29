@@ -55,6 +55,23 @@ substitute(Old, [Term|Terms], New, Constraint, [NewTerm|NewTerms]) :-
 substitute(Old, [Term|Terms], New, Constraint, [Term|NewTerms]) :-
   substitute(Old, Terms, New, Constraint, NewTerms).
 
+%% substitute_list(+Terms, +Substitutions, +Constraint, -NewTerms)
+%
+%  The same as substitute/5, but use the list of Substitutions. Substitutions is
+%  a list of pairs, where the first element is the old term and the second
+%  element is the new term.
+substitute_list(Terms, [], _, Terms).
+substitute_list(Terms, [(Old,New)|Substitutions], Constraint, NewTerms) :-
+  substitute(Old, Terms, New, Constraint, SubstitutedTerms),
+  substitute_list(SubstitutedTerms, Substitutions, Constraint, NewTerms).
+
+%% substitute_list(+Terms, +Substitutions, -NewTerms)
+%
+%  The same as substitute_list/4, but without a constraint, i.e., the constraint
+%  is always true.
+substitute_list(Terms, Substitutions, NewTerms) :-
+  once(substitute_list(Terms, Substitutions, true, NewTerms)).
+
 %% true(?Any)
 %  Auxiliary predicate that is always true.
 true(_).
@@ -85,4 +102,6 @@ test(
 ) :-
   substitute(_, [goto(kitchen,hall)], location, domain:type_of_object(room),
     [goto(location,hall)]).
+test(substitute_list) :-
+  substitute_list([a,p(b),p(b(a))], [(a,c),(b,d)], [c,p(d),p(d(c))]).
 :- end_tests(substitute).
