@@ -20,7 +20,8 @@
  */
 
 :- module(pddl_parser,
-  [parse_pddl_domain/2, parse_pddl_domain_file/2, preprocess_pddl/2]).
+    [ parse_pddl_domain/2, parse_pddl_domain_file/2, preprocess_pddl/2,
+      assert_domain_facts/1, assert_domain_file/1]).
 
 
 %% preprocess_pddl(*String, -PreprocessedStringList)
@@ -259,6 +260,14 @@ assert_domain_facts(Domain) :-
       assertz(domain:action_effect(ActionName, ActionEffect))
     )
   ).
+
+%% assert_domain_file(*DomainFile)
+%
+%  Parse the given domain file and assert all facts about it.
+%  See assert_domain_facts/1 for more information on the asserted facts.
+assert_domain_file(DomainFile) :-
+  parse_pddl_domain_file(DomainFile, Domain),
+  assert_domain_facts(Domain).
 
 
 :- begin_tests(pddl_parser).
