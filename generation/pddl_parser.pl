@@ -21,7 +21,7 @@
 
 :- module(pddl_parser,
     [ parse_pddl_domain/2, parse_pddl_domain_file/2, preprocess_pddl/2,
-      assert_domain_facts/1, assert_domain_file/1]).
+      assert_domain_facts/1, assert_domain_file/1, retract_domain_facts/0]).
 
 
 %% preprocess_pddl(*String, -PreprocessedStringList)
@@ -260,6 +260,23 @@ assert_domain_facts(Domain) :-
       assertz(domain:action_effect(ActionName, ActionEffect))
     )
   ).
+
+%% retract_domain_facts
+%
+%  Retract all asserted facts about the domain.
+retract_domain_facts :-
+  retractall(domain:name(_)),
+  retractall(domain:rquirements(_)),
+  retractall(domain:requires(_)),
+  retractall(domain:types(_)),
+  retractall(domain:type(_)),
+  retractall(domain:constants(_)),
+  retractall(domain:predicate(_)),
+  retractall(domain:predicate_parameters(_,_)),
+  retractall(domain:action(_)),
+  retractall(domain:action_parameters(_,_)),
+  retractall(domain:action_precondition(_,_)),
+  retractall(domain:action_effect(_,_)).
 
 %% assert_domain_file(*DomainFile)
 %
