@@ -19,99 +19,122 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
-:- module(regression, [regress/3]).
+:- module(regression, [regress/4]).
 :- use_module(library(apply)).
 :- use_module(simplify).
 :- use_module(substitute).
 
-%% regress(+ActionList, +Condition, -RegressedCondition)
+%% regress(+Effects, +Types, +Condition, -RegressedCondition)
 %
-%  Regresses the formula Condition with ActionList, giving RegressedCondition.
-%  For each action, the action's effect must be declared with
-%  domain:action_effect(Action,Effect).
+%  Regresses the formula Condition with Effects, giving RegressedCondition.
 %  Compares Condition with the effects of all actions. Any term that is an
 %  effect of one of the actions is removed from Condition.
-regress([], Cond, Cond) :- !.
-regress(Actions, Cond, SimplifiedCondRes) :-
+%  Types must define the types of all parameters used in Effects. Types is a
+%  list of pairs of the form (TypeName, ListOfParameters).
+%  The resulting Condition is simplified.
+regress(Effects, Types, Cond, SimplifiedRegressedCond) :-
+  once(regress_(Effects, Types, Cond, RegressedCond)),
+  simplify(RegressedCond, SimplifiedRegressedCond).
+
+%% regress_(+Effects, +Types, +Condition, -RegressedCondition)
+%
+%  Helper predicate for regress/4. This predicate does the actual regression
+%  without simplification of the resulting term.
+
+regress_([], [], Cond, Cond) :- !.
+regress_(Effects, Types, Cond, SimplifiedCondRes) :-
   Cond =.. [Op|Conjuncts],
   member(Op,[and,or]),
-  maplist(regress(Actions),Conjuncts,RegressedConjuncts),
+  maplist(regress(Effects, Types),Conjuncts,RegressedConjuncts),
   CondRes =.. [Op|RegressedConjuncts],
   simplify(CondRes, SimplifiedCondRes).
-regress(Actions, Cond, CondRes) :-
+regress_(Effects, Types, Cond, CondRes) :-
   Cond =.. [impl,Implicant,Implicate],
   !,
-  once(regress(Actions, or(not(Implicant),Implicate), CondRes)).
+  once(regress(Effects, Types, or(not(Implicant),Implicate), CondRes)).
 % TODO this expects exactly one var, but PDDL allows lists of vars
 % also rename the operator
-regress(Actions, some(Var,Type,Cond), CondRes) :-
+% TODO depending on which parameter is picked this may be incorrect
+regress_(Effects, Types, some(Var,Type,Cond), CondRes) :-
   !,
-  domain:type_of_object(Type, TypedObject),
+  domain:subtype_of_type(SubType, Type),
+  member((SubType, TypedParameters), Types),
+  member(TypedObject, TypedParameters),
   substitute(Var, [Cond], TypedObject, [SubstitutedCond]),
-  regress(Actions, SubstitutedCond, CondRes).
-regress([Action|R], Cond, CondRes) :-
-  domain:action_effect(Action,Effect),
-  once(regress_on_effects(Cond,[Effect],CondInter)),
-  once(regress(R,CondInter,CondRes)).
+  regress(Effects, Types, SubstitutedCond, CondRes).
 
-%% regress_on_effects(+Term, +EffectList, -RegressedTerm)
-%
-%  Regresses a single term Term with EffectList, giving RegressedTerm.
-%  If Term occurs in the EffectList, RegressedTerm is true, similarly false for
-%  negated Term/Effect.
-%  This also considers effects of the form and(Effect1,Effect2) and
-%  all(var,type,Effect).
-regress_on_effects(Term, Effects, SimplifiedRegressedTerm) :-
-  regress_on_effects_(Term, Effects, RegressedTerm),
-  simplify(RegressedTerm, SimplifiedRegressedTerm).
-regress_on_effects_(Term, [], Term).
-regress_on_effects_(Term, [Effect|R], TermRes) :-
+regress_([Effect|R], Types, Term, TermRes) :-
   Effect =.. [and|Conjuncts],
   append(Conjuncts, R, Effects),
-  regress_on_effects(Term, Effects, TermRes).
-regress_on_effects_(Term, [Term|_], true).
-regress_on_effects_(not(Term), [Term|_], false).
-regress_on_effects_(Term, [not(Term)|_], false).
-regress_on_effects_(all(X,Term), [all(Y,Effect)|_], true) :-
+  regress(Effects, Types, Term, TermRes).
+regress_([Term|_], _, Term, true).
+regress_([Term|_], _, not(Term), false).
+regress_([not(Term)|_], _, Term, false).
+regress_([all(Y,Effect)|_], Types, all(X,Term), true) :-
   substitute(X, [Term], _, [NewTerm]),
   substitute(Y, [Effect], _,[NewEffect]),
-  regress_on_effects(NewTerm, [NewEffect], true).
+  regress([NewEffect], Types, NewTerm, true).
 % Note: subtype_of_type must be reflexive.
-regress_on_effects_(all(X,TermType,Term), [all(Y,EffectType,Effect)|R], Res) :-
+regress_(
+  [all(Y,EffectType,Effect)|R], Types, all(X,TermType,Term), Res
+) :-
   domain:subtype_of_type(TermType, EffectType),
-  regress_on_effects(all(X,Term), [all(Y,Effect)|R], Res).
-regress_on_effects_(Term, [all(X,Type,Effect)|R], TermRes) :-
+  regress([all(Y,Effect)|R], Types, all(X,Term), Res).
+regress_([all(X,Type,Effect)|R], Types, Term, TermRes) :-
   Effect =.. [Predicate|Args],
-  substitute(X, Args, _, domain:type_of_object(Type), NArgs),
+  member((Type, TypedParameters), Types),
+  substitute(X, Args, _, \Member^member(Member, TypedParameters), NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
-  regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
-regress_on_effects_(Term, [all(X,Effect)|R], TermRes) :-
+  regress([QuantifiedEffect|R], Types, Term, TermRes).
+regress_([all(X,Effect)|R], Types, Term, TermRes) :-
   Effect =.. [Predicate|Args],
   substitute(X, Args, _, NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
-  regress_on_effects(Term, [QuantifiedEffect|R], TermRes).
+  regress([QuantifiedEffect|R], Types, Term, TermRes).
 % conditional effect: regress Term for both cases (Cond true/false). The
 % resulting term is a disjunction of both cases.
 % TODO rename operator to imply
-regress_on_effects_(Term, [impl(Cond,Effect)|Effects], TermRes) :-
+regress_([impl(Cond,Effect)|Effects], Types, Term, TermRes) :-
   % cut here because we don't want to skip the cond effect if regression fails
   !,
-  regress_on_effects(Term, [Effect|Effects], TermResIfCond),
-  regress_on_effects(Cond, Effects, CondRes),
-  regress_on_effects(not(Cond), Effects, NegCondRes),
-  regress_on_effects(Term, Effects, TermResIfNotCond),
+  regress([Effect|Effects], Types, Term, TermResIfCond),
+  regress(Effects, Types, Cond, CondRes),
+  regress(Effects, Types, not(Cond), NegCondRes),
+  regress(Effects, Types, Term, TermResIfNotCond),
   !,
   TermRes = or(and(CondRes,TermResIfCond),and(NegCondRes,TermResIfNotCond)).
 
-regress_on_effects_(Term, [_|R], TermRes) :-
-  regress_on_effects(Term, R, TermRes).
+regress_([_|R], Types, Term, TermRes) :-
+  regress(R, Types, Term, TermRes).
 
+%% regress_on_actions(+Actions, +Types, +Cond, -RegressedCond).
+%
+%  Regress the Cond with the effects of all Actions. This expects
+%  domain:action_effect/2 to be defined for each action in Actions.
+%  Types defines the types of all parameters used in the effects of all Actions.
+%  Types must be a list of pairs of the form (TypeName, ParameterList).
+regress_on_actions([], _, Cond, Cond).
+regress_on_actions([Action|Actions], Types, Cond, CondRes) :-
+  domain:action_effect(Action, Effect),
+  regress([Effect], Types, Cond, CondWithFirstAction),
+  regress_on_actions(Actions, CondWithFirstAction, CondRes).
+
+%% regress_on_actions(+Actions, +Cond, -RegressedCond).
+%
+%  Regress the Cond with the effects of all Actions. This expects
+%  domain:action_effect/2 to be defined for each action in Actions.
+%  This is the same as regress_on_actions/4 with an empty type list. Note that
+%  the resulting term may be incorrect for any terms or actions that contain
+%  quantifiers, because of the incomplete type list.
+regress_on_actions(Actions, Cond, CondRes) :-
+  regress_on_actions(Actions, [], Cond, CondRes).
 
 :- begin_tests(regression).
 
 init_location_types :-
   assertz(domain:type_of_object(room, kitchen)),
-  assertz(domain:type_of_object(location, kitchen)),
+  %assertz(domain:type_of_object(location, kitchen)),
+  assertz(domain:subtype_of_type(room, location)),
   assertz(domain:type_of_object(location, hall)).
 
 init_goto_action :-
@@ -138,55 +161,55 @@ cleanup_actions_and_types :-
   retractall(domain:subtype_of_type(_,_)).
 
 test(regress_empty_action_list) :-
-  regress([], a, a).
+  regress_on_actions([], a, a).
 
 test(
   regress_simple_goto,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress([goto(hall,kitchen)], at(kitchen), true),
-  regress([goto(hall,kitchen)], not(at(hall)), true).
+  regress_on_actions([goto(hall,kitchen)], at(kitchen), true),
+  regress_on_actions([goto(hall,kitchen)], not(at(hall)), true).
 
 test(
   regress_action_sequence,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress([goto(hall,kitchen),goto(kitchen,office)], at(office), true).
+  regress_on_actions([goto(hall,kitchen),goto(kitchen,office)], at(office), true).
 
 test(
   regress_forall,
   [setup(init_clearall_action),cleanup(cleanup_actions)]
 ) :-
-  regress([clearall], clear(a), true),
-  regress([clearall], not(clear(a)), false),
-  regress([clearall], other_predicate(a), other_predicate(a)).
+  regress_on_actions([clearall], clear(a), true),
+  regress_on_actions([clearall], not(clear(a)), false),
+  regress_on_actions([clearall], other_predicate(a), other_predicate(a)).
 
 test(
   regress_forall_with_negation,
   [setup(init_dropall_action),cleanup(cleanup_actions)]
 ) :-
-  regress([dropall], not(holding(a)), true),
-  regress([dropall], holding(a), false),
-  regress([dropall], other_predicate(a), other_predicate(a)).
+  regress_on_actions([dropall], not(holding(a)), true),
+  regress_on_actions([dropall], holding(a), false),
+  regress_on_actions([dropall], other_predicate(a), other_predicate(a)).
 
 test(
   regress_conditional_effect,
   [setup(init_condeffect_action), cleanup(cleanup_actions)]
 ) :-
-  regress([drop(o)], broken(o), or(fragile(o),broken(o))),
-  regress([drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))).
+  regress_on_actions([drop(o)], broken(o), or(fragile(o),broken(o))),
+  regress_on_actions([drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))).
 
 test(
   regress_conditional_effect_with_two_cases,
   [setup(init_fix_action),cleanup(cleanup_actions)]
 ) :-
-  regress([fix_green(c),fix_other(c)], fixed(c), true).
+  regress_on_actions([fix_green(c),fix_other(c)], fixed(c), true).
 
 test(
   regress_implication,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress([goto(hall,kitchen)], impl(true,at(kitchen)), true).
+  regress_on_actions([goto(hall,kitchen)], impl(true,at(kitchen)), true).
 
 test(
   regress_existential_quantifier,
@@ -194,25 +217,25 @@ test(
     setup(init_goto_action),
     cleanup(cleanup_actions_and_types)]
 ) :-
-  regress([goto(hall,kitchen)], some(l,location,at(l)), true).
+  regress_on_actions([goto(hall,kitchen)], [(room, [kitchen])], some(l,location,at(l)), true).
 
 test(
   regress_universal_quantifier,
   [setup(init_clearall_action),cleanup(cleanup_actions)]
 ) :-
-  regress([clearall], all(c,clear(c)), true).
+  regress_on_actions([clearall], all(c,clear(c)), true).
 
 test(
   regress_universal_quantifier_with_types,
   [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
 ) :-
-  regress([clearall], all(c,object,clear(c)), true).
+  regress_on_actions([clearall], all(c,object,clear(c)), true).
 
 test(
   regress_universal_quantifier_with_subtypes,
   [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
 ) :-
-  regress([clearall], all(c,cup,clear(c)), true).
+  regress_on_actions([clearall], all(c,cup,clear(c)), true).
 
 
 :- end_tests(regression).
