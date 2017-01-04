@@ -19,7 +19,10 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
-:- module(substitute, [substitute/4, substitute/5]).
+:- module(
+    substitute,
+    [substitute/4, substitute/5, substitute_list/3, substitute_list/4]
+  ).
 
 %% substitute(+Old, +Terms, +New, -NewTerms)
 %
