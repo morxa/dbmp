@@ -43,7 +43,7 @@ substitute(Old, Terms, New, NewTerms) :-
 %  type of variable. However, any other constraint can be used.
 substitute(_, [], _, _, []) :- !.
 substitute(Old, [Term|Terms], New, Constraint, [New|NewTerms]) :-
-  Old = Term,
+  (Old = Term ; atom_string(Old, Term) ; atom_string(Term, Old)),
   call(Constraint, Term),
   % Cut here, otherwise the non-substituted list will succeed, too.
   !,
