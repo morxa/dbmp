@@ -104,8 +104,10 @@ regress_([impl(Cond,Effect)|Effects], Types, Term, TermRes) :-
   !,
   TermRes = or(and(CondRes,TermResIfCond),and(NegCondRes,TermResIfNotCond)).
 
-regress_([_|R], Types, Term, TermRes) :-
+regress_([_|R], [_|Types], Term, TermRes) :-
   regress(R, Types, Term, TermRes).
+regress_([_|R], [], Term, TermRes) :-
+  regress(R, [], Term, TermRes).
 
 %% regress_on_actions(+Actions, +Types, +Cond, -RegressedCond).
 %
@@ -236,6 +238,9 @@ test(
   [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
 ) :-
   regress_on_actions([clearall], all(c,cup,clear(c)), true).
+
+test(regress_unrelated_term) :-
+  assertion(regress([holding(x)], [[]], at(l), at(l))).
 
 
 :- end_tests(regression).
