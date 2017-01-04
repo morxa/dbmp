@@ -19,7 +19,7 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
- %:- module(macro_generation, [generate_macro/2]).
+ :- module(macro_generation, [generate_macro/4]).
 
 :- use_module(pddl_parser).
 :- use_module(effects).
@@ -29,6 +29,20 @@
 
 :- use_module(library(lambda)).
 
+%% generate_macro(+DomainFile, +Actions, +ParameterAssignment, -Macro)
+%
+%  Compute the macro for the given Actions. Action preconditions and effects are
+%  parse from the DomainFile, and parameters are reassigned according to the
+%  ParameterAssignment. The resulting macro is a triple
+%  (Parameters, Precondition, Effect).
+generate_macro(
+  DomainFile, Actions, ParameterAssignment, (Parameters, Precondition, Effect)
+) :-
+  parse_pddl_domain_file(DomainFile, ParsedDomain),
+  assert_domain_facts(ParsedDomain),
+  compute_parameters(Actions, ParameterAssignment, Parameters),
+  compute_precondition(Actions, ParameterAssignment, Precondition),
+  compute_effect(Actions, ParameterAssignment, Effect).
 
 %% compute_parameters(+Actions, +Assignments, -Parameters)
 %
