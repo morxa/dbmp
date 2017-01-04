@@ -19,12 +19,33 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
-:- module(effects, [compute_effect/2]).
+:- module(effects, [compute_effect/2, compute_effect/3]).
 
 :- use_module(substitute).
 :- use_module(library(lambda)).
 
 :- dynamic domain:subtype_of_type/2.
+
+%  compute_effect(*Actions, *ParameterAssignment, -Effect)
+%
+%  Compute the effect of the given list of Actions respecting the given
+%  ParameterAssignment. This is the same as compute_effect/2, but with a
+%  separate assignment.
+compute_effect(Actions, ParameterAssignment, Effect) :-
+  get_pair_representation(Actions, ParameterAssignment, ActionParameterPairs),
+  compute_effect(ActionParameterPairs, Effect).
+
+%% get_pair_representation(+Actions, +Assignments, -ActionsWithAssignments)
+%
+%  Compute a pair representation of the given Actions and Assignments. This is a
+%  helper predicate for compute_effect/3.
+get_pair_representation([], [], []).
+get_pair_representation(
+  [Action|Actions],
+  [Assignment|Assignments],
+  [(Action,Assignment)|ActionParameterPairs]
+) :-
+  get_pair_representation(Actions, Assignments, ActionParameterPairs).
 
 %% compute_effect(*Actions, -Effect)
 %
