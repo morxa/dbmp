@@ -24,6 +24,8 @@
 :- use_module(pddl_parser).
 :- use_module(effects).
 :- use_module(regression).
+:- use_module(simplify).
+:- use_module(substitute).
 
 :- use_module(library(lambda)).
 
@@ -140,6 +142,19 @@ remove_duplicate_parameters(
     NewParameters,
     ResultingParameters).
 
+compute_precondition([], _, true).
+compute_precondition(
+  [Action|Actions],
+  [Assignment|Assignments],
+  Precondition
+) :-
+  compute_precondition(Actions, Assignments, PreconditionR),
+  compute_effect([Action], [Assignment], ActionEffect),
+  regress([ActionEffect], [Assignment], PreconditionR, RegressedPreconditionR),
+  domain:action_precondition(Action, ActionPrecondition),
+  substitute_list([ActionPrecondition], Assignment, [SubstitutedPrecondition]),
+  simplify(and(SubstitutedPrecondition,RegressedPreconditionR), Precondition).
+
 
 :- begin_tests(remove_duplicate_parameters).
 test(no_duplicates) :-
@@ -171,3 +186,24 @@ test(two_params) :-
   assertion(get_unique_reassigned_parameters(
     [("block",["?y", "?z"])], [("?y","?z")], [("block", ["?z"])])).
 :- end_tests(parameter_assignment).
+
+:- begin_tests(precondition).
+test(
+  no_reassignment,
+  [ setup(assert_domain_file("test_data/domain.pddl")),
+    cleanup(retract_domain_facts)
+  ]
+) :-
+  assertion(compute_precondition(["pick-up", "put-down"], [[],[]],
+    and(clear('?x'), ontable('?x'), handempty))).
+
+test(
+  with_reassignment,
+  [ setup(assert_domain_file("test_data/domain.pddl")),
+    cleanup(retract_domain_facts)
+  ]
+) :-
+  assertion(compute_precondition(["pick-up", "put-down"], [[('?x','?y')],[]],
+    and(clear('?y'), ontable('?y'), handempty, holding('?x')))).
+
+:- end_tests(precondition).
