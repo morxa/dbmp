@@ -327,6 +327,5 @@ test(
      retractall(domain:action_parameters(_,_))]))
   ]
 ) :-
-  assertion(\+ with_output_to(string(Output), add_action_effects([(drop,[])], _))),
-  print(Output).
+  assertion(\+ with_output_to(string(_), add_action_effects([(drop,[])], _))).
 :- end_tests(action_effects).
