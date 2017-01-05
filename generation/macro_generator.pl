@@ -40,6 +40,8 @@ generate_macro(
 ) :-
   parse_pddl_domain_file(DomainFile, ParsedDomain),
   assert_domain_facts(ParsedDomain),
+  % Cut here so we parse and assert the domain only once.
+  !,
   compute_parameters(Actions, ParameterAssignment, Parameters),
   compute_precondition(Actions, ParameterAssignment, Precondition),
   compute_effect(Actions, ParameterAssignment, Effect).
