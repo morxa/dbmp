@@ -269,7 +269,7 @@ assert_domain_facts(Domain) :-
 %  Retract all asserted facts about the domain.
 retract_domain_facts :-
   retractall(domain:name(_)),
-  retractall(domain:rquirements(_)),
+  retractall(domain:requirements(_)),
   retractall(domain:requires(_)),
   retractall(domain:types(_)),
   retractall(domain:type(_)),
