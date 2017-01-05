@@ -42,6 +42,18 @@ substitute(Old, Terms, New, NewTerms) :-
 %  As an example, Constraint can be used to restrict substitution to a certain
 %  type of variable. However, any other constraint can be used.
 substitute(_, [], _, _, []) :- !.
+substitute(Old, Terms, New, Constraint, NewTerms) :-
+  string(Old),
+  % Cut here so we never work with the string.
+  !,
+  atom_string(OldAtom, Old),
+  substitute(OldAtom, Terms, New, Constraint, NewTerms).
+substitute(Old, Terms, New, Constraint, NewTerms) :-
+  string(New),
+  % Cut here so we never work with the string.
+  !,
+  atom_string(NewAtom, New),
+  substitute(Old, Terms, NewAtom, Constraint, NewTerms).
 substitute(Old, [Term|Terms], New, Constraint, NewTerms) :-
   string(Term),
   % cut here so we never proceed with a string in Terms
