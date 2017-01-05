@@ -42,8 +42,18 @@ substitute(Old, Terms, New, NewTerms) :-
 %  As an example, Constraint can be used to restrict substitution to a certain
 %  type of variable. However, any other constraint can be used.
 substitute(_, [], _, _, []) :- !.
+substitute(Old, [Term|Terms], New, Constraint, NewTerms) :-
+  string(Term),
+  % cut here so we never proceed with a string in Terms
+  !,
+  ( sub_string(Term, 0, _, _, "?") ->
+    atom_string(TermTerm, Term)
+  ;
+    term_string(TermTerm, Term)
+  ),
+  substitute(Old, [TermTerm|Terms], New, Constraint, NewTerms).
 substitute(Old, [Term|Terms], New, Constraint, [New|NewTerms]) :-
-  (Old = Term ; atom_string(Old, Term) ; atom_string(Term, Old)),
+  Old = Term,
   call(Constraint, Term),
   % Cut here, otherwise the non-substituted list will succeed, too.
   !,
@@ -106,6 +116,16 @@ test(
 ) :-
   substitute(_, [goto(kitchen,hall)], location, domain:type_of_object(room),
     [goto(location,hall)]).
+
+test(substitute_string) :-
+  substitute(a, ["a(b)", "b(c)", "a"], d, [d(b), b(c), d]).
+
+test(substitute_atom_with_question_mark) :-
+  substitute('?x', ['?x'], '?y', ['?y']).
+
+test(substitute_string_with_question_mark) :-
+  substitute('?x', ["?x"], '?y', ['?y']).
+
 test(substitute_list) :-
   substitute_list([a,p(b),p(b(a))], [(a,c),(b,d)], [c,p(d),p(d(c))]).
 :- end_tests(substitute).
