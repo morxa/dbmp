@@ -51,6 +51,7 @@ substitute(Old, [Term|Terms], New, Constraint, [New|NewTerms]) :-
 substitute(Old, [Term|Terms], New, Constraint, [NewTerm|NewTerms]) :-
   \+ atom(Term),
   Term =.. Subterms,
+  Subterms \= [Term],
   substitute(Old, Subterms, New, Constraint, NewSubterms),
   !,
   NewTerm =.. NewSubterms,
