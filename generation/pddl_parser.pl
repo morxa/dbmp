@@ -284,7 +284,7 @@ retract_domain_facts :-
 %  See assert_domain_facts/1 for more information on the asserted facts.
 assert_domain_file(DomainFile) :-
   parse_pddl_domain_file(DomainFile, Domain),
-  assert_domain_facts(Domain).
+  once(assert_domain_facts(Domain)).
 
 
 :- begin_tests(pddl_parser).
@@ -451,6 +451,10 @@ test(two_actions) :-
 test(load_domain_file) :-
   parse_pddl_domain_file("test_data/domain.pddl", ParserResult),
   assertion(member((domain, "blocksworld"), ParserResult)).
+
+test(parsing_leaves_no_choicepoint) :-
+  assert_domain_file("test_data/domain.pddl"),
+  retract_domain_facts.
 
 :- end_tests(pddl_parser).
 
