@@ -199,6 +199,17 @@ test(simple_reassignment) :-
 test(two_params) :-
   assertion(get_unique_reassigned_parameters(
     [("block",["?y", "?z"])], [("?y","?z")], [("block", ["?z"])])).
+test(
+  parameters_from_actions,
+  [setup(assertz(
+    domain:action_parameters("stack", [("block", ['?x']), ("block", ['?y'])]))),
+   cleanup(retract_domain_facts)
+  ]
+) :-
+  assertion(compute_parameters(
+    ["stack", "stack"],
+    [[], [('?x', '?z')]],
+    [("block", ['?x', '?y', '?z'])])).
 :- end_tests(parameter_assignment).
 
 :- begin_tests(precondition).

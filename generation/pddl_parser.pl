@@ -160,7 +160,10 @@ typed_list([TypedVars|Types]) --> typed_vars(TypedVars), typed_list(Types).
 typed_vars((Type, [Var])) --> variable(Var), ["-"], type(Type).
 typed_vars((Type,[Var|Vars])) --> variable(Var), typed_vars((Type, Vars)).
 
-variable(Var) --> [Var], {string_chars(Var,['?'|_])}.
+variable(VarAtom) -->
+  [Var],
+  { string_chars(Var,['?'|_]),
+    atom_string(VarAtom, Var) }.
 
 
 %% parse_pddl_domain(*DomainString, -ParsedDomain)
@@ -313,17 +316,17 @@ test(requirements) :-
 test(predicates) :-
   parse_pddl_domain("(define (domain d) (:predicates (at ?l - location)))",
                     ParserResult),
-  assertion(member((predicates, [("at",[("location",["?l"])])]), ParserResult)),
+  assertion(member((predicates, [("at",[("location",['?l'])])]), ParserResult)),
   parse_pddl_domain("(define (domain d) (:predicates (on ?x ?y - block)))",
                     ParserResult2),
-  assertion(member( (predicates, [("on",[("block",["?x", "?y"])])]) ,
+  assertion(member( (predicates, [("on",[("block",['?x', '?y'])])]) ,
                     ParserResult2)),
   parse_pddl_domain("(define (domain d)
     (:predicates (at ?l - location) (on ?x ?y - block)))",
                     ParserResult3),
   assertion(member( (predicates,
-                      [("at", [("location", ["?l"])]),
-                       ("on",[("block",["?x", "?y"])])]) ,
+                      [("at", [("location", ['?l'])]),
+                       ("on",[("block",['?x', '?y'])])]) ,
                     ParserResult3)).
 
 test(simple_action) :-
@@ -338,7 +341,7 @@ test(simple_action) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx", [("var",["?x"])], cond1('?x'), cond2('?x')]]),
+        (actions,[["setx", [("var",['?x'])], cond1('?x'), cond2('?x')]]),
         ParserResult)
     ).
 test(action_with_two_parameters) :-
@@ -353,7 +356,7 @@ test(action_with_two_parameters) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx", [("var",["?x", "?y"])], cond1('?x'), cond2('?y')]]),
+        (actions,[["setx", [("var",['?x', '?y'])], cond1('?x'), cond2('?y')]]),
         ParserResult)
     ).
 test(action_with_negated_precondition) :-
@@ -369,7 +372,7 @@ test(action_with_negated_precondition) :-
     assertion(
       member(
         (actions,[["setx",
-          [("var",["?x", "?y"])], not(cond1('?x')), cond2('?y')]]),
+          [("var",['?x', '?y'])], not(cond1('?x')), cond2('?y')]]),
         ParserResult)
     ).
 test(action_with_negated_effect) :-
@@ -385,7 +388,7 @@ test(action_with_negated_effect) :-
     assertion(
       member(
         (actions,[["setx",
-          [("var",["?x", "?y"])], cond1('?x'), not(cond2('?y'))]]),
+          [("var",['?x', '?y'])], cond1('?x'), not(cond2('?y'))]]),
         ParserResult)
     ).
 test(action_with_conjunctive_effect) :-
@@ -401,7 +404,7 @@ test(action_with_conjunctive_effect) :-
     assertion(
       member(
         (actions,[["setx",
-          [("var",["?x", "?y"])], cond1('?x'), and(cond1('?y'),cond2('?y'))]]),
+          [("var",['?x', '?y'])], cond1('?x'), and(cond1('?y'),cond2('?y'))]]),
         ParserResult)
     ).
 test(action_goto) :-
@@ -417,7 +420,7 @@ test(action_goto) :-
     assertion(
       member(
         (actions,[["goto",
-          [("location",["?from", "?to"])], at('?from'),
+          [("location",['?from', '?to'])], at('?from'),
           and(not(at('?from')),at('?to'))]]),
         ParserResult)
     ).
@@ -441,9 +444,9 @@ test(two_actions) :-
       member(
         (actions,[
           ["setx",
-            [("var",["?x", "?y"])], cond1('?x'), cond2('?y')],
+            [("var",['?x', '?y'])], cond1('?x'), cond2('?y')],
           ["resetx",
-            [("var",["?x", "?y"])], cond1('?x'), not(cond2('?y'))]
+            [("var",['?x', '?y'])], cond1('?x'), not(cond2('?y'))]
           ]),
         ParserResult)
     ).
