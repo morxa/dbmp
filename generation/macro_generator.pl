@@ -29,22 +29,65 @@
 
 :- use_module(library(lambda)).
 
-%% generate_macro(+DomainFile, +Actions, +ParameterAssignment, -Macro)
+%% generate_macro(+DomainFile, +Actions, +ParameterEnumeration, -Macro)
 %
 %  Compute the macro for the given Actions. Action preconditions and effects are
 %  parse from the DomainFile, and parameters are reassigned according to the
-%  ParameterAssignment. The resulting macro is a triple
-%  (Parameters, Precondition, Effect).
+%  ParameterEnumeration. ParameterEnumeration is expected to be a list of lists
+%  of numbers that the parameters should be assigned to, e.g., [[1,2],[3,1]] if
+%  the second parameter of the second action should be the same as the first
+%  parameter of the first action.
+%  The resulting macro is a triple (Parameters, Precondition, Effect).
 generate_macro(
-  DomainFile, Actions, ParameterAssignment, (Parameters, Precondition, Effect)
+  DomainFile, Actions, ParameterEnumeration, (Parameters, Precondition, Effect)
 ) :-
   parse_pddl_domain_file(DomainFile, ParsedDomain),
   assert_domain_facts(ParsedDomain),
   % Cut here so we parse and assert the domain only once.
   !,
+  maplist(get_parameter_assignment,
+    Actions, ParameterEnumeration, ParameterAssignment),
   compute_parameters(Actions, ParameterAssignment, Parameters),
   compute_precondition(Actions, ParameterAssignment, Precondition),
   compute_effect(Actions, ParameterAssignment, Effect).
+
+%% get_parameter_assignment(-Action, -ParamEnumeration, +ParamAssignment)
+%
+%  For the given Action, transform the enumeration of parameters
+%  ParamEnumeration into a parameter assignment. A parameter enumeration is a
+%  list new parameters that shall be used for the reassigned action, e.g.,
+%  [1,2,1]. All parameters are reassigned to a variable of the name ?<number>.
+%  This expects the domain to be asserted already. In particular,
+%  domain:action_parameters(Action, Parameters) must give the action's
+%  parameters.
+get_parameter_assignment(Action, ParamEnumeration, ParamAssignment) :-
+  domain:action_parameters(Action, TypedParameters),
+  get_parameter_list(TypedParameters, Parameters),
+  length(Parameters, ParameterLength),
+  length(ParamEnumeration, EnumerationLength),
+  ( ParameterLength \= EnumerationLength ->
+    format('Parameter length mismatch. Action ~w has ~w parameters, \c
+            given enumeration has ~w',
+           [Action, ParameterLength, EnumerationLength]),
+    fail
+  ;
+    true
+  ),
+  maplist(atom_concat('?'), ParamEnumeration, NewParams),
+  maplist(\Param^NewParam^(=((Param,NewParam))),
+    Parameters, NewParams, ParamAssignment).
+
+%% get_parameter_list(-TypedParameters, +UntypedParameterList)
+%
+%  Convert a typed parameter list of the form
+%  [(Type1,[Param1,Param2]),(Type2,[Param3]),...) to a list of the form
+%  [Param1,Param2,Param3].
+%  This is a helper predicate for get_parameter_assignment/3.
+get_parameter_list([], []).
+get_parameter_list([(_,TypedParameters)|RTypedParameters], Parameters) :-
+  get_parameter_list(RTypedParameters, RParameters),
+  append(TypedParameters, RParameters, Parameters).
+
 
 %% compute_parameters(+Actions, +Assignments, -Parameters)
 %
@@ -212,6 +255,22 @@ test(
     ["stack", "stack"],
     [[], [('?x', '?z')]],
     [("block", ['?x', '?y', '?z'])])).
+test(
+  parameter_enumeration_to_assignment,
+  [setup(assertz(
+    domain:action_parameters("stack", [("block", ['?x']), ("block", ['?y'])]))),
+   cleanup(retract_domain_facts)
+  ]
+) :-
+  assertion(
+    get_parameter_assignment("stack", [1,2], [('?x', '?1'), ('?y', '?2')])),
+  assertion(
+    get_parameter_assignment("stack", [2,1], [('?x', '?2'), ('?y', '?1')])),
+  assertion(
+    get_parameter_assignment("stack", [2,2], [('?x', '?2'), ('?y', '?2')])),
+  assertion(with_output_to(string(_),
+     \+ get_parameter_assignment("stack", [1], [('?x', '?2'), ('?y', '?2')]))).
+
 :- end_tests(parameter_assignment).
 
 :- begin_tests(precondition).
