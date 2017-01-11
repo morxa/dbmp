@@ -19,7 +19,7 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
-:- module(simplify, [simplify/2]).
+:- module(simplify, [simplify/2, simplify_effect/2]).
 
 
 %% simplify(*Term, -SimplifiedTerm)
@@ -60,6 +60,16 @@ simplify(Term, SimplifiedTerm) :-
   simplify_or_fail(Term, SimplifiedTerm) -> true
 ;
   SimplifiedTerm = Term.
+
+%% simplify_effect(*Effect, -SimplifiedEffect)
+%
+%  Simplify the given Effect to SimplifiedEffect. This filters nil effects out
+%  of the effect.
+simplify_effect(Effect, SimplifiedEffect) :-
+  simplify_effect_or_fail(Effect, SimplifiedEffect) -> true
+;
+  SimplifiedEffect = Effect.
+
 
 %% simplify_or_fail(*Term, -SimplifiedTerm)
 %
@@ -125,6 +135,11 @@ simplify_or_fail(Term, true) :-
 % imply(Cond,Term) -> or(not(Cond),Term)
 simplify_or_fail(imply(Cond,Term), SimplifiedTerm) :-
   simplify(or(not(Cond),Term), SimplifiedTerm).
+% when(true,Term) -> Term
+simplify_or_fail(when(true,Term), SimplifiedTerm) :-
+  simplify(Term, SimplifiedTerm).
+% when(false,Term) -> and()
+simplify_or_fail(when(false,_), and()).
 % simplify subterms
 simplify_or_fail(Term, SimplifiedTerm) :-
   Term =.. [Op|Terms],
@@ -239,6 +254,44 @@ flatten_on_op(Op, [Term|RestTerms], FlattenedTerms) :-
 negated_term(not(Term),Term).
 negated_term(Term,not(Term)).
 
+%% simplify_effect_or_fail(*Effect, -SimplifiedEffect)
+%
+%  Simplify the effect Effect. This is similar to simplify_or_fail/2, except
+%  that it replaces with the empty effect instead of 'true' if there is no
+%  effect, e.g., 'and()' becomes '()' instead of 'true'.
+simplify_effect_or_fail(and(), nil).
+simplify_effect_or_fail(and(Effect), SimplifiedEffect) :-
+  simplify_effect(Effect, SimplifiedEffect).
+simplify_effect_or_fail(Effect, SimplifiedEffect) :-
+  Effect =.. [and|Effects],
+  exclude(=(nil), Effects, FilteredEffects),
+  Effects \= FilteredEffects,
+  FilteredEffect =.. [and|FilteredEffects],
+  simplify_effect(FilteredEffect, SimplifiedEffect).
+simplify_effect_or_fail(not(nil), nil).
+simplify_effect_or_fail(forall(_,nil),nil).
+simplify_effect_or_fail(forall(_,_,nil),nil).
+simplify_effect_or_fail(when(_,nil), nil).
+simplify_effect_or_fail(when(false,_),nil).
+simplify_effect_or_fail(Effect, SimplifiedEffect) :-
+  Effect =.. [and|Effects],
+  maplist(simplify_effect, Effects, SimplifiedEffects),
+  Effects \= SimplifiedEffects,
+  SimplifiedEffect =.. [and|SimplifiedEffects].
+simplify_effect_or_fail(not(Effect), SimplifiedNegEffect) :-
+  simplify_effect_or_fail(Effect, SimplifiedEffect),
+  simplify_effect(not(SimplifiedEffect), SimplifiedNegEffect).
+simplify_effect_or_fail(forall(Var,Effect), SimplifiedAllEffect) :-
+  simplify_effect_or_fail(Effect, SimplifiedEffect),
+  simplify(forall(Var,SimplifiedEffect), SimplifiedAllEffect).
+simplify_effect_or_fail(when(Cond,Effect), SimplifiedCondEffect) :-
+  simplify(Cond, SimplifiedCond),
+  simplify_effect(Effect, SimplifiedEffect),
+  (
+    Cond \= SimplifiedCond
+  ; Effect \= SimplifiedEffect
+  ),
+  simplify_effect(when(SimplifiedCond,SimplifiedEffect), SimplifiedCondEffect).
 
 :- begin_tests(simplify).
 
@@ -287,6 +340,18 @@ test(simplify_remove_negated_conjunct_in_disjunction) :-
 test(simplify_implication) :-
   assertion(simplify(imply(true,a),a)),
   assertion(simplify(and(imply(not(a),b),imply(a,b)), b)).
-
+test(simplify_when) :-
+  assertion(simplify(when(true,and(a,b)),and(a,b))),
+  assertion(simplify(when(false,and(a,b)),and())).
 
 :- end_tests(simplify).
+
+:- begin_tests(simplify_effect).
+test(simplify_empty_effect) :-
+  assertion(simplify_effect(and(),nil)),
+  assertion(simplify_effect(forall(x,block,nil),nil)),
+  assertion(simplify_effect(when(x,nil),nil)),
+  assertion(simplify_effect(when(false,a),nil)).
+
+test(simplify_cond_effect_with_false_condition) :-
+  assertion(simplify_effect(when(and(a,not(a)),b),nil)).
