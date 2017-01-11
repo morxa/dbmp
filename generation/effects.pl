@@ -127,9 +127,9 @@ split_effect(Effect, Effects) :-
   maplist(\X^(=([all,Var,Type,X])),QuantifiedEffects,EffectUnivs),
   maplist(=..(), Effects, EffectUnivs).
 split_effect(Effect, Effects) :-
-  Effect =.. [imply,Cond,CondEffect],
+  Effect =.. [when,Cond,CondEffect],
   split_effect(CondEffect, CondEffects),
-  maplist(\X^(=([imply,Cond,X])), CondEffects, EffectUnivs),
+  maplist(\X^(=([when,Cond,X])), CondEffects, EffectUnivs),
   maplist(=..(), Effects, EffectUnivs).
 
 %% atomic_formula(+A)
@@ -160,10 +160,10 @@ effect_collision(Effects, ParameterTypes, Formula) :-
 effect_collision(Effects,  ParameterTypes, Formula) :-
   member(all(_,_,QuantifiedEffect),Effects),
   effect_collision([QuantifiedEffect], ParameterTypes, Formula).
-effect_collision(Effects, ParameterTypes, imply(_, Formula)) :-
+effect_collision(Effects, ParameterTypes, when(_, Formula)) :-
   effect_collision(Effects, ParameterTypes, Formula).
-effect_collision(Effects, ParameterTypes, imply(Condition, Formula)) :-
-  member(imply(Condition, Effect), Effects),
+effect_collision(Effects, ParameterTypes, when(Condition, Formula)) :-
+  member(when(Condition, Effect), Effects),
   effect_collision([Effect], ParameterTypes, Formula).
 
 %% negated_formula(?F1, ?F2)
@@ -197,8 +197,8 @@ test(conjunction) :-
 test(nested_conjunction) :-
   assertion(split_effect(and(a,and(b,c),d),[a,b,c,d])).
 test(conditional_effect) :-
-  assertion(split_effect(imply(cond,and(eff1,eff2)),
-    [imply(cond,eff1),imply(cond,eff2)])).
+  assertion(split_effect(when(cond,and(eff1,eff2)),
+    [when(cond,eff1),when(cond,eff2)])).
 :- end_tests(split_effects).
 
 :- begin_tests(effect_collision).
@@ -228,12 +228,12 @@ test(nested_quantified) :-
   assertion(effect_collision([all(t,table,all(b,block,on(b,t)))],
     [(block,[a]),(table,[t1])], on(a,t1))).
 test(conditional_effect_with_same_nonconditional_effect) :-
-  assertion(effect_collision([effect], [], imply(cond,effect))),
-  assertion(\+ effect_collision([effect1], [], imply(cond,effect2))).
+  assertion(effect_collision([effect], [], when(cond,effect))),
+  assertion(\+ effect_collision([effect1], [], when(cond,effect2))).
 test(two_conditional_effects) :-
-  assertion(effect_collision([imply(cond,effect)],[],imply(cond,effect))),
+  assertion(effect_collision([when(cond,effect)],[],when(cond,effect))),
   assertion(effect_collision(
-    [imply(cond,all(b,block,clean(b)))],[(block,[a])],imply(cond,clean(a)))).
+    [when(cond,all(b,block,clean(b)))],[(block,[a])],when(cond,clean(a)))).
 :- end_tests(effect_collision).
 
 :- begin_tests(merge_effects).
