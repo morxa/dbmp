@@ -43,7 +43,7 @@
 %  - or(...,Term,...,Term,...) -> or(...,Term,...)
 %  - and(Term,not(Term)) -> false
 %  - or (Term,not(Term)) -> true
-%  - impl(Cond,Term) -> or(not(Cond),Term)
+%  - imply(Cond,Term) -> or(not(Cond),Term)
 %  - and(or(T1,...,Tn,T,Tn+1,...),or(T1,...,Tn,not(T),Tn+1,...),...)
 %     -> and(or(T1,...,Tn,Tn+1,...),...)
 %  - and(T,or(...,Ti,not(T),Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
@@ -122,8 +122,8 @@ simplify_or_fail(Term, true) :-
   Term =.. [or|SubTerms],
   member(SubTerm, SubTerms),
   member(not(SubTerm), SubTerms).
-% impl(Cond,Term) -> or(not(Cond),Term)
-simplify_or_fail(impl(Cond,Term), SimplifiedTerm) :-
+% imply(Cond,Term) -> or(not(Cond),Term)
+simplify_or_fail(imply(Cond,Term), SimplifiedTerm) :-
   simplify(or(not(Cond),Term), SimplifiedTerm).
 % simplify subterms
 simplify_or_fail(Term, SimplifiedTerm) :-
@@ -285,8 +285,8 @@ test(simplify_remove_subset_conjunctions_in_disjunction) :-
 test(simplify_remove_negated_conjunct_in_disjunction) :-
   assertion(simplify(or(a,and(not(a),b)),or(a,b))).
 test(simplify_implication) :-
-  assertion(simplify(impl(true,a),a)),
-  assertion(simplify(and(impl(not(a),b),impl(a,b)), b)).
+  assertion(simplify(imply(true,a),a)),
+  assertion(simplify(and(imply(not(a),b),imply(a,b)), b)).
 
 
 :- end_tests(simplify).
