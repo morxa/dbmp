@@ -96,6 +96,9 @@ effect_tree(
     FalseEffectSubTree
   ).
 
+%% get_leave_nodes(-EffectTree, +LeaveNodes)
+%
+%  For the given tree, get a list of the leave nodes of the tree.
 get_leave_nodes((_, _ ,_, LeftSubTree, RightSubTree), LeaveNodes) :-
   get_leave_nodes(LeftSubTree, LeftLeaveNodes),
   get_leave_nodes(RightSubTree, RightLeaveNodes),
@@ -105,6 +108,37 @@ get_leave_nodes((_, _ ,_, SubTree, nil), LeaveNodes) :-
 get_leave_nodes((_, _ ,_, nil, SubTree), LeaveNodes) :-
   get_leave_nodes(SubTree, LeaveNodes).
 get_leave_nodes((_, Effects, Conditions, nil, nil), [(Effects, Conditions)]).
+
+%% get_effect_from_tree(-EffectTree, +Effect)
+%
+%  For the given EffectTree, compute the resulting overall effect. This gets all
+%  leave nodes of the tree, adds conditionals as necessary, and simplifies the
+%  resulting effect.
+get_effect_from_tree(EffectTree, SimplifiedEffect) :-
+  get_leave_nodes(EffectTree, LeaveNodes),
+  simplify_leave_nodes(LeaveNodes, SimplifiedLeaveNodes),
+  maplist(get_effect_from_leave_node, SimplifiedLeaveNodes, Effects),
+  maplist(simplify_effect, Effects, SimplifiedEffects),
+  Effect =.. [and|SimplifiedEffects],
+  simplify_effect(Effect, SimplifiedEffect).
+
+
+%% simplify_leave_nodes(-LeaveNodes, +SimplifiedLeaveNodes)
+%
+%  Simplify the given LeaveNodes. Remove empty nodes and merge nodes if
+%  possible.
+%  TODO: add simplifications
+simplify_leave_nodes(LeaveNodes, SimplifiedLeaveNodes) :-
+  exclude(=(([],_)), LeaveNodes, SimplifiedLeaveNodes).
+
+get_effect_from_leave_node((Effects, []), Effect) :-
+  Effect =.. [and|Effects].
+get_effect_from_leave_node((Effects, Conditions), CondEffect) :-
+  Conditions \= [],
+  Condition =.. [and|Conditions],
+  Effect =.. [and|Effects],
+  CondEffect = when(Condition, Effect).
+
 
 tree_to_dot(Tree, File) :-
   open(File, write, Stream),
