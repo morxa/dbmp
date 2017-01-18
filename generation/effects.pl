@@ -26,6 +26,13 @@
 
 :- dynamic domain:subtype_of_type/2.
 
+% Effect trees are only used if enable_effect_trees is true.
+:- dynamic enable_effect_trees/0.
+% Comment the following line to disable effect trees.
+enable_effect_trees.
+
+:- enable_effect_trees -> ensure_loaded(effect_tree) ; true.
+
 %  compute_effect(*Actions, *ParameterAssignment, -Effect)
 %
 %  Compute the effect of the given list of Actions respecting the given
@@ -54,8 +61,30 @@ get_pair_representation(
 %  is a list of pairs of reassigned parameters, e.g. [(a,b)] denotes that
 %  parameter a was renamed to parameter b.
 compute_effect(Actions, Effect) :-
+  enable_effect_trees,
+  maplist(get_reassigned_effect, Actions, Effects),
+  reverse(Effects, ReversedEffects),
+  effect_tree(ReversedEffects, EffectTree),
+  get_effect_from_tree(EffectTree, Effect).
+
+compute_effect(Actions, Effect) :-
+  \+ enable_effect_trees,
   add_action_effects(Actions, Effects),
   merge_effects(Effects, Effect).
+
+%% get_reassigned_effect(+ParameterizedAction, -ReassignedEffect)
+%
+%  Get the effect for the given action a with the given parameter assignment.
+%  ParameterizedAction is expected to a pair (Action, ParameterAssignment).
+%  The result is a pair (Effect, Parameters).
+get_reassigned_effect(
+  (Action,ParameterAssignment),
+  (ReassignedEffect, ReassignedParameters)
+) :-
+  domain:action_effect(Action, Effect),
+  reassign_parameters(Effect, ParameterAssignment, ReassignedEffect),
+  domain:action_parameters(Action, Parameters),
+  reassign_types(Parameters, ParameterAssignment, ReassignedParameters).
 
 %% merge_effects(+Effects, -Effect)
 %
