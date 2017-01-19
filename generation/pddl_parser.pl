@@ -23,6 +23,8 @@
     [ parse_pddl_domain/2, parse_pddl_domain_file/2, preprocess_pddl/2,
       assert_domain_facts/1, assert_domain_file/1, retract_domain_facts/0]).
 
+:- use_module(library(regex)).
+
 
 %% preprocess_pddl(*String, -PreprocessedStringList)
 %
@@ -31,6 +33,9 @@
 %  the text, e.g.
 %  preprocess("(define (domain d))", ["(","define","(","domain","d",")",")"]).
 %  This allows simpler parsing of the domain in the subsequent parsing step.
+preprocess_pddl(String, []) :-
+  String =~ "^[\s\t\f\r]*;.*",
+  !.
 preprocess_pddl(String, PreprocessedStringList) :-
   add_padding(String, PaddedString),
   split_string(PaddedString, " \t\n", " \t\n", PreprocessedStringList).
@@ -458,6 +463,13 @@ test(load_domain_file) :-
 test(parsing_leaves_no_choicepoint) :-
   assert_domain_file("test_data/domain.pddl"),
   retract_domain_facts.
+
+test(domain_file_with_comments) :-
+  parse_pddl_domain_file("test_data/domain.pddl", ParserResult),
+  assertion(parse_pddl_domain_file(
+    "test_data/domain_with_comments.pddl", ParserResult)
+  ).
+
 
 :- end_tests(pddl_parser).
 
