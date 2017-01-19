@@ -157,9 +157,16 @@ term(TermAtom) -->
 requirement(R) --> [R], {string_chars(R,[':'|_])}.
 requirements_list([]) --> [].
 requirements_list([R|L2]) --> requirement(R), requirements_list(L2).
-types_list([]) --> [].
-types_list([Type|T2]) --> type(Type), types_list(T2).
-type(T) --> [T], { \+ member(T, ["(", ")"]) }.
+% TODO we may want to add them to the type object
+types_list(Types) --> subtypes_list(Types).
+types_list([(Type,SubTypes)|T2]) -->
+  subtypes_list(SubTypes),
+  ["-"],
+  type(Type),
+  types_list(T2).
+subtypes_list([]) --> [].
+subtypes_list([Type|T2]) --> type(Type), subtypes_list(T2).
+type(T) --> [T], { \+ member(T, ["(", ")", "-"]) }.
 typed_list([]) --> [].
 typed_list([TypedVars|Types]) --> typed_vars(TypedVars), typed_list(Types).
 typed_vars((Type, [Var])) --> variable(Var), ["-"], type(Type).
@@ -333,6 +340,16 @@ test(predicates) :-
                       [("at", [("location", ['?l'])]),
                        ("on",[("block",['?x', '?y'])])]) ,
                     ParserResult3)).
+
+test(subtypes, [nondet]) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:types st1 st2 - t1 \c
+        st3 st4 - t2) \c
+     )",
+     ParserResult),
+  member((types,Types), ParserResult),
+  assertion(member(("t1", ["st1", "st2"]), Types)).
 
 test(simple_action) :-
   parse_pddl_domain(
