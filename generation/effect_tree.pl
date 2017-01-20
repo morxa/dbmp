@@ -143,6 +143,7 @@ get_effect_from_leave_node((Effects, Conditions), CondEffect) :-
 tree_to_dot(Tree, File) :-
   open(File, write, Stream),
   write(Stream, "digraph effects {\n"),
+  write(Stream, "rankdir=\"LR\";\n"),
   write(Stream, "node [shape=box];\n"),
   tree_to_dot(Stream, 1, Tree, _),
   write(Stream, "\n}"),
