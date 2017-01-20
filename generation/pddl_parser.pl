@@ -139,6 +139,10 @@ effect(Effect) -->
   { Effect =.. [and|Effects] }.
 effect(when(Cond,Effect)) -->
   ["(", "when"], goal_description(Cond), effect(Effect), [")"].
+effect(all(VarList,Effect)) -->
+  ["(", "forall"],
+  ["("], typed_list(VarList), [")"],
+  effect(Effect), [")"].
 
 effect_list([Effect]) --> effect(Effect).
 effect_list([Effect|Effects]) --> effect(Effect), effect_list(Effects).
@@ -543,6 +547,24 @@ test(action_with_conditional_effect) :-
         (actions,
           [["setx", [("var",['?x', '?y'])], cond1('?x'),
             when(cond2('?y'),cond3('?x'))]]),
+        ParserResult)
+    ).
+
+test(action_with_forall_effect) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (cond1 ?x) \c
+        :effect (forall (?y - t1) (cond3 ?y)) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,
+          [["setx", [("var",['?x', '?y'])], cond1('?x'),
+            all([("t1",['?y'])],cond3('?y'))]]),
         ParserResult)
     ).
 
