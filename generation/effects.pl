@@ -156,6 +156,11 @@ split_effect(Effect, Effects) :-
   maplist(\X^(=([all,Var,Type,X])),QuantifiedEffects,EffectUnivs),
   maplist(=..(), Effects, EffectUnivs).
 split_effect(Effect, Effects) :-
+  Effect =.. [all,TypedVars,QuantifiedEffect],
+  split_effect(QuantifiedEffect, QuantifiedEffects),
+  maplist(\X^(=([all,TypedVars,X])),QuantifiedEffects,EffectUnivs),
+  maplist(=..(), Effects, EffectUnivs).
+split_effect(Effect, Effects) :-
   Effect =.. [when,Cond,CondEffect],
   split_effect(CondEffect, CondEffects),
   maplist(\X^(=([when,Cond,X])), CondEffects, EffectUnivs),
@@ -176,7 +181,7 @@ atomic_formula(F) :-
 %  True if Formula collides with one of the effects in Effects. Colliding means
 %  that the effect implies either the formula or its negation.
 effect_collision(Effects, _, Formula) :- member(Formula, Effects).
-effect_collision(Effects, _, Formula) :- 
+effect_collision(Effects, _, Formula) :-
   member(Effect, Effects),
   negated_formula(Effect, Formula).
 effect_collision(Effects, ParameterTypes, Formula) :-
@@ -186,14 +191,44 @@ effect_collision(Effects, ParameterTypes, Formula) :-
   member(Param, Params),
   substitute(Var, [QuantifiedEffect], Param, [SubstitutedEffect]),
   effect_collision([SubstitutedEffect], ParameterTypes, Formula).
+% Note: This assumes that the names used in forall quantifiers are disjunct with
+% the parameter names.
 effect_collision(Effects,  ParameterTypes, Formula) :-
   member(all(_,_,QuantifiedEffect),Effects),
   effect_collision([QuantifiedEffect], ParameterTypes, Formula).
+effect_collision(Effects, ParameterTypes, Formula) :-
+  member(all(TypedVars,QuantifiedEffect), Effects),
+  ground_formula(
+    QuantifiedEffect, TypedVars, ParameterTypes, GroundedEffect
+  ),
+  effect_collision([GroundedEffect], ParameterTypes, Formula).
 effect_collision(Effects, ParameterTypes, when(_, Formula)) :-
   effect_collision(Effects, ParameterTypes, Formula).
 effect_collision(Effects, ParameterTypes, when(Condition, Formula)) :-
   member(when(Condition, Effect), Effects),
   effect_collision([Effect], ParameterTypes, Formula).
+
+%% ground_formula(+Formula, +TypedVars, +TypedParams, GroundedFormula)
+%
+%  Substitute all variables in TypedVars by an arbitrary parameter from
+%  TypedParams, obtaining GroundedFormula.
+ground_formula(Formula, [], _, Formula).
+ground_formula(
+  Formula, [(_,[])|TypedVars], TypedParameters, GroundedFormula
+) :-
+  ground_formula( Formula, TypedVars, TypedParameters, GroundedFormula).
+ground_formula(
+  Formula, [(Type,[Var|Vars])|TypedVars], TypedParameters, GroundedFormula
+) :-
+  member((TypeInFormula, Parameters), TypedParameters),
+  ( TypeInFormula = Type ; domain:subtype_of_type(TypeInFormula, Type)),
+  member(Parameter, Parameters),
+  substitute(Var, [Formula], Parameter, [SubstitutedFormula]),
+  ground_formula(
+    SubstitutedFormula, [(Type,Vars)|TypedVars], TypedParameters,
+    GroundedFormula
+  ).
+
 
 %% negated_formula(?F1, ?F2)
 %
@@ -228,6 +263,13 @@ test(nested_conjunction) :-
 test(conditional_effect) :-
   assertion(split_effect(when(cond,and(eff1,eff2)),
     [when(cond,eff1),when(cond,eff2)])).
+test(quantified_effect) :-
+  assertion(split_effect(all(var,type,and(e1,e2)),
+    [all(var,type,e1),all(var,type,e2)])).
+test(quantified_effect_with_typed_list) :-
+  assertion(split_effect(
+    all([(t1,[v1,v2]),(t2,[v3])],and(e1,e2)),
+    [all([(t1,[v1,v2]),(t2,[v3])],e1),all([(t1,[v1,v2]),(t2,[v3])],e2)])).
 :- end_tests(split_effects).
 
 :- begin_tests(effect_collision).
@@ -263,6 +305,19 @@ test(two_conditional_effects) :-
   assertion(effect_collision([when(cond,effect)],[],when(cond,effect))),
   assertion(effect_collision(
     [when(cond,all(b,block,clean(b)))],[(block,[a])],when(cond,clean(a)))).
+test(quantified_list_simple) :-
+  assertion(effect_collision(
+    [all([(block,[b])],clean(b))], [(block,[a])], clean(a))).
+test(quantified_list_two_vars) :-
+  assertion(effect_collision(
+    [all([(table,[t]),(block,[b])],on(b,t))],
+    [(block,[b1]),(table,[t1])],
+    on(b1,t1))).
+test(quantified_list_two_vars_conjunctive_effect) :-
+  assertion(effect_collision(
+    [all([(table,[t]),(block,[b])],clear(b))],
+    [(block,[b1]),(table,[t1])],
+    clear(b1))).
 :- end_tests(effect_collision).
 
 :- begin_tests(merge_effects).
