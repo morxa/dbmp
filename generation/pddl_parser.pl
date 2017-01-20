@@ -507,6 +507,24 @@ test(action_with_equality_two_vars) :-
         ParserResult)
     ).
 
+test(action_with_implication_in_precondition) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x - var) \c
+        :precondition (imply (cond1 ?x) (cond2 ?x)) \c
+        :effect (cond3 ?x) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[
+          ["setx", [("var",['?x'])],
+            imply(cond1('?x'),cond2('?x')), cond3('?x')]]),
+        ParserResult)
+    ).
+
 test(load_domain_file) :-
   parse_pddl_domain_file("test_data/domain.pddl", ParserResult),
   assertion(member((domain, "blocksworld"), ParserResult)).
