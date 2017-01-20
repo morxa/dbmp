@@ -124,6 +124,8 @@ goal_description(all(VarList,Goal)) -->
   ["(", "forall"],
   ["("], typed_list(VarList), [")"],
   goal_description(Goal), [")"].
+goal_description(Var1 = Var2) -->
+  ["(", "="], term(Var1), term(Var2), [")"].
 
 goal_description_list([Goal]) --> goal_description(Goal).
 goal_description_list([Goal|GoalList]) -->
@@ -470,6 +472,38 @@ test(two_actions) :-
           ["resetx",
             [("var",['?x', '?y'])], cond1('?x'), not(cond2('?y'))]
           ]),
+        ParserResult)
+    ).
+
+test(action_with_equality_and_constant) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x - var) \c
+        :precondition (= ?x 3) \c
+        :effect (cond2 ?x) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx", [("var",['?x'])], '?x'='3', cond2('?x')]]),
+        ParserResult)
+    ).
+
+test(action_with_equality_two_vars) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:action setx \c
+        :parameters (?x ?y - var) \c
+        :precondition (= ?x ?y) \c
+        :effect (cond2 ?x) \c
+      )
+    )",
+    ParserResult),
+    assertion(
+      member(
+        (actions,[["setx", [("var",['?x', '?y'])], '?x'='?y', cond2('?x')]]),
         ParserResult)
     ).
 
