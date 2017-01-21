@@ -57,8 +57,8 @@ regress_(Effects, Types, Cond, CondRes) :-
 % TODO depending on which parameter is picked this may be incorrect
 regress_(Effects, Types, some(Var,Type,Cond), CondRes) :-
   !,
-  domain:subtype_of_type(SubType, Type),
-  member((SubType, TypedParameters), Types),
+  ( ParameterType = Type ; domain:subtype_of_type(ParameterType, Type) ),
+  member((ParameterType, TypedParameters), Types),
   member(TypedObject, TypedParameters),
   substitute(Var, [Cond], TypedObject, [SubstitutedCond]),
   regress(Effects, Types, SubstitutedCond, CondRes).
@@ -74,7 +74,7 @@ regress_([not(Term)|_], _, Term, false).
 regress_(
   [all(Y,EffectType,Effect)|R], Types, all(X,TermType,Term), true
 ) :-
-  domain:subtype_of_type(TermType, EffectType),
+  ( EffectType = TermType ; domain:subtype_of_type(TermType, EffectType) ),
   substitute(X, [Term], _, [NewTerm]),
   substitute(Y, [Effect], _,[NewEffect]),
   regress([NewEffect|R], Types, NewTerm, true).
