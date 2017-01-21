@@ -70,25 +70,20 @@ regress_([Effect|R], Types, Term, TermRes) :-
 regress_([Term|_], _, Term, true).
 regress_([Term|_], _, not(Term), false).
 regress_([not(Term)|_], _, Term, false).
-regress_([all(Y,Effect)|_], Types, all(X,Term), true) :-
-  substitute(X, [Term], _, [NewTerm]),
-  substitute(Y, [Effect], _,[NewEffect]),
-  regress([NewEffect], Types, NewTerm, true).
 % Note: subtype_of_type must be reflexive.
 regress_(
-  [all(Y,EffectType,Effect)|R], Types, all(X,TermType,Term), Res
+  [all(Y,EffectType,Effect)|R], Types, all(X,TermType,Term), true
 ) :-
   domain:subtype_of_type(TermType, EffectType),
-  regress([all(Y,Effect)|R], Types, all(X,Term), Res).
+  substitute(X, [Term], _, [NewTerm]),
+  substitute(Y, [Effect], _,[NewEffect]),
+  regress([NewEffect|R], Types, NewTerm, true).
 regress_([all(X,Type,Effect)|R], Types, Term, TermRes) :-
   Effect =.. [Predicate|Args],
-  member((Type, TypedParameters), Types),
-  substitute(X, Args, _, \Member^member(Member, TypedParameters), NArgs),
-  QuantifiedEffect =.. [Predicate|NArgs],
-  regress([QuantifiedEffect|R], Types, Term, TermRes).
-regress_([all(X,Effect)|R], Types, Term, TermRes) :-
-  Effect =.. [Predicate|Args],
-  substitute(X, Args, _, NArgs),
+  member((ParameterType, TypedParameters), Types),
+  ( ParameterType = Type ; domain:subtype_of_type(ParameterType, Type)),
+  member(Parameter, TypedParameters),
+  substitute(X, Args, Parameter, NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
   regress([QuantifiedEffect|R], Types, Term, TermRes).
 % conditional effect: regress Term for both cases (Cond true/false). The
@@ -143,9 +138,7 @@ init_goto_action :-
   assertz(domain:action_effect(goto(L1,L2),and(not(at(L1)),at(L2)))),
   init_location_types.
 init_dropall_action :-
-  assertz(domain:action_effect(dropall,all(o,not(holding(o))))).
-init_clearall_action :-
-  assertz(domain:action_effect(clearall,all(o,clear(o)))).
+  assertz(domain:action_effect(dropall,all(o,object,not(holding(o))))).
 init_typed_clearall_action :-
   assertz(domain:subtype_of_type(T,T)),
   assertz(domain:subtype_of_type(cup,object)),
@@ -156,11 +149,10 @@ init_fix_action :-
   assertz(domain:action_effect(fix_green(C),impl(green(C),fixed(C)))),
   assertz(domain:action_effect(fix_other(C),impl(not(green(C)),fixed(C)))).
 cleanup_actions :-
-  retractall(domain:action_effect(_,_)).
-cleanup_actions_and_types :-
-  cleanup_actions,
+  retractall(domain:action_effect(_,_)),
   retractall(type_of_object(_,_)),
   retractall(domain:subtype_of_type(_,_)).
+cleanup_actions_and_types :- cleanup_actions.
 
 test(regress_empty_action_list) :-
   regress_on_actions([], a, a).
@@ -176,30 +168,48 @@ test(
   regress_action_sequence,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress_on_actions([goto(hall,kitchen),goto(kitchen,office)], at(office), true).
+  regress_on_actions(
+    [goto(hall,kitchen),goto(kitchen,office)], at(office), true
+  ).
 
 test(
   regress_forall,
-  [setup(init_clearall_action),cleanup(cleanup_actions)]
+  [setup(init_typed_clearall_action),cleanup(cleanup_actions)]
 ) :-
-  regress_on_actions([clearall], clear(a), true),
-  regress_on_actions([clearall], not(clear(a)), false),
-  regress_on_actions([clearall], other_predicate(a), other_predicate(a)).
+  regress_on_actions([clearall], [(object,[a])], clear(a), true),
+  regress_on_actions([clearall], [(object,[a])], not(clear(a)), false),
+  regress_on_actions(
+    [clearall], [(object,[a])], other_predicate(a), other_predicate(a)
+  ).
+
+test(
+  regress_forall_on_subtypes,
+  [setup(init_typed_clearall_action),cleanup(cleanup_actions)]
+) :-
+  regress_on_actions([clearall], [(cup,[a])], clear(a), true),
+  regress_on_actions([clearall], [(cup,[a])], not(clear(a)), false),
+  regress_on_actions(
+    [clearall], [(cup,[a])], other_predicate(a), other_predicate(a)
+  ).
 
 test(
   regress_forall_with_negation,
   [setup(init_dropall_action),cleanup(cleanup_actions)]
 ) :-
-  regress_on_actions([dropall], not(holding(a)), true),
-  regress_on_actions([dropall], holding(a), false),
-  regress_on_actions([dropall], other_predicate(a), other_predicate(a)).
+  regress_on_actions([dropall], [(object,[a])], not(holding(a)), true),
+  regress_on_actions([dropall], [(object,[a])], holding(a), false),
+  regress_on_actions(
+    [dropall], [(object,[a])], other_predicate(a), other_predicate(a)
+  ).
 
 test(
   regress_conditional_effect,
   [setup(init_condeffect_action), cleanup(cleanup_actions)]
 ) :-
   regress_on_actions([drop(o)], broken(o), or(fragile(o),broken(o))),
-  regress_on_actions([drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))).
+  regress_on_actions(
+    [drop(o)], not(broken(o)), and(not(fragile(o)),not(broken(o)))
+  ).
 
 test(
   regress_conditional_effect_with_two_cases,
@@ -220,12 +230,6 @@ test(
     cleanup(cleanup_actions_and_types)]
 ) :-
   regress_on_actions([goto(hall,kitchen)], [(room, [kitchen])], some(l,location,at(l)), true).
-
-test(
-  regress_universal_quantifier,
-  [setup(init_clearall_action),cleanup(cleanup_actions)]
-) :-
-  regress_on_actions([clearall], all(c,clear(c)), true).
 
 test(
   regress_universal_quantifier_with_types,
