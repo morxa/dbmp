@@ -4,7 +4,7 @@
  *  regression.pl - ADL regression
  *
  *  Created:  Wed 19 Oct 2016 17:44:44 CEST
- *  Copyright  2016  Till Hofmann <hofmann@kbsg.rwth-aachen.de>
+ *  Copyright  2016, 2017  Till Hofmann <hofmann@kbsg.rwth-aachen.de>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -54,14 +54,14 @@ regress_(Effects, Types, Cond, CondRes) :-
   once(regress(Effects, Types, or(not(Implicant),Implicate), CondRes)).
 % TODO this expects exactly one var, but PDDL allows lists of vars
 % also rename the operator
-% TODO depending on which parameter is picked this may be incorrect
 regress_(Effects, Types, some(Var,Type,Cond), CondRes) :-
   !,
   ( ParameterType = Type ; domain:subtype_of_type(ParameterType, Type) ),
   member((ParameterType, TypedParameters), Types),
   member(TypedObject, TypedParameters),
   substitute(Var, [Cond], TypedObject, [SubstitutedCond]),
-  regress(Effects, Types, SubstitutedCond, CondRes).
+  regress(Effects, Types, SubstitutedCond, CondRes),
+  member(CondRes, [false, true]).
 
 regress_([Effect|R], Types, Term, TermRes) :-
   Effect =.. [and|Conjuncts],
@@ -72,12 +72,13 @@ regress_([Term|_], _, not(Term), false).
 regress_([not(Term)|_], _, Term, false).
 % Note: subtype_of_type must be reflexive.
 regress_(
-  [all(Y,EffectType,Effect)|R], Types, all(X,TermType,Term), true
+  [all(Y,EffectType,Effect)|R], Types, all(X,TermType,Term), TermRes
 ) :-
   ( EffectType = TermType ; domain:subtype_of_type(TermType, EffectType) ),
   substitute(X, [Term], _, [NewTerm]),
   substitute(Y, [Effect], _,[NewEffect]),
-  regress([NewEffect|R], Types, NewTerm, true).
+  regress([NewEffect|R], Types, NewTerm, TermRes),
+  member(TermRes, [true,false]).
 regress_([all(X,Type,Effect)|R], Types, Term, TermRes) :-
   Effect =.. [Predicate|Args],
   member((ParameterType, TypedParameters), Types),
@@ -85,7 +86,8 @@ regress_([all(X,Type,Effect)|R], Types, Term, TermRes) :-
   member(Parameter, TypedParameters),
   substitute(X, Args, Parameter, NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
-  regress([QuantifiedEffect|R], Types, Term, TermRes).
+  regress([QuantifiedEffect|R], Types, Term, TermRes),
+  member(TermRes, [true,false]).
 % conditional effect: regress Term for both cases (Cond true/false). The
 % resulting term is a disjunction of both cases.
 % TODO rename operator to imply
@@ -229,7 +231,9 @@ test(
     setup(init_goto_action),
     cleanup(cleanup_actions_and_types)]
 ) :-
-  regress_on_actions([goto(hall,kitchen)], [(room, [kitchen])], some(l,location,at(l)), true).
+  regress_on_actions(
+    [goto(hall,kitchen)], [(room, [kitchen])], some(l,location,at(l)), true
+  ).
 
 test(
   regress_universal_quantifier_with_types,
@@ -246,5 +250,21 @@ test(
 test(regress_unrelated_term) :-
   assertion(regress([holding(x)], [[]], at(l), at(l))).
 
+test(regress_forall_with_multiple_parameters) :-
+  assertion(regress([all(o,object,p(o))], [(object,[a,b])], p(b), true)).
+
+test(regress_complementary_forall) :-
+  assertion(regress([all(o,object,p(o))], [], all(o,object,not(p(o))), false)).
+
+test(regress_some_with_multiple_parameters) :-
+  assertion(regress([p(b)], [(object,[a,b])], some(o,object,p(o)), true)).
+
+test(regress_forall_with_conjunctions) :-
+  assertion(regress(
+    [all(o,object,p(o)),all(o,object,q(o))],
+    [(object,[a]), (object,[a])],
+    and(p(a),q(a)),
+    true
+  )).
 
 :- end_tests(regression).
