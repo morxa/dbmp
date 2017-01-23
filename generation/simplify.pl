@@ -276,8 +276,8 @@ simplify_effect_or_fail(Effect, SimplifiedEffect) :-
   FilteredEffect =.. [and|FilteredEffects],
   simplify_effect(FilteredEffect, SimplifiedEffect).
 simplify_effect_or_fail(not(nil), nil).
-simplify_effect_or_fail(forall(_,nil),nil).
-simplify_effect_or_fail(forall(_,_,nil),nil).
+simplify_effect_or_fail(all(_,nil),nil).
+simplify_effect_or_fail(all(_,_,nil),nil).
 simplify_effect_or_fail(when(_,nil), nil).
 simplify_effect_or_fail(when(false,_),nil).
 simplify_effect_or_fail(Effect, SimplifiedEffect) :-
@@ -288,9 +288,9 @@ simplify_effect_or_fail(Effect, SimplifiedEffect) :-
 simplify_effect_or_fail(not(Effect), SimplifiedNegEffect) :-
   simplify_effect_or_fail(Effect, SimplifiedEffect),
   simplify_effect(not(SimplifiedEffect), SimplifiedNegEffect).
-simplify_effect_or_fail(forall(Var,Effect), SimplifiedAllEffect) :-
+simplify_effect_or_fail(all(Var,Effect), SimplifiedAllEffect) :-
   simplify_effect_or_fail(Effect, SimplifiedEffect),
-  simplify(forall(Var,SimplifiedEffect), SimplifiedAllEffect).
+  simplify(all(Var,SimplifiedEffect), SimplifiedAllEffect).
 simplify_effect_or_fail(when(Cond,Effect), SimplifiedCondEffect) :-
   simplify(Cond, SimplifiedCond),
   simplify_effect(Effect, SimplifiedEffect),
@@ -359,7 +359,7 @@ test(simplify_same_parameter_twice) :-
 :- begin_tests(simplify_effect).
 test(simplify_empty_effect) :-
   assertion(simplify_effect(and(),nil)),
-  assertion(simplify_effect(forall(x,block,nil),nil)),
+  assertion(simplify_effect(all(x,block,nil),nil)),
   assertion(simplify_effect(when(x,nil),nil)),
   assertion(simplify_effect(when(false,a),nil)).
 
