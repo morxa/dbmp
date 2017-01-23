@@ -96,6 +96,7 @@ simplify_or_fail(or(Term), SimplifiedTerm) :-
 % or(...,Term,...,Term,...) -> or(...,Term,...)
 simplify_or_fail(Term, SimplifiedTerm) :-
   Term =.. [Op|SubTerms],
+  member(Op, [and,or]),
   list_to_set(SubTerms,SimplifiedSubTerms),
   SubTerms \= SimplifiedSubTerms,
   IntermediateSimplifiedTerm =.. [Op|SimplifiedSubTerms],
@@ -343,6 +344,9 @@ test(simplify_implication) :-
 test(simplify_when) :-
   assertion(simplify(when(true,and(a,b)),and(a,b))),
   assertion(simplify(when(false,and(a,b)),and())).
+test(simplify_same_parameter_twice) :-
+  simplify(p(a,a),R),
+  assertion(R=p(a,a)).
 
 :- end_tests(simplify).
 
