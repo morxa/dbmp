@@ -72,6 +72,10 @@ regress_([Effect|R], Types, Term, TermRes) :-
 regress_([Term|_], _, Term, true).
 regress_([Term|_], _, not(Term), false).
 regress_([not(Term)|_], _, Term, false).
+regress_(Effects, Types, not(Term), true) :-
+  regress_(Effects, Types, Term, false).
+regress_(Effects, Types, not(Term), false) :-
+  regress_(Effects, Types, Term, true).
 % Note: subtype_of_type must be reflexive.
 regress_(
   [all(Y,EffectType,Effect)|R], Types, all(X,TermType,Term), TermRes
@@ -314,6 +318,11 @@ test(regress_forall_with_var_lists_in_term) :-
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     all([(t1,[a,b]),(t2,[c,d])],not(p(a,b,c,d))),
+    false)),
+  assertion(regress(
+    [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
+    [(t1,[a,b]),(t2,[c,d])],
+    not(all([(t1,[a,b]),(t2,[c,d])],p(a,b,c,d))),
     false)).
 
 :- end_tests(regression).
