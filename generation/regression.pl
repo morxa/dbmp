@@ -47,13 +47,13 @@ regress_([], _, Cond, Cond) :- !.
 regress_(Effects, Types, Cond, SimplifiedCondRes) :-
   Cond =.. [Op|Conjuncts],
   member(Op,[and,or]),
-  maplist(regress(Effects, Types),Conjuncts,RegressedConjuncts),
+  maplist(regress_(Effects, Types),Conjuncts,RegressedConjuncts),
   CondRes =.. [Op|RegressedConjuncts],
   simplify(CondRes, SimplifiedCondRes).
 regress_(Effects, Types, Cond, CondRes) :-
   Cond =.. [impl,Implicant,Implicate],
   !,
-  once(regress(Effects, Types, or(not(Implicant),Implicate), CondRes)).
+  once(regress_(Effects, Types, or(not(Implicant),Implicate), CondRes)).
 % TODO this expects exactly one var, but PDDL allows lists of vars
 % also rename the operator
 regress_(Effects, Types, some(Var,Type,Cond), CondRes) :-
@@ -62,13 +62,13 @@ regress_(Effects, Types, some(Var,Type,Cond), CondRes) :-
   member((ParameterType, TypedParameters), Types),
   member(TypedObject, TypedParameters),
   substitute(Var, [Cond], TypedObject, [SubstitutedCond]),
-  regress(Effects, Types, SubstitutedCond, CondRes),
+  regress_(Effects, Types, SubstitutedCond, CondRes),
   member(CondRes, [false, true]).
 
 regress_([Effect|R], Types, Term, TermRes) :-
   Effect =.. [and|Conjuncts],
   append(Conjuncts, R, Effects),
-  regress(Effects, Types, Term, TermRes).
+  regress_(Effects, Types, Term, TermRes).
 regress_([Term|_], _, Term, true).
 regress_([Term|_], _, not(Term), false).
 regress_([not(Term)|_], _, Term, false).
@@ -83,7 +83,7 @@ regress_(
   ( EffectType = TermType ; domain:subtype_of_type(TermType, EffectType) ),
   substitute(X, [Term], _, [NewTerm]),
   substitute(Y, [Effect], _,[NewEffect]),
-  regress([NewEffect|R], Types, NewTerm, TermRes),
+  regress_([NewEffect|R], Types, NewTerm, TermRes),
   member(TermRes, [true,false]).
 regress_([all(X,Type,Effect)|R], Types, Term, TermRes) :-
   Effect =.. [Predicate|Args],
@@ -92,50 +92,48 @@ regress_([all(X,Type,Effect)|R], Types, Term, TermRes) :-
   member(Parameter, TypedParameters),
   substitute(X, Args, Parameter, NArgs),
   QuantifiedEffect =.. [Predicate|NArgs],
-  regress([QuantifiedEffect|R], Types, Term, TermRes),
+  regress_([QuantifiedEffect|R], Types, Term, TermRes),
   member(TermRes, [true,false]).
 
 regress_([all([],Effect)|R], Types, Term, TermRes) :-
   member(TermRes, [true,false]),
-  regress([Effect|R], Types, Term, TermRes).
+  regress_([Effect|R], Types, Term, TermRes).
 regress_([all([(_,[])|VarList],Effect)|R], Types, Term, TermRes) :-
-  regress([all(VarList,Effect)|R], Types, Term, TermRes).
+  regress_([all(VarList,Effect)|R], Types, Term, TermRes).
 regress_([all([(VarType,[Var|Vars])|VarList],Effect)|R], Types, Term, TermRes) :-
   member((ParamType, TypedParams), Types),
   ( ParamType = VarType ; domain:subtype_of_type(ParamType, VarType) ),
   member(Param, TypedParams),
   substitute(Var, [Effect], Param, [QuantifiedEffect]),
   member(TermRes, [true,false]),
-  regress(
+  regress_(
     [all([(VarType,Vars)|VarList],QuantifiedEffect)|R], Types, Term, TermRes
   ).
 
 regress_(Effects, Types, all([],QuantifiedTerm), TermRes) :-
-  regress(Effects, Types, QuantifiedTerm, TermRes).
+  regress_(Effects, Types, QuantifiedTerm, TermRes).
 regress_(Effects, Types, all([(_,[])|Vars],QuantifiedTerm), TermRes) :-
-  regress(Effects, Types, all(Vars,QuantifiedTerm), TermRes).
+  regress_(Effects, Types, all(Vars,QuantifiedTerm), TermRes).
 regress_(Effects, Types, all(Vars,Term), TermRes) :-
   append(Vars, Types, NewTypes),
   member(TermRes, [true,false]),
-  regress(Effects, NewTypes, Term, TermRes).
+  regress_(Effects, NewTypes, Term, TermRes).
 
-% conditional effect: regress Term for both cases (Cond true/false). The
-% resulting term is a disjunction of both cases.
 % TODO rename operator to imply
 regress_([impl(Cond,Effect)|Effects], Types, Term, TermRes) :-
   % cut here because we don't want to skip the cond effect if regression fails
   !,
-  regress([Effect|Effects], Types, Term, TermResIfCond),
-  regress(Effects, Types, Cond, CondRes),
-  regress(Effects, Types, not(Cond), NegCondRes),
-  regress(Effects, Types, Term, TermResIfNotCond),
+  regress_([Effect|Effects], Types, Term, TermResIfCond),
+  regress_(Effects, Types, Cond, CondRes),
+  regress_(Effects, Types, not(Cond), NegCondRes),
+  regress_(Effects, Types, Term, TermResIfNotCond),
   !,
   TermRes = or(and(CondRes,TermResIfCond),and(NegCondRes,TermResIfNotCond)).
 
-regress_([_|R], [_|Types], Term, TermRes) :-
-  regress(R, Types, Term, TermRes).
+regress_([_|R], Types, Term, TermRes) :-
+  regress_(R, Types, Term, TermRes).
 regress_([_|R], [], Term, TermRes) :-
-  regress(R, [], Term, TermRes).
+  regress_(R, [], Term, TermRes).
 
 %% regress_on_actions(+Actions, +Types, +Cond, -RegressedCond).
 %
@@ -209,10 +207,11 @@ test(
   regress_forall,
   [setup(init_typed_clearall_action),cleanup(cleanup_actions)]
 ) :-
-  regress_on_actions([clearall], [(object,[a])], clear(a), true),
-  regress_on_actions([clearall], [(object,[a])], not(clear(a)), false),
-  regress_on_actions(
-    [clearall], [(object,[a])], other_predicate(a), other_predicate(a)
+  assertion(regress_on_actions([clearall], [(object,[a])], clear(a), true)),
+  assertion(
+    regress_on_actions([clearall], [(object,[a])], not(clear(a)), false)),
+  assertion(regress_on_actions(
+    [clearall], [(object,[a])], other_predicate(a), other_predicate(a))
   ).
 
 test(
