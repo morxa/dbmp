@@ -51,6 +51,8 @@
 %  - or(and(T1,...,Ti,T,Ti+1,...,Tn),and(T1,...,Ti,Ti+1,...,Tn))
 %    -> or(and(T1,...,Ti,T,Ti+1,...,Tn)
 %  - or(...,T,and(...,T,...),...) -> or(...,T,...)
+%  - all([], T) -> T
+%  - exists([], T) -> T
 %
 %  simplify/2 never fails; if the term cannot be simplified, it stays the same.
 
@@ -234,6 +236,10 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   append(TermPrefix, [FilteredSubTerm|TermSuffix], FilteredSubTerms),
   FilteredTerm =.. [or|FilteredSubTerms],
   simplify(FilteredTerm, SimplifiedTerm).
+% all([],T) -> T
+% exists([],T) -> T
+simplify_or_fail(all([], Term), Term).
+simplify_or_fail(exists([], Term), Term).
 
 % flatten_on_op(+Op, +Terms, -FlattenedTerms)
 %
