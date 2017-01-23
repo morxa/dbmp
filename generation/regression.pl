@@ -24,6 +24,8 @@
 :- use_module(simplify).
 :- use_module(substitute).
 
+:- dynamic domain:subtype_of_type/2.
+
 %% regress(+Effects, +Types, +Condition, -RegressedCondition)
 %
 %  Regresses the formula Condition with Effects, giving RegressedCondition.
@@ -88,6 +90,30 @@ regress_([all(X,Type,Effect)|R], Types, Term, TermRes) :-
   QuantifiedEffect =.. [Predicate|NArgs],
   regress([QuantifiedEffect|R], Types, Term, TermRes),
   member(TermRes, [true,false]).
+
+regress_([all([],Effect)|R], Types, Term, TermRes) :-
+  member(TermRes, [true,false]),
+  regress([Effect|R], Types, Term, TermRes).
+regress_([all([(_,[])|VarList],Effect)|R], Types, Term, TermRes) :-
+  regress([all(VarList,Effect)|R], Types, Term, TermRes).
+regress_([all([(VarType,[Var|Vars])|VarList],Effect)|R], Types, Term, TermRes) :-
+  member((ParamType, TypedParams), Types),
+  ( ParamType = VarType ; domain:subtype_of_type(ParamType, VarType) ),
+  member(Param, TypedParams),
+  substitute(Var, [Effect], Param, [QuantifiedEffect]),
+  regress(
+    [all([(VarType,Vars)|VarList],QuantifiedEffect)|R], Types, Term, TermRes
+  ).
+
+regress_(Effects, Types, all([],QuantifiedTerm), TermRes) :-
+  regress(Effects, Types, QuantifiedTerm, TermRes).
+regress_(Effects, Types, all([(_,[])|Vars],QuantifiedTerm), TermRes) :-
+  regress(Effects, Types, all(Vars,QuantifiedTerm), TermRes).
+regress_(Effects, Types, all(Vars,Term), TermRes) :-
+  append(Vars, Types, NewTypes),
+  member(TermRes, [true,false]),
+  regress(Effects, NewTypes, Term, TermRes).
+
 % conditional effect: regress Term for both cases (Cond true/false). The
 % resulting term is a disjunction of both cases.
 % TODO rename operator to imply
@@ -266,5 +292,28 @@ test(regress_forall_with_conjunctions) :-
     and(p(a),q(a)),
     true
   )).
+
+test(regress_forall_with_var_lists) :-
+  assertion(regress(
+    [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
+    [(t1,[a,b]),(t2,[c,d])],
+    p(a,b,c,d),
+    true)),
+  assertion(regress(
+    [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
+    [(t1,[a,b]),(t2,[c,d])],
+    not(p(a,b,c,d)),
+    false)).
+test(regress_forall_with_var_lists_in_term) :-
+  assertion(regress(
+    [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
+    [(t1,[a,b]),(t2,[c,d])],
+    all([(t1,[a,b]),(t2,[c,d])],p(a,b,c,d)),
+    true)),
+  assertion(regress(
+    [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
+    [(t1,[a,b]),(t2,[c,d])],
+    all([(t1,[a,b]),(t2,[c,d])],not(p(a,b,c,d))),
+    false)).
 
 :- end_tests(regression).
