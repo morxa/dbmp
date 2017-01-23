@@ -56,14 +56,26 @@ regress_(Effects, Types, Cond, CondRes) :-
   once(regress_(Effects, Types, or(not(Implicant),Implicate), CondRes)).
 % TODO this expects exactly one var, but PDDL allows lists of vars
 % also rename the operator
-regress_(Effects, Types, some(Var,Type,Cond), CondRes) :-
+regress_(Effects, Types, exists([],Cond), CondRes) :-
+  regress_(Effects, Types, Cond, CondRes).
+regress_(Effects, Types, exists([(_,[])|Vars], Cond), CondRes) :-
   !,
-  ( ParameterType = Type ; domain:subtype_of_type(ParameterType, Type) ),
-  member((ParameterType, TypedParameters), Types),
-  member(TypedObject, TypedParameters),
-  substitute(Var, [Cond], TypedObject, [SubstitutedCond]),
-  regress_(Effects, Types, SubstitutedCond, CondRes),
-  member(CondRes, [false, true]).
+  regress_(Effects, Types, exists(Vars, Cond), CondRes).
+regress_(
+  Effects, Types, exists([(Type,TypedVars)|Vars],Cond), SimplifiedCondRes
+) :-
+  findall(C,
+  ( member((ParamType, TypedParams), Types),
+    ( Type = ParamType ; domain:subtype_of_type(ParamType, Type) ),
+    member(Param, TypedParams),
+    member(Var, TypedVars),
+    substitute(Var, [Cond], Param, [QuantifiedCond]),
+    exclude(=(Var), TypedVars, RestTypedVars),
+    regress_(Effects, Types, exists([(Type,RestTypedVars)|Vars],QuantifiedCond),
+      C)
+  ), CondBag),
+  CondRes =.. [or,exists([(Type,TypedVars)|Vars],Cond)|CondBag],
+  simplify(CondRes, SimplifiedCondRes).
 
 regress_([Effect|R], Types, Term, TermRes) :-
   Effect =.. [and|Conjuncts],
@@ -261,8 +273,9 @@ test(
     setup(init_goto_action),
     cleanup(cleanup_actions_and_types)]
 ) :-
-  regress_on_actions(
-    [goto(hall,kitchen)], [(room, [kitchen])], some(l,location,at(l)), true
+  assertion(regress_on_actions(
+    [goto(hall,kitchen)], [(location, [kitchen])],
+    exists([(location,[l])],at(l)), true)
   ).
 
 test(
@@ -286,8 +299,19 @@ test(regress_forall_with_multiple_parameters) :-
 test(regress_complementary_forall) :-
   assertion(regress([all(o,object,p(o))], [], all(o,object,not(p(o))), false)).
 
-test(regress_some_with_multiple_parameters) :-
-  assertion(regress([p(b)], [(object,[a,b])], some(o,object,p(o)), true)).
+test(regress_exists_with_multiple_parameters) :-
+  assertion(
+    regress([p(b)], [(object,[a,b])], exists([(object,[o])],p(o)), true)
+  ).
+
+test(regress_exists_with_alternatives) :-
+  assertion(
+    regress(
+      [p(a),q(b)],
+      [(object,[a,b])],
+      exists([(object,[o])], and(p(o),q(o))),
+      or(exists([(object,[o])],and(p(o),q(o))),q(a),p(b))
+  )).
 
 test(regress_forall_with_conjunctions) :-
   assertion(regress(
