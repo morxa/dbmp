@@ -43,7 +43,7 @@ regress(Effects, Types, Cond, SimplifiedRegressedCond) :-
 %  Helper predicate for regress/4. This predicate does the actual regression
 %  without simplification of the resulting term.
 
-regress_([], [], Cond, Cond) :- !.
+regress_([], _, Cond, Cond) :- !.
 regress_(Effects, Types, Cond, SimplifiedCondRes) :-
   Cond =.. [Op|Conjuncts],
   member(Op,[and,or]),
@@ -309,6 +309,11 @@ test(regress_forall_with_var_lists) :-
     [(t1,[a,b]),(t2,[c,d])],
     p(a,b,c,d),
     true)),
+  assertion(regress(
+    [all([(t1,[o1,o2]),(t2,[o3])], p(o1,o2,o3,o3))],
+    [(t1,[a,b]),(t2,[c,d])],
+    p(a,b,c,d),
+    p(a,b,c,d))),
   assertion(regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
