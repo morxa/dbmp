@@ -105,6 +105,7 @@ regress_([all([(VarType,[Var|Vars])|VarList],Effect)|R], Types, Term, TermRes) :
   ( ParamType = VarType ; domain:subtype_of_type(ParamType, VarType) ),
   member(Param, TypedParams),
   substitute(Var, [Effect], Param, [QuantifiedEffect]),
+  member(TermRes, [true,false]),
   regress(
     [all([(VarType,Vars)|VarList],QuantifiedEffect)|R], Types, Term, TermRes
   ).
