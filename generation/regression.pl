@@ -304,6 +304,11 @@ test(regress_forall_with_var_lists) :-
     p(a,b,c,d),
     true)),
   assertion(regress(
+    [all([(t2,[o4,o3]),(t1,[o1,o2])], p(o1,o2,o3,o4))],
+    [(t1,[a,b]),(t2,[c,d])],
+    p(a,b,c,d),
+    true)),
+  assertion(regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     not(p(a,b,c,d)),
@@ -313,6 +318,11 @@ test(regress_forall_with_var_lists_in_term) :-
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     all([(t1,[a,b]),(t2,[c,d])],p(a,b,c,d)),
+    true)),
+  assertion(regress(
+    [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
+    [(t1,[a,b]),(t2,[c,d])],
+    all([(t2,[d,c]),(t1,[a,b])],p(a,b,c,d)),
     true)),
   assertion(regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
