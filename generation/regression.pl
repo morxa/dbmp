@@ -53,7 +53,7 @@ regress_(Effects, Types, Cond, SimplifiedCondRes) :-
 regress_(Effects, Types, Cond, CondRes) :-
   Cond =.. [impl,Implicant,Implicate],
   !,
-  once(regress_(Effects, Types, or(not(Implicant),Implicate), CondRes)).
+  regress_(Effects, Types, or(not(Implicant),Implicate), CondRes).
 % TODO this expects exactly one var, but PDDL allows lists of vars
 % also rename the operator
 regress_(Effects, Types, exists([],Cond), CondRes) :-
