@@ -51,13 +51,29 @@ get_status () {
   fi
 }
 
+count_users () {
+  user_count=0
+  user_count=$(who -u | grep -c -v "^root" || true)
+  echo $user_count
+}
+
+if [ "$#" -eq 1 ] && [ "$1" = "reload" ] ; then
+  user_count=$( count_users )
+  if [ "$user_count" -eq 0 ] ; then
+    enable_node
+  else
+    disable_node
+  fi
+  exit 0
+fi
+
 if [ -z ${PAM_TYPE+0} ] || [ -z ${PAM_USER+0} ] ; then
   echo "PAM_TYPE or PAM_USER is not set or empty."
   exit 1
 fi
 
 if [ "$PAM_TYPE" = "close_session" ] ; then
-  user_count=$( who -u | grep -c -v "^root" || true)
+  user_count=$( count_users )
   if [ "$user_count" -eq 0 ] ; then
     enable_node
   fi

@@ -81,3 +81,7 @@
     name: docker
     enabled: true
     state: started
+- name: run kubernetes login controller
+  command: >
+    /usr/bin/systemd-cat -t kubernetes-login-controller
+    /usr/local/bin/kubernetes-login-controller.sh reload
