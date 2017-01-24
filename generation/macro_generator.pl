@@ -48,7 +48,7 @@ generate_macro(
   maplist(get_parameter_assignment,
     Actions, ParameterEnumeration, ParameterAssignment),
   compute_parameters(Actions, ParameterAssignment, Parameters),
-  compute_precondition(Actions, ParameterAssignment, Precondition),
+  compute_precondition(Actions, ParameterAssignment, Parameters, Precondition),
   compute_effect(Actions, ParameterAssignment, Effect).
 
 %% get_parameter_assignment(-Action, -ParamEnumeration, +ParamAssignment)
@@ -201,15 +201,27 @@ remove_duplicate_parameters(
     NewParameters,
     ResultingParameters).
 
-compute_precondition([], _, true).
+%% compute_preconditions(+Actions, +Assignments, +Parameters, -Precondition)
+%
+%  Compute the Precondition of the given Actions with the parameter assignment
+%  Assignments and the typed parameter list Parameters. The result is a single
+%  formula that describes the precondition of the whole action sequence.
+%  Note the difference between Assignments and Parameters: Assignments is a list
+%  with the same length as Actions and describes for each action in Actions what
+%  the action's parameters should be reassigned to. Thus, Assignments is a list
+%  of list of pairs, e.g., [[('?from','?1'),('?to','?2')],[('?loc','?2')]].
+%  On the other hand, Parameters describes the cumulative parameters and their
+%  types of the action sequence, e.g., [(location,['?1','?2'])].
+compute_precondition([], _, _, true).
 compute_precondition(
   [Action|Actions],
   [Assignment|Assignments],
+  Parameters,
   Precondition
 ) :-
-  compute_precondition(Actions, Assignments, PreconditionR),
+  compute_precondition(Actions, Assignments, Parameters, PreconditionR),
   compute_effect([Action], [Assignment], ActionEffect),
-  regress([ActionEffect], [Assignment], PreconditionR, RegressedPreconditionR),
+  regress([ActionEffect], Parameters, PreconditionR, RegressedPreconditionR),
   domain:action_precondition(Action, ActionPrecondition),
   substitute_list([ActionPrecondition], Assignment, [SubstitutedPrecondition]),
   simplify(and(SubstitutedPrecondition,RegressedPreconditionR), Precondition).
@@ -280,7 +292,7 @@ test(
     cleanup(retract_domain_facts)
   ]
 ) :-
-  assertion(compute_precondition(["pick-up", "put-down"], [[],[]],
+  assertion(compute_precondition(["pick-up", "put-down"], [[],[]], [],
     and(clear('?x'), ontable('?x'), handempty))).
 
 test(
@@ -290,6 +302,6 @@ test(
   ]
 ) :-
   assertion(compute_precondition(["pick-up", "put-down"], [[('?x','?y')],[]],
-    and(clear('?y'), ontable('?y'), handempty, holding('?x')))).
+    [], and(clear('?y'), ontable('?y'), handempty, holding('?x')))).
 
 :- end_tests(precondition).
