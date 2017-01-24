@@ -292,7 +292,7 @@ test(
     cleanup(retract_domain_facts)
   ]
 ) :-
-  assertion(compute_precondition(["pick-up", "put-down"], [[],[]], [],
+  assertion(compute_precondition(['pick-up', 'put-down'], [[],[]], [],
     and(clear('?x'), ontable('?x'), handempty))).
 
 test(
@@ -301,7 +301,7 @@ test(
     cleanup(retract_domain_facts)
   ]
 ) :-
-  assertion(compute_precondition(["pick-up", "put-down"], [[('?x','?y')],[]],
+  assertion(compute_precondition(['pick-up', 'put-down'], [[('?x','?y')],[]],
     [], and(clear('?y'), ontable('?y'), handempty, holding('?x')))).
 
 :- end_tests(precondition).

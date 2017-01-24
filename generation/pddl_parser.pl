@@ -76,7 +76,8 @@ domain_body(
   constants_def(Constants),
   predicates_def(Predicates),
   actions_defs(Actions).
-domain_name_def((domain, N)) --> ["(", "domain"], [N], [")"].
+domain_name_def((domain, NameAtom)) -->
+  ["(", "domain"], [Name], { atom_string(NameAtom, Name) }, [")"].
 require_def((requirements, [])) --> [].
 require_def((requirements,Reqs)) -->
   ["(", ":requirements"], requirements_list(Reqs), [")"].
@@ -91,15 +92,16 @@ predicates_def((predicates, Predicates)) -->
   predicate_list(Predicates),
   [")"].
 predicate_list([]) --> [].
-predicate_list([(PredicateName,PredicateTypes)|Predicates]) -->
+predicate_list([(PredicateNameAtom,PredicateTypes)|Predicates]) -->
   ["("], [PredicateName], typed_list(PredicateTypes), [")"],
+  { atom_string(PredicateNameAtom, PredicateName) },
   predicate_list(Predicates).
 actions_defs((actions,Actions)) --> action_list(Actions).
 action_list([]) --> [].
 action_list([Action|Actions]) -->
   action_def(Action), action_list(Actions).
-action_def([Name,Params,Precondition,Effect]) -->
-  ["(", ":action"], [Name],
+action_def([NameAtom,Params,Precondition,Effect]) -->
+  ["(", ":action"], [Name], { atom_string(NameAtom, Name) },
   [":parameters"], ["("], typed_list(Params), [")"],
   [":precondition"], goal_description(Precondition),
   [":effect"], effect(Effect),
@@ -165,7 +167,10 @@ term(TermAtom) -->
 
 requirement(R) --> [R], {string_chars(R,[':'|_])}.
 requirements_list([]) --> [].
-requirements_list([R|L2]) --> requirement(R), requirements_list(L2).
+requirements_list([RequirementAtom|L2]) -->
+  requirement(Requirement),
+  { atom_string(RequirementAtom, Requirement) },
+  requirements_list(L2).
 % TODO we may want to add them to the type object
 types_list(Types) --> subtypes_list(Types).
 types_list([(Type,SubTypes)|T2]) -->
@@ -326,31 +331,31 @@ test(preprocessing) :-
 
 test(domain_name) :-
   parse_pddl_domain("(define (domain blocksworld))", ParserResult),
-  assertion(member((domain, "blocksworld"), ParserResult)).
+  assertion(member((domain, blocksworld), ParserResult)).
 
 test(requirements) :-
   parse_pddl_domain("(define (domain d) (:requirements :adl :action-costs))",
                     ParserResult),
-  assertion(member((requirements, [":adl", ":action-costs"]), ParserResult)),
+  assertion(member((requirements, [':adl', ':action-costs']), ParserResult)),
   % we do NOT validate requirements, i.e., we can have arbitrary requirements.
   parse_pddl_domain("(define (domain d) (:requirements :nonexistent-req))",
                     ParserResult2),
-  assertion(member((requirements, [":nonexistent-req"]), ParserResult2)).
+  assertion(member((requirements, [':nonexistent-req']), ParserResult2)).
 
 test(predicates) :-
   parse_pddl_domain("(define (domain d) (:predicates (at ?l - location)))",
                     ParserResult),
-  assertion(member((predicates, [("at",[(location,['?l'])])]), ParserResult)),
+  assertion(member((predicates, [(at,[(location,['?l'])])]), ParserResult)),
   parse_pddl_domain("(define (domain d) (:predicates (on ?x ?y - block)))",
                     ParserResult2),
-  assertion(member( (predicates, [("on",[(block,['?x', '?y'])])]) ,
+  assertion(member( (predicates, [(on,[(block,['?x', '?y'])])]) ,
                     ParserResult2)),
   parse_pddl_domain("(define (domain d)
     (:predicates (at ?l - location) (on ?x ?y - block)))",
                     ParserResult3),
   assertion(member( (predicates,
-                      [("at", [(location, ['?l'])]),
-                       ("on",[(block,['?x', '?y'])])]) ,
+                      [(at, [(location, ['?l'])]),
+                       (on,[(block,['?x', '?y'])])]) ,
                     ParserResult3)).
 
 test(subtypes, [nondet]) :-
@@ -375,7 +380,7 @@ test(simple_action) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx", [(var,['?x'])], cond1('?x'), cond2('?x')]]),
+        (actions,[[setx, [(var,['?x'])], cond1('?x'), cond2('?x')]]),
         ParserResult)
     ).
 test(action_with_two_parameters) :-
@@ -390,7 +395,7 @@ test(action_with_two_parameters) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx", [(var,['?x', '?y'])], cond1('?x'), cond2('?y')]]),
+        (actions,[[setx, [(var,['?x', '?y'])], cond1('?x'), cond2('?y')]]),
         ParserResult)
     ).
 test(action_with_negated_precondition) :-
@@ -405,7 +410,7 @@ test(action_with_negated_precondition) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx",
+        (actions,[[setx,
           [(var,['?x', '?y'])], not(cond1('?x')), cond2('?y')]]),
         ParserResult)
     ).
@@ -421,7 +426,7 @@ test(action_with_negated_effect) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx",
+        (actions,[[setx,
           [(var,['?x', '?y'])], cond1('?x'), not(cond2('?y'))]]),
         ParserResult)
     ).
@@ -437,7 +442,7 @@ test(action_with_conjunctive_effect) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx",
+        (actions,[[setx,
           [(var,['?x', '?y'])], cond1('?x'), and(cond1('?y'),cond2('?y'))]]),
         ParserResult)
     ).
@@ -453,7 +458,7 @@ test(action_goto) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["goto",
+        (actions,[[goto,
           [(location,['?from', '?to'])], at('?from'),
           and(not(at('?from')),at('?to'))]]),
         ParserResult)
@@ -477,9 +482,9 @@ test(two_actions) :-
     assertion(
       member(
         (actions,[
-          ["setx",
+          [setx,
             [(var,['?x', '?y'])], cond1('?x'), cond2('?y')],
-          ["resetx",
+          [resetx,
             [(var,['?x', '?y'])], cond1('?x'), not(cond2('?y'))]
           ]),
         ParserResult)
@@ -497,7 +502,7 @@ test(action_with_equality_and_constant) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx", [(var,['?x'])], '?x'='3', cond2('?x')]]),
+        (actions,[[setx, [(var,['?x'])], '?x'='3', cond2('?x')]]),
         ParserResult)
     ).
 
@@ -513,7 +518,7 @@ test(action_with_equality_two_vars) :-
     ParserResult),
     assertion(
       member(
-        (actions,[["setx", [(var,['?x', '?y'])], '?x'='?y', cond2('?x')]]),
+        (actions,[[setx, [(var,['?x', '?y'])], '?x'='?y', cond2('?x')]]),
         ParserResult)
     ).
 
@@ -530,7 +535,7 @@ test(action_with_implication_in_precondition) :-
     assertion(
       member(
         (actions,[
-          ["setx", [(var,['?x'])],
+          [setx, [(var,['?x'])],
             imply(cond1('?x'),cond2('?x')), cond3('?x')]]),
         ParserResult)
     ).
@@ -548,7 +553,7 @@ test(action_with_conditional_effect) :-
     assertion(
       member(
         (actions,
-          [["setx", [(var,['?x', '?y'])], cond1('?x'),
+          [[setx, [(var,['?x', '?y'])], cond1('?x'),
             when(cond2('?y'),cond3('?x'))]]),
         ParserResult)
     ).
@@ -566,14 +571,14 @@ test(action_with_forall_effect) :-
     assertion(
       member(
         (actions,
-          [["setx", [(var,['?x', '?y'])], cond1('?x'),
+          [[setx, [(var,['?x', '?y'])], cond1('?x'),
             all([(t1,['?y'])],cond3('?y'))]]),
         ParserResult)
     ).
 
 test(load_domain_file) :-
   parse_pddl_domain_file("test_data/domain.pddl", ParserResult),
-  assertion(member((domain, "blocksworld"), ParserResult)).
+  assertion(member((domain, blocksworld), ParserResult)).
 
 test(parsing_leaves_no_choicepoint) :-
   assert_domain_file("test_data/domain.pddl"),
