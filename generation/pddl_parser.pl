@@ -92,9 +92,8 @@ predicates_def((predicates, Predicates)) -->
   predicate_list(Predicates),
   [")"].
 predicate_list([]) --> [].
-predicate_list([(PredicateNameAtom,PredicateTypes)|Predicates]) -->
-  ["("], [PredicateName], typed_list(PredicateTypes), [")"],
-  { atom_string(PredicateNameAtom, PredicateName) },
+predicate_list([(Predicate,PredicateTypes)|Predicates]) -->
+  ["("], predicate(Predicate), typed_list(PredicateTypes), [")"],
   predicate_list(Predicates).
 actions_defs((actions,Actions)) --> action_list(Actions).
 action_list([]) --> [].
@@ -109,11 +108,15 @@ action_def([NameAtom,Params,Precondition,Effect]) -->
 
 goal_description(Formula) --> atomic_formula(Formula).
 goal_description(Goal) -->
+  % Same workaround as for atomic_formula
+  { \+ var(Goal) -> Goal =.. [and|GoalList] ; true },
   ["(", "and"], goal_description_list(GoalList), [")"],
-  { Goal =.. [and|GoalList] }.
+  { var(Goal) -> Goal =.. [and|GoalList] ; true }.
 goal_description(Goal) -->
+  % Same workaround as for atomic_formula
+  { \+ var(Goal) -> Goal =.. [or|GoalList] ; true },
   ["(", "or"], goal_description_list(GoalList), [")"],
-  { Goal =.. [or|GoalList] }.
+  { var(Goal) -> Goal =.. [or|GoalList] ; true }.
 goal_description(not(Goal)) --> ["(", "not"], goal_description(Goal), [")"].
 goal_description(imply(Cond,Goal)) -->
   ["(", "imply"], goal_description(Cond), goal_description(Goal), [")"].
@@ -137,8 +140,10 @@ effect(Effect) --> atomic_formula(Effect).
 effect(not(Effect)) -->
   ["(", "not"], atomic_formula(Effect), [")"].
 effect(Effect) -->
+  % Same workaround as for atomic_formula
+  { \+ var(Effect) -> Effect =.. [and|Effects] ; true },
   ["(", "and"], effect_list(Effects), [")"],
-  { Effect =.. [and|Effects] }.
+  { var(Effect) -> Effect =.. [and|Effects] ; true }.
 effect(when(Cond,Effect)) -->
   ["(", "when"], goal_description(Cond), effect(Effect), [")"].
 effect(all(VarList,Effect)) -->
@@ -150,8 +155,15 @@ effect_list([Effect]) --> effect(Effect).
 effect_list([Effect|Effects]) --> effect(Effect), effect_list(Effects).
 
 atomic_formula(Formula) -->
+  % This is a workaround to support both parsing and generation. The problem
+  % here is that for =../2 to work, one of the arguments has to be instantiated.
+  % Thus, if we are parsing, we cannot enforce Formula =.. [...] at the
+  % beginning. On the other hand, when generating, Predicate needs to be
+  % instantiated, otherwise predicate(Predicate) will throw an error because
+  % both arguments for atom_string/2 would be uninstantiated.
+  { \+ var(Formula) -> Formula =.. [Predicate|Terms] ; true},
   ["("], predicate(Predicate), term_list(Terms), [")"],
-  {Formula =.. [Predicate|Terms]}.
+  { var(Formula) -> Formula =.. [Predicate|Terms] ; true }.
 term_list([]) --> [].
 term_list([Term|Terms]) --> term(Term), term_list(Terms).
 % TODO We might need some constraints on the symbols used for terms and
@@ -165,11 +177,11 @@ term(TermAtom) -->
   { atom_string(TermAtom, Term),
     \+ member(TermAtom, ['(', ')'])}.
 
-requirement(R) --> [R], {string_chars(R,[':'|_])}.
+requirement(RAtom) -->
+  [R], { atom_string(RAtom, R), string_concat(":", _, R) }.
 requirements_list([]) --> [].
-requirements_list([RequirementAtom|L2]) -->
+requirements_list([Requirement|L2]) -->
   requirement(Requirement),
-  { atom_string(RequirementAtom, Requirement) },
   requirements_list(L2).
 % TODO we may want to add them to the type object
 types_list(Types) --> subtypes_list(Types).
@@ -182,18 +194,21 @@ subtypes_list([]) --> [].
 subtypes_list([Type|T2]) --> type(Type), subtypes_list(T2).
 type(TypeAtom) -->
   [Type],
-  { \+ member(Type, ["(", ")", "-"]),
-    atom_string(TypeAtom, Type) }.
+  {
+    % constrain TypeAtom to be either a var (if we parse a string), or an atom
+    % (if we generate the string), because atom_string/2 fails on non-atomic
+    % terms.
+    ( var(TypeAtom) ; atom(TypeAtom) ),
+    atom_string(TypeAtom, Type),
+    \+ member(Type, ["(", ")", "-"])
+  }.
 typed_list([]) --> [].
 typed_list([TypedVars|Types]) --> typed_vars(TypedVars), typed_list(Types).
 typed_vars((Type, [Var])) --> variable(Var), ["-"], type(Type).
 typed_vars((Type,[Var|Vars])) --> variable(Var), typed_vars((Type, Vars)).
 
 variable(VarAtom) -->
-  [Var],
-  { string_chars(Var,['?'|_]),
-    atom_string(VarAtom, Var) }.
-
+  [Var], { atom_string(VarAtom, Var), string_concat("?", _, Var) }.
 
 %% parse_pddl_domain(*DomainString, -ParsedDomain)
 %
@@ -590,6 +605,46 @@ test(domain_file_with_comments) :-
     "test_data/domain_with_comments.pddl", ParserResult)
   ).
 
-
 :- end_tests(pddl_parser).
 
+:- begin_tests(pddl_generator).
+
+test(generate_domain_name_def) :-
+  domain_name_def(D, ["(","domain","blub",")"], []),
+  domain_name_def(D, S, []),
+  assertion(S = ["(","domain","blub",")"]).
+
+test(generate_require_def, [fixme(nondet)]) :-
+  require_def(R, ["(",":requirements",":adl",":conditional-effects",")"], []),
+  require_def(R, S, []),
+  assertion(S = ["(",":requirements",":adl",":conditional-effects",")"]).
+
+test(generate_types_def, [fixme(nondet)]) :-
+  types_def(T, ["(",":types","a","b","-","c","d","-","e","f",")"], []),
+  types_def(T, S, []),
+  assertion(S = ["(",":types","a","b","-","c","d","-","e","f",")"]).
+
+test(generate_predicates_def, [fixme(nondet)]) :-
+  predicates_def(R,
+    ["(",":predicates","(","at","?x","?y","-","location",")",")"], []),
+  predicates_def(R, S, []),
+  assertion(S = ["(",":predicates","(","at","?x","?y","-","location",")",")"]).
+
+test(generate_atomic_formula, [fixme(nondet)]) :-
+  atomic_formula(R, ["(","at","?from",")"], []),
+  atomic_formula(R, S, []),
+  assertion(S = ["(","at","?from",")"]).
+
+test(generate_action_def, [fixme(nondet)]) :-
+  Def =
+    ["(",":action","goto",":parameters","(","?from","?to","-","location",")",
+      ":precondition","(","at","?from",")",
+      ":effect","(","and","(","not","(","at","?from",")",")",
+        "(","at","?to",")",")",")"
+    ],
+  action_def(R, Def, []),
+  action_def(R, S, []),
+  assertion(S = Def).
+
+
+:- end_tests(pddl_generator).
