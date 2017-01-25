@@ -4,7 +4,7 @@
  *  pddl_parser.pl - A Prolog PDDL parser
  *
  *  Created:  Mon 05 Dec 2016 11:33:33 CET
- *  Copyright  2016  Till Hofmann <hofmann@kbsg.rwth-aachen.de>
+ *  Copyright  2016, 2017  Till Hofmann <hofmann@kbsg.rwth-aachen.de>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -217,6 +217,15 @@ variable(VarAtom) -->
 parse_pddl_domain(DomainString, ParsedDomain) :-
   preprocess_pddl(DomainString, PreprocessedDomain),
   once(pddl_domain(ParsedDomain, PreprocessedDomain, [])).
+
+%% generate_pddl_domain(*Domain, -PDDLString)
+%
+%  From the given Domain, generate a PDDL representation of the domain.
+%  TODO: This currently produces a one-liner, add better line breaks.
+generate_pddl_domain(Domain, PDDLString) :-
+  once(pddl_domain(Domain, PDDLStringList, [])),
+  atomic_list_concat(PDDLStringList, ' ', PDDLAtom),
+  atom_string(PDDLAtom, PDDLString).
 
 %% read_file(*Filename, -Strings)
 %
@@ -646,5 +655,10 @@ test(generate_action_def, [fixme(nondet)]) :-
   action_def(R, S, []),
   assertion(S = Def).
 
+test(parse_and_generate_domain) :-
+  parse_pddl_domain_file("test_data/domain.pddl", ParserResult),
+  generate_pddl_domain(ParserResult, PDDLString),
+  parse_pddl_domain(PDDLString, OtherParserResult),
+  assertion(ParserResult = OtherParserResult).
 
 :- end_tests(pddl_generator).
