@@ -19,7 +19,7 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
- :- module(macro_generation, [generate_macro/4]).
+ :- module(macro_generation, [generate_macro/4, generate_macro_to_file/4]).
 
 :- use_module(pddl_parser).
 :- use_module(effects).
@@ -54,6 +54,18 @@ generate_macro(
   !,
   atomic_list_concat(Actions, '-', Name),
   generate_pddl_action(Name, Parameters, Precondition, Effect, Macro).
+
+%% generate_macro_to_file(+DomainFile, +Actions, +ParameterEnum, +Filename)
+%
+%  The same as generate_macro/4, but write the resulting macro directly to
+%  Filename.
+generate_macro_to_file(DomainFile, Actions, ParameterEnum, Filename) :-
+  generate_macro(DomainFile, Actions, ParameterEnum, Macro),
+  setup_call_cleanup(
+    open(Filename, write, Stream),
+    write(Stream, Macro),
+    close(Stream)
+  ).
 
 %% get_parameter_assignment(-Action, -ParamEnumeration, +ParamAssignment)
 %
