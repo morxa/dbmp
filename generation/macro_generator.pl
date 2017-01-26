@@ -37,9 +37,9 @@
 %  of numbers that the parameters should be assigned to, e.g., [[1,2],[3,1]] if
 %  the second parameter of the second action should be the same as the first
 %  parameter of the first action.
-%  The resulting macro is a triple (Parameters, Precondition, Effect).
+%  The result Macro is a PDDL string representation of the macro action.
 generate_macro(
-  DomainFile, Actions, ParameterEnumeration, (Parameters, Precondition, Effect)
+  DomainFile, Actions, ParameterEnumeration, Macro
 ) :-
   parse_pddl_domain_file(DomainFile, ParsedDomain),
   assert_domain_facts(ParsedDomain),
@@ -49,7 +49,11 @@ generate_macro(
     Actions, ParameterEnumeration, ParameterAssignment),
   compute_parameters(Actions, ParameterAssignment, Parameters),
   compute_precondition(Actions, ParameterAssignment, Parameters, Precondition),
-  compute_effect(Actions, ParameterAssignment, Effect).
+  compute_effect(Actions, ParameterAssignment, Effect),
+  % Cut here, we really only want to generate the macro once.
+  !,
+  atomic_list_concat(Actions, '-', Name),
+  generate_pddl_action(Name, Parameters, Precondition, Effect, Macro).
 
 %% get_parameter_assignment(-Action, -ParamEnumeration, +ParamAssignment)
 %
