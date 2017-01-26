@@ -17,6 +17,7 @@
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
 
+import argparse
 import pyswip
 import subprocess
 import tempfile
@@ -77,9 +78,28 @@ class MacroAction(object):
 
 def main():
     """ Test MacroAction with a macro from the test domain. """
+
+    parser = argparse.ArgumentParser(
+        description='Read frequent action patterns from the database and '
+                    'generate PDDL macro actions for those action patterns.')
+    parser.add_argument('--domainfile',
+                        help='path to the domain this macro belongs to')
+    parser.add_argument('action', nargs='*',
+                        help='an action and its parameters to include into the '
+                             'macro, e.g. "unstack 1,2"')
+    args = parser.parse_args()
+    assert(len(args.action) % 2 == 0), \
+            'You need to specify parameters for each action, given actions: ' \
+            + str(args.actions)
+    actions = args.action[0::2]
+    parameters = []
+    for params in args.action[1::2]:
+        if params == 'none':
+            parameters.append([])
+        else:
+            parameters.append([int(param) for param in params.split(',') ])
     m = MacroAction()
-    m.generate_with_run('test_data/domain.pddl', ["unstack", "stack"],
-        [[1,2],[1,3]])
+    m.generate_with_run(args.domainfile, actions, parameters)
 
 if __name__ == "__main__":
     main()
