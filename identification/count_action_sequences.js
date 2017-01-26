@@ -59,12 +59,12 @@ var findSequencesInPlan = function() {
         }
         parameterAssignment.push(actionParams);
       }
-      var val = { totalCount: 1 };
+      var val = { actions: sequence, totalCount: 1 };
       val[parameterAssignment] = {
         'parameters': parameterAssignment,
         'count': 1
       };
-      emit(sequence, val);
+      emit(sequence.join(), val);
     }
   }
 }
@@ -100,11 +100,12 @@ var countSequences = function(key, vals) {
 var cleanupResult = function(key, actionSequence) {
   cleanedResult = {
     totalCount: actionSequence['totalCount'],
+    actions: actionSequence['actions'],
     parameters: []
   };
   Object.keys(actionSequence).forEach(
       function(seqKey, index) {
-        if (seqKey == 'totalCount') {
+        if (seqKey == 'totalCount' || seqKey == 'actions') {
           return;
         }
         cleanedResult['parameters'].push(
