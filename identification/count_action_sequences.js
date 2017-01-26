@@ -101,6 +101,7 @@ var cleanupResult = function(key, actionSequence) {
   cleanedResult = {
     totalCount: actionSequence['totalCount'],
     actions: actionSequence['actions'],
+    domain: domain,
     parameters: []
   };
   Object.keys(actionSequence).forEach(
@@ -125,7 +126,7 @@ function get_macros(domain, max_length, out) {
       { out: out,
         query: { "domain": domain, "use_for_macros": true },
         finalize: cleanupResult,
-        scope: { maxSequenceLength: max_length }
+        scope: { domain: domain, maxSequenceLength: max_length }
       }
   )
 }
