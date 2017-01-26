@@ -21,7 +21,8 @@
 
 :- module(pddl_parser,
     [ parse_pddl_domain/2, parse_pddl_domain_file/2, preprocess_pddl/2,
-      assert_domain_facts/1, assert_domain_file/1, retract_domain_facts/0]).
+      assert_domain_facts/1, assert_domain_file/1, retract_domain_facts/0,
+      generate_pddl_domain/2, generate_pddl_action/5]).
 
 :- use_module(library(regex)).
 
@@ -225,6 +226,15 @@ parse_pddl_domain(DomainString, ParsedDomain) :-
 generate_pddl_domain(Domain, PDDLString) :-
   once(pddl_domain(Domain, PDDLStringList, [])),
   atomic_list_concat(PDDLStringList, ' ', PDDLAtom),
+  atom_string(PDDLAtom, PDDLString).
+
+%% generate_pddl_action(+Parameters, +Precondition, +Effects, -PDDLString)
+%
+%  For the given action with Name, Parameters, Precondition, and Effects,
+%  compute a the respective PDDL representation of the action.
+generate_pddl_action(Name, Parameters, Precondition, Effects, PDDLString) :-
+  once(action_def([Name, Parameters, Precondition, Effects], PDDLList, [])),
+  atomic_list_concat(PDDLList, ' ', PDDLAtom),
   atom_string(PDDLAtom, PDDLString).
 
 %% read_file(*Filename, -Strings)
