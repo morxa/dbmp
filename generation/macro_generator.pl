@@ -19,8 +19,6 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
- :- module(macro_generation, [generate_macro/4, generate_macro_to_file/4]).
-
 :- use_module(pddl_parser).
 :- use_module(effects).
 :- use_module(regression).
