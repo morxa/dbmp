@@ -18,7 +18,11 @@
 #  Read the full text in the LICENSE.GPL file in the doc directory.
 
 import argparse
+import configparser
+import getpass
+import pymongo
 import pyswip
+import re
 import subprocess
 import tempfile
 
@@ -71,10 +75,38 @@ class MacroAction(object):
         macro_file = tempfile.NamedTemporaryFile(mode='r')
         query = 'generate_macro_to_file("{}", {}, {}, "{}").'.format(
             domain_file_path, actions, parameters, macro_file.name)
-        subprocess.run(["swipl", "-q", "-l", "macro_generator.pl", "-t", query])
+        subprocess.call(["swipl", "-q", "-l", "macro_generator.pl", "-t", query])
         self.macro = macro_file.read()
         print('\nresult:\n' + self.macro)
         self.initialized = True
+
+# TODO: this is copied from scripts and should be separated into a module such
+# that it can be reused.
+def get_domainname(domain_string):
+    """Gets the domain name from the domain given as string.
+
+    Parses the first line of the string and returns the domain name specified in
+    the domain string.
+
+    Args:
+        domain_string: A string representation of the domain.
+
+    Returns:
+        A domain as string.
+
+    Raises:
+        AssertionError: The domain string does not contain a domain name.
+    """
+    for line in domain_string.splitlines():
+        # Skip empty lines and commented lines.
+        if re.match(r'^\s*$', line) or re.match(r'^;', line):
+            continue
+        match = re.search('\(domain ([^)]+)\)', line)
+        assert match is not None, \
+            'Could not extract domain name from ' \
+            'first non-empty line "{}".'.format(line)
+        return match.group(1)
+
 
 def main():
     """ Test MacroAction with a macro from the test domain. """
@@ -82,8 +114,23 @@ def main():
     parser = argparse.ArgumentParser(
         description='Read frequent action patterns from the database and '
                     'generate PDDL macro actions for those action patterns.')
+    parser.add_argument('--domain', help='the domain the problems belong to')
     parser.add_argument('--domainfile',
                         help='path to the domain this macro belongs to')
+    parser.add_argument('-c', '--config-file',
+                        help='config file to read database info from')
+    parser.add_argument('-H', '--db-host', help='the database hostname')
+    parser.add_argument('-u', '--db-user', help='the database username')
+    parser.add_argument('-p', '--db-passwd', help='the database password')
+    parser.add_argument('-s', '--save', action='store_true',
+                        help='upload the resulting macro into the database')
+    parser.add_argument('--from-db', action='store_true',
+                        help='fetch domain and actions from the database')
+    parser.add_argument('-a', '--all', action='store_true',
+                        help='start jobs for all problems in the domain')
+    parser.add_argument('-l', '--occurrence-threshold', type=int, default=1,
+                        help='the minimal number of occurrences of the action '
+                             'sequence such that a macro is generated from it')
     parser.add_argument('action', nargs='*',
                         help='an action and its parameters to include into the '
                              'macro, e.g. "unstack 1,2"')
@@ -91,15 +138,77 @@ def main():
     assert(len(args.action) % 2 == 0), \
             'You need to specify parameters for each action, given actions: ' \
             + str(args.actions)
-    actions = args.action[0::2]
-    parameters = []
-    for params in args.action[1::2]:
-        if params == 'none':
-            parameters.append([])
-        else:
-            parameters.append([int(param) for param in params.split(',') ])
-    m = MacroAction()
-    m.generate_with_run(args.domainfile, actions, parameters)
+    assert(args.domain or args.domainfile), \
+            'Please specify a domain name or a domain file'
+    db_host = 'localhost'
+    db_user = 'planner'
+    db_passwd = ''
+    if args.config_file:
+        config = configparser.ConfigParser()
+        config.read(args.config_file)
+        if 'plan_database' in config:
+            if 'host' in config['plan_database']:
+                db_host = config['plan_database']['host']
+            if 'user' in config['plan_database']:
+                db_user = config['plan_database']['user']
+            if 'passwd' in config['plan_database']:
+                db_passwd = config['plan_database']['passwd']
+    if args.db_host:
+        db_host = args.db_host
+    if args.db_user:
+        db_user = args.db_user
+    if args.db_passwd:
+        db_passwd = db_passwd
+    macros = set()
+    if args.from_db:
+        assert(db_host and db_user), \
+                'Please specify database host and user'
+        if not db_passwd:
+            db_passwd = getpass.getpass()
+        client = pymongo.MongoClient(host=db_host)
+        database = client.macro_planning
+        database.authenticate(db_user, db_passwd)
+        # TODO: need to adapt identificaton scripts to write result here
+        action_seqs_coll = client.macro_planning.action_sequences
+        domain_coll = client.macro_planning.domains
+        if not args.domainfile:
+            domain_entry = domain_coll.find_one({ 'name': args.domain })
+            assert(domain_entry), \
+                'Could not find domain {} in the database!'.format(args.domain)
+            tmpfile = tempfile.NamedTemporaryFile(mode='w')
+            tmpfile.write(domain_entry['raw'])
+            tmpfile.flush()
+            args.domainfile = tmpfile.name
+        if args.all:
+            for sequence in action_seqs_coll.find(
+                    { 'value.domain': args.domain }):
+                for parameters in sequence['value']['parameters']:
+                    if parameters['count'] < args.occurrence_threshold:
+                        continue
+                    actions = sequence['value']['actions']
+                    parameter_list = []
+                    for params in parameters['assignment']:
+                        parameter_list.append([int(param) for param in params])
+                    m = MacroAction()
+                    m.generate_with_run(args.domainfile, actions,
+                        parameter_list)
+                    macros.add(m)
+    if not args.domain:
+        dfile = open(args.domainfile, 'r')
+        domain_string = dfile.read()
+        args.domain = get_domainname(domain_string)
+    if args.action:
+        actions = args.action[0::2]
+        parameters = []
+        for params in args.action[1::2]:
+            if params == 'none':
+                parameters.append([])
+            else:
+                parameters.append([int(param) for param in params.split(',') ])
+        assert(args.domainfile), 'Domain was not specified'
+        m = MacroAction()
+        m.generate_with_run(args.domainfile, actions, parameters)
+        macros.add(m)
 
 if __name__ == "__main__":
     main()
