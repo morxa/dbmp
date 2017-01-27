@@ -35,6 +35,18 @@ class MacroAction(object):
     def __init__(self):
         """Initialize the macro."""
         self.initialized = False
+    def generate(self, domain_file_path, actions, parameters):
+        """ Generate the macro.
+
+        This calls Prolog (with one of the other class methods) to generate a
+        PDDL string representation of the macro.
+
+        Args:
+            domain_file_path: The path to the domain file to read from.
+            actions: The actions that the macro should consist of.
+            parameters: The parameter assignment for the macro, e.g. [[1,2],[1]]
+        """
+        self.generate_with_run(domain_file_path, actions, parameters)
     def generate_with_pyswip(self, domain_file_path, actions, parameters):
         """ Generate a macro using pyswip.
 
@@ -190,8 +202,7 @@ def main():
                     for params in parameters['assignment']:
                         parameter_list.append([int(param) for param in params])
                     m = MacroAction()
-                    m.generate_with_run(args.domainfile, actions,
-                        parameter_list)
+                    m.generate(args.domainfile, actions, parameter_list)
                     macros.add(m)
     if not args.domain:
         dfile = open(args.domainfile, 'r')
@@ -207,7 +218,7 @@ def main():
                 parameters.append([int(param) for param in params.split(',') ])
         assert(args.domainfile), 'Domain was not specified'
         m = MacroAction()
-        m.generate_with_run(args.domainfile, actions, parameters)
+        m.generate(args.domainfile, actions, parameters)
         macros.add(m)
 
 if __name__ == "__main__":
