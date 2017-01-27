@@ -20,6 +20,7 @@
 import argparse
 import configparser
 import getpass
+import itertools
 import pymongo
 import pyswip
 import re
@@ -35,6 +36,10 @@ class MacroAction(object):
     def __init__(self):
         """Initialize the macro."""
         self.initialized = False
+        self.num_actions = 0
+        self.actions = []
+        self.parameters = []
+        self.count = 0
     def generate(self, domain_file_path, actions, parameters):
         """ Generate the macro.
 
@@ -46,6 +51,11 @@ class MacroAction(object):
             actions: The actions that the macro should consist of.
             parameters: The parameter assignment for the macro, e.g. [[1,2],[1]]
         """
+        self.actions = actions
+        self.num_actions = len(actions)
+        self.parameters = parameters
+        flat_parameters = list(itertools.chain.from_iterable(parameters))
+        self.parameter_reduction = len(flat_parameters) - max(flat_parameters)
         self.generate_with_run(domain_file_path, actions, parameters)
     def generate_with_pyswip(self, domain_file_path, actions, parameters):
         """ Generate a macro using pyswip.
@@ -203,6 +213,7 @@ def main():
                         parameter_list.append([int(param) for param in params])
                     m = MacroAction()
                     m.generate(args.domainfile, actions, parameter_list)
+                    m.count = int(parameters['count'])
                     macros.add(m)
     if not args.domain:
         dfile = open(args.domainfile, 'r')
@@ -219,6 +230,8 @@ def main():
         assert(args.domainfile), 'Domain was not specified'
         m = MacroAction()
         m.generate(args.domainfile, actions, parameters)
+        # We don't really know the count, so assume it is 1.
+        m.count = 1
         macros.add(m)
 
 if __name__ == "__main__":
