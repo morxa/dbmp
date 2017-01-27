@@ -126,6 +126,20 @@ def get_domainname(domain_string):
             'first non-empty line "{}".'.format(line)
         return match.group(1)
 
+def augment_domain(domain, macro):
+    """Augment a domain with a macro.
+
+    Args:
+        domain: The domain string to augment.
+        macro: The macro string to add to the domain.
+
+    Returns:
+        The augmented domain as string.
+    """
+    last_parenthesis = domain.rindex(')')
+    return domain[:last_parenthesis] + '\n' + macro + '\n)'
+
+
 
 def main():
     """ Test MacroAction with a macro from the test domain. """
@@ -152,6 +166,9 @@ def main():
                              'sequence such that a macro is generated from it')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print the generated macro actions')
+    parser.add_argument('-g', '--augment-domain', action='store_true',
+                        help='augment the domain with the macro and upload the '
+                             'resulting domain macro')
     parser.add_argument('action', nargs='*',
                         help='an action and its parameters to include into the '
                              'macro, e.g. "unstack 1,2"')
@@ -236,11 +253,27 @@ def main():
         # We don't really know the count, so assume it is 1.
         m.count = 1
         macros.add(m)
-    for m in macros:
+    for macro in macros:
         if args.save:
-            macros_coll.insert_one(m.__dict__)
+            macros_coll.insert_one(macro.__dict__)
         if args.verbose:
-            print(m.__dict__)
+            print(macro.__dict__)
+        if args.augment_domain:
+            assert(args.save), \
+                'You need to provide --save if you want to augment the domain'
+            domain_entry = domain_coll.find_one({'name': args.domain})
+            assert(domain_entry), 'Could not find domain {}'.format(args.domain)
+            augmented_domain_entry = domain_entry
+            # remove the ID so we can upload the domain as a new document
+            augmented_domain_entry['base_domain'] = domain_entry['_id']
+            del augmented_domain_entry['_id']
+            augmented_domain_entry['macro'] = macro._id
+            augmented_domain_entry['augmented'] = True
+            augmented_domain_entry['raw'] = augment_domain(domain_entry['raw'],
+                macro.macro)
+            if args.verbose:
+                print('Inserting {}'.format(augmented_domain_entry))
+            domain_coll.insert(augmented_domain_entry)
 
 if __name__ == "__main__":
     main()
