@@ -331,17 +331,19 @@ def main():
         solution = planner.get_solution()
         print('Planner was successful. Uploading results.')
         db_connector.upload_result(
-                planner=args.planner, domain=args.domain, problem=args.problem,
-                raw=planner.get_solution(), resources=planner.get_resources(),
-                start_time=start_time, use_for_macros=args.use_for_macros)
+            planner=args.planner, domain=bson.objectid.ObjectId(args.domain),
+            problem=bson.objectid.ObjectId(args.problem),
+            raw=planner.get_solution(), resources=planner.get_resources(),
+            start_time=start_time, use_for_macros=args.use_for_macros)
     except NoSolutionFoundError:
         print('Planner output:\n' + result.stdout)
         print('Could not find a solution. Planner failed, '
               'return code: {}'.format(result.returncode))
         db_connector.upload_result(
-                planner=args.planner, domain=args.domain, problem=args.problem,
-                error='no solution found', output=result.stdout,
-                start_time=start_time)
+            planner=args.planner, domain=bson.objectid.ObjectId(args.domain),
+            problem=bson.objectid.ObjectId(args.problem),
+            error='no solution found', output=result.stdout,
+            start_time=start_time)
 
 if __name__ == '__main__':
     main()
