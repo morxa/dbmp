@@ -22,6 +22,7 @@ Upload a domain file or a problem file to the database
 """
 
 import argparse
+import bson.objectid
 import configparser
 import getpass
 import pymongo
@@ -104,12 +105,23 @@ def get_domain_of_problem(problem_string):
     return match.group(1)
 
 def start_job(planner, job_template, domain, problem):
+    """ Start a job for the given planner, domain, and problem.
+
+    This reads the job template and substitutes all its parameters. It then
+    prints the substituted template to stdout. The output can be piped into
+    kubectl.
+
+    Args:
+        planner: The name of the planner to use for this job.
+        domain: The ID of the domain to use for this job.
+        problem: The ID of the problem to use for this job.
+    """
     template_file = open(job_template, 'r')
     job_string = template_file.read()\
-        .replace('$DOMAIN', domain)\
-        .replace('$PROBLEM', problem)\
-        .replace('$LOWERDOMAIN', domain.lower())\
-        .replace('$LOWERPROBLEM', problem.lower())\
+        .replace('$DOMAIN', str(domain))\
+        .replace('$PROBLEM', str(problem))\
+        .replace('$LOWERDOMAIN', str(domain).lower())\
+        .replace('$LOWERPROBLEM', str(problem).lower())\
         .replace('$PLANNER', planner)
     print(job_string)
 
@@ -135,7 +147,8 @@ def main():
     parser.add_argument('--skip-upload', action='store_true',
                         help='do not upload the problem')
     parser.add_argument('--domainfile', help='the domain file to add')
-    parser.add_argument('--domain', help='the domain the problems belong to')
+    parser.add_argument('--domain',
+                        help='the ID of the domain the problems belong to')
     parser.add_argument('--problem', action='append', dest='problems',
                         help='Additional problem to start a job for')
     parser.add_argument('--planner', default='ff', help='the planner to use')
@@ -165,67 +178,77 @@ def main():
         problems = set(args.problems)
     else:
         problems = set()
-    if not args.skip_upload:
-        if not db_passwd:
-            db_passwd = getpass.getpass()
-        client = pymongo.MongoClient(host=db_host)
-        database = client.macro_planning
-        database.authenticate(db_user, db_passwd)
-        domain_coll = client.macro_planning.domains
-        problem_coll = client.macro_planning.problems
-        solution_coll = client.macro_planning.solutions
+    if not db_passwd:
+        db_passwd = getpass.getpass()
+    client = pymongo.MongoClient(host=db_host)
+    database = client.macro_planning
+    database.authenticate(db_user, db_passwd)
+    domain_coll = client.macro_planning.domains
+    problem_coll = client.macro_planning.problems
+    solution_coll = client.macro_planning.solutions
     if args.domainfile:
         domainfile = open(args.domainfile, 'r')
         domain_string = domainfile.read()
-        domain = get_domainname(domain_string)
+        domain_name = get_domainname(domain_string)
         if args.domain:
-            assert domain == args.domain, \
+            domain_entry = domain_coll.find_one(
+                { '_id': bson.objectid.ObjectId(args.domain) })
+            assert domain_entry['name'] == domain_name, \
                 'Domain "{}" in domain file does not match ' \
-                'given domain "{}".'.format(domain, args.domain)
+                'given domain "{}".'.format(domain_name, domain_entry['name'])
         if not args.skip_upload:
-            assert domain_coll.find({ 'name': domain }).count() == 0, \
-                'Domain "{}" already exists in the database.'.format(domain)
-            domain_coll.insert({ 'name': domain, 'raw': domain_string})
+            assert domain_coll.find({ 'name': domain_name }).count() == 0, \
+                'Domain "{}" already exists in the database.'.format(
+                    domain_name)
+            domain = domain_coll.insert(
+                { 'name': domain_name, 'raw': domain_string})
+        if not domain:
+            domain = domain_coll.find_one({'name': domain_name,
+                                           'augmented': { '$ne': True }})['_id']
     else:
         assert args.domain, \
-            'You need to specify a domain file or a domain name.'
+            'You need to specify a domain file or a domain ID.'
         domain = args.domain
+        domain_entry = domain_coll.find_one(
+            { '_id': bson.objectid.ObjectId(domain) })
+        assert(domain_entry), \
+                'Could not find domain with ID "{}"'.format(domain)
+        domain_name = domain_entry['name']
     for problempath in args.problemfiles:
         problemfile = open(problempath, 'r')
         problem_string = problemfile.read()
-        problem = get_problemname(problem_string)
+        problem_name = get_problemname(problem_string)
         problem_domain = get_domain_of_problem(problem_string)
-        assert problem_domain == domain, \
-            'Domain "{}" in problem "{}" does not match ' \
-            'given domain name "{}".'.format(problem_domain, problem, domain)
+        assert problem_domain == domain_name, \
+            'Domain "{}" in problem "{}" does not match given domain name ' \
+            '"{}".'.format(problem_domain, problem_name, domain_name)
         if not args.skip_upload:
-            assert domain_coll.find({ 'name': domain }).count() > 0, \
-                'Missing domain "{}" in database for problem "{}".'.format(
-                    domain, problem)
-            assert problem_coll.find({ 'name': problem }).count() == 0, \
-                'Problem "{}" already exists in database.'.format(problem)
-            problem_coll.insert(
-                {'name': problem, 'domain': domain, 'raw': problem_string}
-            )
-        problems.add(problem)
+            assert problem_coll.find({ 'name': problem_name }).count() == 0, \
+                'Problem "{}" already exists in database.'.format(problem_name)
+            problem_id = problem_coll.insert(
+                {'name': problem_name, 'domain': domain_name,
+                 'raw': problem_string})
+        else:
+            problem_id =  problem_coll.find_one({ 'name': problem_name })['_id']
+        problems.add(problem_id)
     if args.all or args.all_missing or args.all_failed:
         all_problems = list(
-            problem_coll.find({ 'domain': domain }, { 'name': True }))
+            problem_coll.find({ 'domain': domain_name }, { 'name': True }))
     if args.all:
         for problem in all_problems:
-            problems.add(problem['name'])
+            problems.add(problem['_id'])
     if args.all_missing:
         for problem in all_problems:
             if not solution_coll.find_one(
-                    { 'domain': domain, 'problem': problem['name'],
+                    { 'domain_id': domain, 'problem': problem['_id'],
                       'planner': args.planner}):
-                problems.add(problem['name'])
+                problems.add(problem['_id'])
     if args.all_failed:
         for problem in all_problems:
             if solution_coll.find_one(
-                    { 'domain': domain, 'problem': problem['name'],
+                    { 'domain_id': domain, 'problem': problem['_id'],
                       'raw': { '$exists': False }}):
-                problems.add(problem['name'])
+                problems.add(problem['_id'])
     for problem in problems:
         start_job(args.planner, args.kubernetes_template, domain, problem)
         print('---')
