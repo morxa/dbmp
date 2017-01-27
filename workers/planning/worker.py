@@ -23,6 +23,7 @@ planner, saves the result to the database, and exits.
 """
 
 import argparse
+import bson.objectid
 import datetime
 import glob
 import os
@@ -80,11 +81,11 @@ class DatabaseConnector(object):
         user = os.environ.get('PLANDB_USER', 'planner')
         pwd = os.environ.get('PLANDB_PWD', 'planner')
         self.db.authenticate(user, pwd)
-    def get_domain(self, domain_name):
-        """Get the domain with the given domain name from the database.
+    def get_domain(self, domain_id):
+        """Get the domain with the given domain ID from the database.
 
         Args:
-            domain_name: The name of the domain to fetch.
+            domain_id: The Object ID of the domain to fetch.
 
         Returns:
             The string representation of the domain.
@@ -92,16 +93,17 @@ class DatabaseConnector(object):
         Raises:
             AssertionError: The file could not be found in the database.
         """
-        res = self.db.domains.find_one({ 'name': domain_name })
+        res = self.db.domains.find_one(
+            { '_id': bson.objectid.ObjectId(domain_id) })
         assert res, \
             'The domain "{}" could not be found ' \
-            'in the database.'.format(domain_name)
+            'in the database.'.format(domain_id)
         return res['raw']
-    def get_problem(self, problem_name):
-        """Get the problem with the given problem name from the database.
+    def get_problem(self, problem_id):
+        """Get the problem with the given problem ID from the database.
 
         Args:
-            problem_name: The name of the problem to fetch.
+            problem_id: The Object ID of the problem to fetch.
 
         Returns:
             The string representation of the problem.
@@ -109,10 +111,11 @@ class DatabaseConnector(object):
         Raises:
             AssertionError: The problem could not be found
         """
-        res = self.db.problems.find_one({ 'name': problem_name })
+        res = self.db.problems.find_one(
+            { '_id': bson.objectid.ObjectId(problem_id) })
         assert res, \
             'The problem "{}" could not be found ' \
-            'in the database.'.format(problem_name)
+            'in the database.'.format(problem_id)
         return res['raw']
     def get_macros(self, macro_name):
         """Get the macros with the given name.
@@ -283,8 +286,8 @@ def main():
                         help='The macros to be used by the planner. '
                              'The file must exist in the database. '
                              'Currently only valid for macro-ff-solep.')
-    parser.add_argument('domain', help='the name of the domain')
-    parser.add_argument('problem', help='the name of the problem')
+    parser.add_argument('domain', help='the ID of the domain')
+    parser.add_argument('problem', help='the ID of the problem')
     args = parser.parse_args()
     db_connector = DatabaseConnector()
     domain_file = open('domain.pddl', 'w')
