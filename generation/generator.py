@@ -40,6 +40,7 @@ class MacroAction(object):
         self.actions = []
         self.parameters = []
         self.count = 0
+        self.type = 'dmp'
     def generate(self, domain_file_path, actions, parameters):
         """ Generate the macro.
 
@@ -72,13 +73,10 @@ class MacroAction(object):
         macro_file = tempfile.NamedTemporaryFile()
         prolog = pyswip.Prolog()
         prolog.consult('macro_generator.pl')
-        print('result file: ' + macro_file.name)
         query_string = 'generate_macro_to_file({}, {}, {}, {})'.format(
             domain_file_path, actions, parameters, macro_file.name)
-        print('query: ' + query_string)
         prolog_query = prolog.query(query_string)
         query_result = next(prolog_query)
-        print('result: ' + query_result)
         self.initialized = True
     def generate_with_run(self, domain_file_path, actions, parameters):
         """ Generate a macro by calling SWI-Prolog with subprocess.run.
@@ -99,7 +97,6 @@ class MacroAction(object):
             domain_file_path, actions, parameters, macro_file.name)
         subprocess.call(["swipl", "-q", "-l", "macro_generator.pl", "-t", query])
         self.macro = macro_file.read()
-        print('\nresult:\n' + self.macro)
         self.initialized = True
 
 # TODO: this is copied from scripts and should be separated into a module such
@@ -153,6 +150,8 @@ def main():
     parser.add_argument('-l', '--occurrence-threshold', type=int, default=1,
                         help='the minimal number of occurrences of the action '
                              'sequence such that a macro is generated from it')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='print the generated macro actions')
     parser.add_argument('action', nargs='*',
                         help='an action and its parameters to include into the '
                              'macro, e.g. "unstack 1,2"')
@@ -193,6 +192,7 @@ def main():
         # TODO: need to adapt identificaton scripts to write result here
         action_seqs_coll = client.macro_planning.action_sequences
         domain_coll = client.macro_planning.domains
+        macros_coll = client.macro_planning.macros
         if not args.domainfile:
             domain_entry = domain_coll.find_one({ 'name': args.domain })
             assert(domain_entry), \
@@ -201,6 +201,8 @@ def main():
             tmpfile.write(domain_entry['raw'])
             tmpfile.flush()
             args.domainfile = tmpfile.name
+        if not args.domain:
+            args.domain = get_domainname(args.domainfile)
         if args.all:
             for sequence in action_seqs_coll.find(
                     { 'value.domain': args.domain }):
@@ -214,6 +216,7 @@ def main():
                     m = MacroAction()
                     m.generate(args.domainfile, actions, parameter_list)
                     m.count = int(parameters['count'])
+                    m.domain = args.domain
                     macros.add(m)
     if not args.domain:
         dfile = open(args.domainfile, 'r')
@@ -233,6 +236,11 @@ def main():
         # We don't really know the count, so assume it is 1.
         m.count = 1
         macros.add(m)
+    for m in macros:
+        if args.save:
+            macros_coll.insert_one(m.__dict__)
+        if args.verbose:
+            print(m.__dict__)
 
 if __name__ == "__main__":
     main()
