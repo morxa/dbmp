@@ -19,6 +19,7 @@
 
 import argparse
 import configparser
+import macro_evaluator
 import getpass
 import itertools
 import pymongo
@@ -40,7 +41,8 @@ class MacroAction(object):
         self.actions = []
         self.parameters = []
         self.count = 0
-        self.type = 'dmp'
+        self.type = 'dbmp'
+        self.evaluation = {}
     def generate(self, domain_file_path, actions, parameters):
         """ Generate the macro.
 
@@ -169,6 +171,9 @@ def main():
     parser.add_argument('-g', '--augment-domain', action='store_true',
                         help='augment the domain with the macro and upload the '
                              'resulting domain macro')
+    parser.add_argument('-e', '--evaluate', action='store_true',
+                        help='evaluate the resulting macros for their '
+                             'usefulness')
     parser.add_argument('action', nargs='*',
                         help='an action and its parameters to include into the '
                              'macro, e.g. "unstack 1,2"')
@@ -253,6 +258,16 @@ def main():
         # We don't really know the count, so assume it is 1.
         m.count = 1
         macros.add(m)
+    if args.evaluate:
+        evaluators = []
+        for weight in range(0,101,10):
+            evaluators.append(
+                macro_evaluator.WeightedFPEvaluator(weight, 100 - weight))
+        for macro in macros:
+            evaluation = {}
+            for evaluator in evaluators:
+                evaluation[evaluator.name()] = evaluator.evaluate(macro)
+            macro.evaluation = evaluation
     for macro in macros:
         if args.save:
             macros_coll.insert_one(macro.__dict__)
