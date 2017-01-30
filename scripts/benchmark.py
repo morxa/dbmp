@@ -120,7 +120,9 @@ def main():
     if args.all:
         assert(args.evaluator), 'Please provide an evaluator'
         query = { 'evaluation.' + args.evaluator: { '$gte': args.min_score }}
-        for macro in macro_coll.find(query).limit(args.num_macros):
+        sorter = [ ('evaluation.' + args.evaluator, -1) ]
+        for macro in \
+                macro_coll.find(query).sort(sorter).limit(args.num_macros):
             domain = domain_coll.find_one( {'macro': macro['_id'] })
             if domain:
                 domains.add(domain['_id'])
