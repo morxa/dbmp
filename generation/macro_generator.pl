@@ -70,7 +70,7 @@ generate_macro_to_file(DomainFile, Actions, ParameterEnum, Filename) :-
 %  For the given Action, transform the enumeration of parameters
 %  ParamEnumeration into a parameter assignment. A parameter enumeration is a
 %  list new parameters that shall be used for the reassigned action, e.g.,
-%  [1,2,1]. All parameters are reassigned to a variable of the name ?<number>.
+%  [1,2,1]. All parameters are reassigned to a variable of the name ?p<number>.
 %  This expects the domain to be asserted already. In particular,
 %  domain:action_parameters(Action, Parameters) must give the action's
 %  parameters.
@@ -87,7 +87,7 @@ get_parameter_assignment(Action, ParamEnumeration, ParamAssignment) :-
   ;
     true
   ),
-  maplist(atom_concat('?'), ParamEnumeration, NewParams),
+  maplist(atom_concat('?p'), ParamEnumeration, NewParams),
   maplist(\Param^NewParam^(=((Param,NewParam))),
     Parameters, NewParams, ParamAssignment).
 
@@ -289,13 +289,13 @@ test(
   ]
 ) :-
   assertion(
-    get_parameter_assignment("stack", [1,2], [('?x', '?1'), ('?y', '?2')])),
+    get_parameter_assignment("stack", [1,2], [('?x', '?p1'), ('?y', '?p2')])),
   assertion(
-    get_parameter_assignment("stack", [2,1], [('?x', '?2'), ('?y', '?1')])),
+    get_parameter_assignment("stack", [2,1], [('?x', '?p2'), ('?y', '?p1')])),
   assertion(
-    get_parameter_assignment("stack", [2,2], [('?x', '?2'), ('?y', '?2')])),
+    get_parameter_assignment("stack", [2,2], [('?x', '?p2'), ('?y', '?p2')])),
   assertion(with_output_to(string(_),
-     \+ get_parameter_assignment("stack", [1], [('?x', '?2'), ('?y', '?2')]))).
+     \+ get_parameter_assignment("stack", [1], [('?x', '?p2'), ('?y', '?p2')]))).
 
 :- end_tests(parameter_assignment).
 
