@@ -25,6 +25,7 @@ import argparse
 import configparser
 import bson.objectid
 import pymongo
+import sys
 
 # TODO This is copy-pasted, move to common module instead.
 def start_job(planner, job_template, domain, problem):
@@ -114,7 +115,8 @@ def main():
             domains.add(domain['_id'])
         else:
            print('Warning: Could not find a domain with macro {}. Did you '
-                 'generate the augmented domain?'.format(macro['_id']))
+                 'generate the augmented domain?'.format(macro),
+                 file=sys.stderr)
     if args.all:
         assert(args.evaluator), 'Please provide an evaluator'
         query = { 'evaluation.' + args.evaluator: { '$gte': args.min_score }}
@@ -124,7 +126,8 @@ def main():
                 domains.add(domain['_id'])
             else:
                 print('Warning: Could not find a domain with macro {}. Did you '
-                      'generate the augmented domain?'.format(macro['_id']))
+                      'generate the augmented domain?'.format(macro['_id']),
+                     file=sys.stderr)
     for domain in domains:
         for problem in problem_coll.find({ 'domain': args.domain }):
             start_job(args.planner, args.kubernetes_template, domain,
