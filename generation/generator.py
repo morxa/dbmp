@@ -226,8 +226,10 @@ def main():
         if not args.domain:
             args.domain = get_domainname(args.domainfile)
         if args.all:
+            domain_id = domain_coll.find_one(
+                {'name': args.domain, 'augmented': { '$ne': True }})['_id']
             for sequence in action_seqs_coll.find(
-                    { 'value.domain': args.domain }):
+                    { 'value.domain': domain_id }):
                 for parameters in sequence['value']['parameters']:
                     if parameters['count'] < args.occurrence_threshold:
                         continue
