@@ -453,7 +453,7 @@ test(
 test(regress_cond_effects) :-
   assertion(regress_cond_effects(
     [(at(l),[]),(when(at(l),p),[])],
-    [(at(l),[]),(when(true,p),[])])),
+    [(at(l),[]),(p,[])])),
   assertion(regress_cond_effects(
     [(at(l),[]),(when(and(q,at(l)),p),[])],
     [(at(l),[]),(when(q,p),[])]))
