@@ -21,6 +21,8 @@
 
 :- module(effects, [compute_effect/2, compute_effect/3]).
 
+:- use_module(regression).
+:- use_module(simplify).
 :- use_module(substitute).
 :- use_module(library(lambda)).
 
@@ -63,7 +65,8 @@ get_pair_representation(
 compute_effect(Actions, Effect) :-
   enable_effect_trees,
   maplist(get_reassigned_effect, Actions, Effects),
-  reverse(Effects, ReversedEffects),
+  regress_cond_effects(Effects, RegressedEffects),
+  reverse(RegressedEffects, ReversedEffects),
   effect_tree(ReversedEffects, EffectTree),
   get_effect_from_tree(EffectTree, Effect).
 
@@ -74,8 +77,8 @@ compute_effect(Actions, Effect) :-
 
 %% get_reassigned_effect(+ParameterizedAction, -ReassignedEffect)
 %
-%  Get the effect for the given action a with the given parameter assignment.
-%  ParameterizedAction is expected to a pair (Action, ParameterAssignment).
+%  Get the effect for the given action with the given parameter assignment.
+%  ParameterizedAction is expected to be a pair (Action, ParameterAssignment).
 %  The result is a pair (Effect, Parameters).
 get_reassigned_effect(
   (Action,ParameterAssignment),
@@ -85,6 +88,41 @@ get_reassigned_effect(
   reassign_parameters(Effect, ParameterAssignment, ReassignedEffect),
   domain:action_parameters(Action, Parameters),
   reassign_types(Parameters, ParameterAssignment, ReassignedParameters).
+
+%% regress_cond_effects(+Effects, -RegressedEffects)
+%
+%  Regress all conditions in Effects to the beginning of the sequence. This
+%  expects the first effect in the list to be the first effect of the sequence.
+%  Effects is expected to be a list of pairs of the form (Effect, Parameters).
+%  The resulting RegressedEffects are a list of pairs of the same form, where
+%  each condition of a conditional effect is substitued by the regressed
+%  condition.
+regress_cond_effects(Effects, RegressedEffects) :-
+  regress_cond_effects([], [], Effects, RegressedEffects).
+
+%% regress_cond_effects(
+%    +PreviousEffects, +PreviousParams, +Effects, -RegressedEffects)
+%
+%  Helper predicate for regress_cond_effects/2. PreviousEffects are the effects
+%  of the action sequence that occur before Effects, i.e., the effects that are
+%  used for regression. Similarly, PreviousParams is a typed parameter list of
+%  the parameters occurring in the actions previous to the current action.
+regress_cond_effects(_, _, [], []).
+regress_cond_effects(
+  PreviousEffects,
+  PreviousParameters,
+  [(Effect,Parameters)|Effects],
+  [(SimplifiedRegressedEffect,Parameters)|RegressedEffects]
+) :-
+  findall(Cond, contains_term(when(Cond, _), Effect), Conds),
+  append(PreviousParameters, Parameters, CurrentParameters),
+  maplist(regress(PreviousEffects, CurrentParameters), Conds, RegressedConds),
+  maplist(\Old^New^(=((Old,New))), Conds, RegressedConds, Substitutions),
+  substitute_list([Effect], Substitutions, [RegressedEffect]),
+  simplify_effect(RegressedEffect, SimplifiedRegressedEffect),
+  regress_cond_effects([SimplifiedRegressedEffect|PreviousEffects],
+    CurrentParameters, Effects, RegressedEffects).
+
 
 %% merge_effects(+Effects, -Effect)
 %
@@ -412,4 +450,13 @@ test(
   ]
 ) :-
   assertion(\+ with_output_to(string(_), add_action_effects([(drop,[])], _))).
+test(regress_cond_effects) :-
+  assertion(regress_cond_effects(
+    [(at(l),[]),(when(at(l),p),[])],
+    [(at(l),[]),(when(true,p),[])])),
+  assertion(regress_cond_effects(
+    [(at(l),[]),(when(and(q,at(l)),p),[])],
+    [(at(l),[]),(when(q,p),[])]))
+    .
+
 :- end_tests(action_effects).
