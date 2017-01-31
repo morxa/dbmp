@@ -175,8 +175,14 @@ predicate(PredicateAtom) -->
     \+ member(PredicateAtom, [not,and,or,forall,imply])}.
 term(TermAtom) -->
   [Term],
-  { atom_string(TermAtom, Term),
-    \+ member(TermAtom, ['(', ')'])}.
+  {
+    % constrain TermAtom to be either a var (if we parse a string), or an atom
+    % (if we generate the string), because atom_string/2 fails on non-atomic
+    % terms.
+    ( var(TermAtom) ; atom(TermAtom) ),
+    atom_string(TermAtom, Term),
+    \+ member(TermAtom, ['(', ')'])
+  }.
 
 requirement(RAtom) -->
   [R], { atom_string(RAtom, R), string_concat(":", _, R) }.
