@@ -69,6 +69,8 @@ def main():
     parser.add_argument('--domain', help='the name of the domain to run')
     parser.add_argument('-a', '--all', action='store_true',
                         help='run all macros that fit the given criteria')
+    parser.add_argument('--missing', action='store_true',
+                        help='run all problems without a solution')
     parser.add_argument('--evaluator',
                         help='the name of the evaluation function'
                              'to use for filtering macros')
@@ -100,14 +102,13 @@ def main():
         db_passwd = db_passwd
     if not db_passwd:
         db_passwd = getpass.getpass()
-
     client = pymongo.MongoClient(host=db_host)
     database = client.macro_planning
     database.authenticate(db_user, db_passwd)
     domain_coll = client.macro_planning.domains
     macro_coll = client.macro_planning.macros
     problem_coll = client.macro_planning.problems
-
+    solutions_coll = client.macro_planning.solutions
     domains = set()
     for macro in args.macros:
         domain = domain_coll.find_one({'macro': bson.objectid.ObjectId(macro)})
@@ -117,7 +118,7 @@ def main():
            print('Warning: Could not find a domain with macro {}. Did you '
                  'generate the augmented domain?'.format(macro),
                  file=sys.stderr)
-    if args.all:
+    if args.all or args.missing:
         assert(args.evaluator), 'Please provide an evaluator'
         query = { 'evaluation.' + args.evaluator: { '$gte': args.min_score }}
         sorter = [ ('evaluation.' + args.evaluator, -1) ]
@@ -132,6 +133,11 @@ def main():
                      file=sys.stderr)
     for domain in domains:
         for problem in problem_coll.find({ 'domain': args.domain }):
+            if not args.all and None != solutions_coll.find_one(
+                { 'domain': bson.objectid.ObjectId(domain),
+                  'problem': bson.objectid.ObjectId(problem['_id']) }):
+                # solution already exists, skip this problem
+                continue
             start_job(args.planner, args.kubernetes_template, domain,
                       problem['_id'])
 
