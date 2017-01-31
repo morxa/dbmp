@@ -141,6 +141,9 @@ merge_effects(Effects, Effect) :-
 %  (ActionName,ParameterAssignment), where ParameterAssignment is a list of
 %  pairs reassigned parameters, e.g. [(a,b)] denotes that parameter a was
 %  renamed to parameter b.
+%  WARNING: THIS IS DEPRECATED. Please use effect trees instead.
+%  In particular, conflicting forall-quantified effects are not resolved
+%  correctly. See tests for an example.
 
 add_action_effects([], []).
 add_action_effects([(Action,ParameterAssignment)|RActions], ResultingEffects) :-
@@ -438,6 +441,23 @@ test(
   assertion(add_action_effects(
     [(pickup,[]),(drop,[]),(pickup,[(b,a)]),(drop,[(b,a)]),(pickup,[(b,a)])],
     [not(holding(b)),holding(a)])).
+test(
+  action_forall_effect_with_collision,
+  [fixme(collision_not_detected),
+   setup(maplist(call,
+    [assertz(domain:action_effect(dropall,all(b,block,not(holding(b))))),
+     assertz(domain:action_effect(pickup,holding(b))),
+     assertz(domain:action_parameters(dropall,[])),
+     assertz(domain:action_parameters(pickup,[(block,[b1])]))
+    ])),
+   cleanup(maplist(call,
+    [retractall(domain:action_effect(_,_)),
+     retractall(domain:action_parameters(_,_))]))
+  ]
+) :-
+  add_action_effects(
+    [(dropall,[]),(pickup,[])],
+    [all(b,block,when(not(b=b1),not(holding(b)))),holding(b1)]).
 test(
   action_with_cond_effect_fails,
   [setup(maplist(call,
