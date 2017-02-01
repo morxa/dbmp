@@ -243,6 +243,9 @@ effect_collision(Effects, ParameterTypes, Formula) :-
     QuantifiedEffect, TypedVars, ParameterTypes, GroundedEffect
   ),
   effect_collision([GroundedEffect], ParameterTypes, Formula).
+effect_collision(Effects, ParameterTypes, all(TypedVars, Formula)) :-
+  append(ParameterTypes, TypedVars, NewParameterTypes),
+  effect_collision(Effects, NewParameterTypes, Formula).
 effect_collision(Effects, ParameterTypes, when(_, Formula)) :-
   effect_collision(Effects, ParameterTypes, Formula).
 effect_collision(Effects, ParameterTypes, when(Condition, Formula)) :-
@@ -359,6 +362,65 @@ test(quantified_list_two_vars_conjunctive_effect) :-
     [all([(table,[t]),(block,[b])],clear(b))],
     [(block,[b1]),(table,[t1])],
     clear(b1))).
+test(two_quantified_effects) :-
+  assertion(effect_collision(
+    [all([(obj,[o])],p(o))],
+    [],
+    all([(obj,[o])],p(o)))).
+test(
+  two_quantified_effects_with_subtypes,
+  [ setup(assertz(domain:subtype_of_type(room,location))),
+    cleanup(retractall(domain:subtype_of_type(_,_)))
+  ]
+  ) :-
+  assertion(effect_collision(
+    [all([(location,[l])],p(l))],
+    [],
+    all([(room,[r])],p(r)))
+  ).
+test(
+  two_quantified_effects_different_var_count,
+  [ setup(assertz(domain:subtype_of_type(room,location))),
+    cleanup(retractall(domain:subtype_of_type(_,_)))
+  ]
+  ) :-
+  assertion(effect_collision(
+    [all([(location,[l1,l2])],p(l1,l2))],
+    [],
+    all([(room,[r])],p(r,r)))
+  ).
+test(
+  two_quantified_effects_more_general_effect_does_not_collide,
+  [ setup(assertz(domain:subtype_of_type(room,location))),
+    cleanup(retractall(domain:subtype_of_type(_,_)))
+  ]
+  ) :-
+  assertion(\+ effect_collision(
+    [all([(room,[r])],p(r,r))],
+    [],
+    all([(location,[l1,l2])],p(l1,l2)))
+  ).
+test(nested_quantified_effects) :-
+  assertion(effect_collision(
+    [all([(obj,[o1])],all([(obj,[o2])],p(o1,o2)))],
+    [],
+    all([(obj,[o1,o2])],p(o1,o2)))
+  ),
+  assertion(effect_collision(
+    [all([(obj,[o1])],all([(obj,[o2])],p(o1,o2)))],
+    [],
+    all([(obj,[o1])],p(o1,o1)))
+  ),
+  assertion(effect_collision(
+    [all([(obj,[o1,o2])],p(o1,o2))],
+    [],
+    all([(obj,[o1])],all([(obj,[o2])],p(o1,o2))))
+  ),
+  assertion(\+ effect_collision(
+    [all([(obj,[o1])],p(o1,o1))],
+    [],
+    [all([(obj,[o1])],all([(obj,[o2])],p(o1,o2)))])
+  ).
 :- end_tests(effect_collision).
 
 :- begin_tests(merge_effects).
