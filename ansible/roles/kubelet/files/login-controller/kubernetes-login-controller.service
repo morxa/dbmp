@@ -1,0 +1,10 @@
+[Unit]
+Description=Kubelet Login Controller
+After=kubelet.service
+
+[Service]
+ExecStart=/usr/local/bin/kubernetes-login-controller.sh reload
+
+[Install]
+WantedBy=kubelet.service
+

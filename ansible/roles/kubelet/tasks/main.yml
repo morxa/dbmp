@@ -52,6 +52,14 @@
   template:
     src: login-controller.conf.j2
     dest: /etc/kubernetes/login-controller.conf
+- name: add service file for login controller
+  copy:
+    src: login-controller/kubernetes-login-controller.service
+    dest: /etc/systemd/system/
+- name: enable login controller service
+  service:
+    name: kubernetes-login-controller
+    enabled: true
 - name: install python2-firewall
   dnf: name=python2-firewall state=latest
 - name: open kubelet port
@@ -82,6 +90,6 @@
     enabled: true
     state: started
 - name: run kubernetes login controller
-  command: >
-    /usr/bin/systemd-cat -t kubernetes-login-controller
-    /usr/local/bin/kubernetes-login-controller.sh reload
+  service:
+    name: kubernetes-login-controller
+    state: started
