@@ -252,6 +252,42 @@ effect_collision(Effects, ParameterTypes, when(Condition, Formula)) :-
   member(when(Condition, Effect), Effects),
   effect_collision([Effect], ParameterTypes, Formula).
 
+%% constrain_effect(+Effects, +ParameterTypes, +Formula, -RemainingEffect)
+%
+%  Same as effect_collision/3, but not all effects of Formula are obliterated by
+%  Effects. RemainingEffect is the effect that remains of Formula after
+%  computing all collisions with Effects.
+constrain_effect(Effects, ParameterTypes, Formula, nil) :-
+  effect_collision(Effects, ParameterTypes, Formula).
+constrain_effect(
+  Effects, ParameterTypes, all(TypedVars,Formula), RemainingEffect
+) :-
+  member((Type, Vars), TypedVars),
+  member(Var, Vars),
+  member((ParameterType, Parameters), ParameterTypes),
+  ( Type = ParameterType ; domain:subtype_of_type(ParameterType, Type) ),
+  member(Parameter, Parameters),
+  exclude(=(Var), Vars, RemainingVars),
+  exclude(=((Type, Vars)), TypedVars, RemainingTypedVars),
+  substitute(Var, [Formula], Parameter, [SubstitutedFormula]),
+  ( effect_collision(
+      Effects, ParameterTypes,
+      all([(Type, RemainingVars)|RemainingTypedVars], SubstitutedFormula)
+    ) ->
+    !, RemainingEffect = all(TypedVars,when(not(Var = Parameter),Formula))
+  ;
+    constrain_effect(
+      Effects, ParameterTypes,
+      all([(Type,RemainingVars)|RemainingTypedVars], SubstitutedFormula),
+      RemainingSubEffect
+    ),
+    substitute(Parameter, [RemainingSubEffect], Var, [SubstitutedSubEffect]),
+    RemainingEffect =
+      all([(Type,[Var])],when(not(Var = Parameter),SubstitutedSubEffect))
+  ).
+
+constrain_effect(_, _, Effect, Effect).
+
 %% ground_formula(+Formula, +TypedVars, +TypedParams, GroundedFormula)
 %
 %  Substitute all variables in TypedVars by an arbitrary parameter from
@@ -421,6 +457,23 @@ test(nested_quantified_effects) :-
     [],
     [all([(obj,[o1])],all([(obj,[o2])],p(o1,o2)))])
   ).
+test(simple_effect_constraint) :-
+  assertion(constrain_effect(
+    [p(a)], [(obj,[a])],
+    all([(obj,[o])],not(p(o))),
+    all([(obj,[o])],when(not(o=a),not(p(o)))))).
+test(effect_constraint_with_two_vars) :-
+  assertion(constrain_effect(
+    [p(a,b)], [(obj,[a,b])],
+    all([(obj,[o1,o2])],not(p(o1,o2))),
+    all([(obj,[o1])],
+      when(not(o1=a),all([(obj,[o2])],when(not(o2=b),not(p(o1,o2)))))))).
+ test(effect_constraint_with_quantified_effect) :-
+   assertion(constrain_effect(
+    [all([(obj,[o])],p(a,o))],
+    [(obj,[a])],
+    all([(obj,[o1,o2])],not(p(o1,o2))),
+    all([(obj,[o1,o2])],when(not(o1=a),not(p(o1,o2)))))).
 :- end_tests(effect_collision).
 
 :- begin_tests(merge_effects).
