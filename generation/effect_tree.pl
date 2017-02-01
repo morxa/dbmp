@@ -70,7 +70,9 @@ effect_tree(
     SplitEffect,
     ActionEffectsWithoutCollisions
   ),
-  maplist(simplify_effect, ActionEffectsWithoutCollisions, SimplifiedEffects),
+  maplist(constrain_effect(CurrentEffects, Parameters),
+    ActionEffectsWithoutCollisions, ConstrainedActionEffects),
+  maplist(simplify_effect, ConstrainedActionEffects, SimplifiedEffects),
   exclude(=(nil), SimplifiedEffects, FilteredActionEffects),
   append(FilteredActionEffects, CurrentEffects, ResultingEffects),
   effect_tree(Effects, ResultingEffects, CurrentConditions, SubTree).
