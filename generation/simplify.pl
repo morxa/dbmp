@@ -278,6 +278,9 @@ simplify_effect_or_fail(Effect, SimplifiedEffect) :-
 simplify_effect_or_fail(not(nil), nil).
 simplify_effect_or_fail(all(_,nil),nil).
 simplify_effect_or_fail(all(_,_,nil),nil).
+simplify_effect_or_fail(all([],Effect), Effect).
+simplify_effect_or_fail(all([(_,[])|Vars],Effect), SimplifiedEffect) :-
+  simplify_effect(all(Vars,Effect), SimplifiedEffect).
 simplify_effect_or_fail(when(_,nil), nil).
 simplify_effect_or_fail(when(false,_),nil).
 simplify_effect_or_fail(when(true,Effect),Effect).
