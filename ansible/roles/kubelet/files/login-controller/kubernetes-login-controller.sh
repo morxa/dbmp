@@ -22,6 +22,16 @@ if [ "$ENABLE_LOGIN_CONTROLLER" -ne 1 ] ; then
   exit 0
 fi
 
+if [ "$KUBE_MASTER" = "" ] ; then
+  echo "KUBE_MASTER not set. Stop."
+  exit 1
+fi
+
+if [ "$( ping -W 1 -c 1 $KUBE_MASTER || echo failed)" = "failed" ] ; then
+  echo "Cannot reach Kubernetes master $KUBE_MASTER. Stop."
+  exit 0
+fi
+
 enable_node () {
   if [ "$( get_status )" -eq 0 ] ; then
     echo "enabling node $KUBELET_NAME"
