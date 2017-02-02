@@ -139,8 +139,7 @@ get_free_vars_list(Formula, Vars) :-
   get_free_vars_list(QuantifiedFormula, FormulaVars),
   exclude(\Var^is_in_typed_list(Var, QuantifiedVars), FormulaVars, Vars).
 get_free_vars_list(Formula, [Formula]) :-
-  atom(Formula),
-  atom_concat('?', _, Formula).
+  atom(Formula).
 get_free_vars_list(Formula, Vars) :-
   \+ atom(Formula),
   Formula =.. [Predicate|Params],
