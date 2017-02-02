@@ -270,17 +270,20 @@ constrain_effect(
   exclude(=(Var), Vars, RemainingVars),
   exclude(=((Type, Vars)), TypedVars, RemainingTypedVars),
   substitute(Var, [Formula], Parameter, [SubstitutedFormula]),
+  QuantifiedSubstitutedFormula =
+      all([(Type, RemainingVars)|RemainingTypedVars], SubstitutedFormula),
   ( effect_collision(
       Effects, ParameterTypes,
-      all([(Type, RemainingVars)|RemainingTypedVars], SubstitutedFormula)
+      QuantifiedSubstitutedFormula
     ) ->
     !, RemainingEffect = all(TypedVars,when(not(Var = Parameter),Formula))
   ;
     constrain_effect(
       Effects, ParameterTypes,
-      all([(Type,RemainingVars)|RemainingTypedVars], SubstitutedFormula),
+      QuantifiedSubstitutedFormula,
       RemainingSubEffect
     ),
+    QuantifiedSubstitutedFormula \= RemainingSubEffect,
     substitute(Parameter, [RemainingSubEffect], Var, [SubstitutedSubEffect]),
     RemainingEffect =
       all([(Type,[Var])],when(not(Var = Parameter),SubstitutedSubEffect))
