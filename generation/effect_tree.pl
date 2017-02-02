@@ -236,34 +236,34 @@ tree_to_dot(
 
 test(effect_tree_leave_nodes, [nondet]) :-
   effect_tree(
-    [(and(when(a,all(x,block,holding(x))),when(b,handempty)),[]),
+    [(and(when(p(a),all(x,block,holding(x))),when(p(b),handempty)),[(t,[a,b])]),
      (not(holding(x)),[(block,[x])])
     ],
     [], [], EffectTree
   ),
   assertion(get_leave_nodes(EffectTree,
     [
-      ([all(x, block, holding(x)), handempty], [b, a]),
-      ([all(x, block, holding(x))], [not(b), a]),
-      ([not(holding(x)), handempty], [b, not(a)]),
-      ([not(holding(x))], [not(b), not(a)])
+      ([all(x, block, holding(x)), handempty], [p(b), p(a)]),
+      ([all(x, block, holding(x))], [not(p(b)), p(a)]),
+      ([not(holding(x)), handempty], [p(b), not(p(a))]),
+      ([not(holding(x))], [not(p(b)), not(p(a))])
     ])).
 
 test(contradicting_effects, [nondet]) :-
   effect_tree(
-    [ (and(when(c1,all(o,obj,p1(o))),when(c2,p1(o1))),[ (obj,[o1])]),
-      (when(c3,not(p1(o1))),[ (obj,[o1])])
+    [ (and(when(p(a),all(o,obj,p1(o))),when(p(b),p1(o1))),[ (obj,[o1,a,b])]),
+      (when(p(c),not(p1(o1))),[ (obj,[o1,c])])
     ], [], [], EffectTree
   ),
   assertion(get_leave_nodes(EffectTree,
-    [ ([all(o, obj, p1(o)), p1(o1)], [c3, c2, c1]),
-      ([all(o, obj, p1(o)), p1(o1)], [not(c3), c2, c1]),
-      ([all(o, obj, p1(o))], [c3, not(c2), c1]),
-      ([all(o, obj, p1(o))], [not(c3), not(c2), c1]),
-      ([p1(o1)], [c3, c2, not(c1)]),
-      ([p1(o1)], [not(c3), c2, not(c1)]),
-      ([not(p1(o1))], [c3, not(c2), not(c1)]),
-      ([], [not(c3), not(c2), not(c1)])
+    [ ([all(o, obj, p1(o)), p1(o1)], [p(c), p(b), p(a)]),
+      ([all(o, obj, p1(o)), p1(o1)], [not(p(c)), p(b), p(a)]),
+      ([all(o, obj, p1(o))], [p(c), not(p(b)), p(a)]),
+      ([all(o, obj, p1(o))], [not(p(c)), not(p(b)), p(a)]),
+      ([p1(o1)], [p(c), p(b), not(p(a))]),
+      ([p1(o1)], [not(p(c)), p(b), not(p(a))]),
+      ([not(p1(o1))], [p(c), not(p(b)), not(p(a))]),
+      ([], [not(p(c)), not(p(b)), not(p(a))])
     ] )).
 
 
