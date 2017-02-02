@@ -19,6 +19,7 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
+:- use_module(library(lambda)).
 :- use_module(simplify).
 :- use_module(substitute).
 
@@ -63,7 +64,7 @@ effect_tree(
   CurrentEffects, CurrentConditions,
   (Effect, ResultingEffects, CurrentConditions, SubTree, nil)
 ) :-
-  free_of_term(when(_,_), Effect),
+  \+ has_free_cond_effect(Effect, Parameters, _),
   split_effect(Effect, SplitEffect),
   exclude(
     effect_collision(CurrentEffects, Parameters),
@@ -82,7 +83,7 @@ effect_tree(
   (Effect, CurrentEffects, CurrentConditions,
     TrueEffectSubTree, FalseEffectSubTree)
 ) :-
-  contains_term(when(Cond,CondEffect), Effect),
+  has_free_cond_effect(Effect, Parameters, when(Cond,CondEffect)),
   substitute(when(Cond,CondEffect), [Effect], CondEffect, [TrueEffect]),
   simplify_effect(TrueEffect, SimplifiedTrueEffect),
   substitute(when(Cond,CondEffect), [Effect], nil, [FalseEffect]),
@@ -97,6 +98,16 @@ effect_tree(
     CurrentEffects, [not(Cond)|CurrentConditions],
     FalseEffectSubTree
   ).
+
+%% has_free_cond_effect(+Effect, +Params, -CondEffect)
+%
+%  Checks the Effect if it contains a conditional effect which has a condition
+%  with no variables bound by a quantifier, i.e., all variables are bound by the
+%  effect's Params.
+has_free_cond_effect(Effect, Params, when(Cond,CondEffect)) :-
+  contains_term(when(Cond,CondEffect), Effect),
+  get_free_vars(Cond, CondVars),
+  maplist(\Var^is_in_typed_list(Var, Params), CondVars).
 
 %% get_free_vars(+Formula, -FreeVars)
 %
@@ -286,3 +297,17 @@ test(quantification) :-
     p('?a','?b','?c')),p('?d')),['?d'])).
 
 :- end_tests(free_vars).
+
+:- begin_tests(cond_effect).
+
+test(simple) :-
+  assertion(has_free_cond_effect(
+    when(p('?a'),p('?b')), [(t,['?a'])], when(p('?a'),p('?b')))).
+test(with_quantifier) :-
+  assertion(\+ has_free_cond_effect(
+    all([(t,['?a'])], when(p('?a'),p('?b'))), [], _)),
+  assertion(\+ has_free_cond_effect(
+    all([(t,['?a'])], when(and(p('?a'),p('?b')),p('?c'))),
+    [(t,['?b','?c'])], _)).
+
+:- end_tests(cond_effect).
