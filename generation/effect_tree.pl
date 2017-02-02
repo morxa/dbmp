@@ -98,6 +98,55 @@ effect_tree(
     FalseEffectSubTree
   ).
 
+%% get_free_vars(+Formula, -FreeVars)
+%
+%  Get all variables of the form '?var_name' in Formula which are not bound
+%  within Formula.
+get_free_vars(Formula, Vars) :-
+  get_free_vars_list(Formula, VarsList),
+  list_to_set(VarsList, Vars).
+
+%% get_free_vars_list(+Formula, -FreeVars)
+%
+%  Helper predicate for get_free_vars/2. This computes the list of free
+%  variables without removing duplicates.
+get_free_vars_list(and(), []).
+get_free_vars_list(Formula, Vars) :-
+  Formula =.. [Op|SubFormulas],
+  member(Op, [and,or]),
+  maplist(get_free_vars, SubFormulas, SubFormulaVars),
+  flatten(SubFormulaVars, Vars).
+get_free_vars_list(Formula, Vars) :-
+  Formula =.. [Op,Formula1,Formula2],
+  member(Op,[imply,when]),
+  get_free_vars(Formula1, Formula1Vars),
+  get_free_vars(Formula2, Formula2Vars),
+  append(Formula1Vars, Formula2Vars, Vars).
+get_free_vars_list(Formula, Vars) :-
+  Formula =.. [Op,QuantifiedVars,QuantifiedFormula],
+  member(Op, [all,some]),
+  get_free_vars_list(QuantifiedFormula, FormulaVars),
+  exclude(\Var^is_in_typed_list(Var, QuantifiedVars), FormulaVars, Vars).
+get_free_vars_list(Formula, [Formula]) :-
+  atom(Formula),
+  atom_concat('?', _, Formula).
+get_free_vars_list(Formula, Vars) :-
+  \+ atom(Formula),
+  Formula =.. [Predicate|Params],
+  \+ member(Predicate, [and,or,some,all,when,imply]),
+  maplist(get_free_vars_list, Params, ParamsVars),
+  flatten(ParamsVars, Vars).
+
+%% is_in_typed_list(+Var, +TypedVars)
+%
+%  True if Var is in the list of TypedVars. TypedVars is expected to be a list
+%  of pairs, where each pair is of the form (Type, TypedVars), and TypedVars is
+%  a list of variable names.
+is_in_typed_list(Var, [(_,[])|Vars]) :- is_in_typed_list(Var, Vars).
+is_in_typed_list(Var, [(_,[Var|_])|_]).
+is_in_typed_list(Var, [(Type,[_|TypedVars])|Vars]) :-
+  is_in_typed_list(Var, [(Type,TypedVars)|Vars]).
+
 %% get_leave_nodes(-EffectTree, +LeaveNodes)
 %
 %  For the given tree, get a list of the leave nodes of the tree.
@@ -209,3 +258,31 @@ test(contradicting_effects, [nondet]) :-
 
 
 :- end_tests(effect_tree).
+
+:- begin_tests(free_vars).
+
+test(simple) :-
+  assertion(get_free_vars(p('?a'), ['?a'])),
+  assertion(\+ get_free_vars(p('?a'), [])).
+test(nested_functions) :-
+  assertion(get_free_vars(p(f(f('?a'))), ['?a'])).
+test(conjunction) :-
+  assertion(get_free_vars(and(), [])),
+  assertion(get_free_vars(and(p('?a')), ['?a'])),
+  assertion(get_free_vars(and(p('?a'),q('?b')), ['?a','?b'])),
+  assertion(get_free_vars(and(p('?a'),q('?b'),q('?a')), ['?a','?b'])),
+  assertion(get_free_vars(and(p('?a'),q('?b'),q('?c')), ['?a','?b','?c'])),
+  assertion(get_free_vars(and(and(p('?a'),p('?b')),p('?c')),['?a','?b','?c'])).
+test(implication) :-
+  assertion(get_free_vars(imply(p('?a'),p('?b')),['?a','?b'])),
+  assertion(get_free_vars(
+    imply(p('?a'),and(p('?b'),p('?c'))),['?a','?b', '?c'])
+  ).
+test(quantification) :-
+  assertion(get_free_vars(all([(t,['?a'])],p('?a')),[])),
+  assertion(get_free_vars(and(all([(t,['?a'])],p('?a')),p('?b')),['?b'])),
+  assertion(get_free_vars(and(all([(t,['?a'])],p('?a')),p('?a')),['?a'])),
+  assertion(get_free_vars(and(all([(t,['?a']),(t2,['?b','?c'])],
+    p('?a','?b','?c')),p('?d')),['?d'])).
+
+:- end_tests(free_vars).
