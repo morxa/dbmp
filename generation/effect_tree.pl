@@ -157,6 +157,24 @@ is_in_typed_list(Var, [(_,[Var|_])|_]).
 is_in_typed_list(Var, [(Type,[_|TypedVars])|Vars]) :-
   is_in_typed_list(Var, [(Type,TypedVars)|Vars]).
 
+%% has_type(+Var, +TypedList, -Type)
+%
+%  True if Var has the type Type as defined in TypesList.
+has_type(Var, [(Type,[Var|_])|_], Type).
+has_type(Var, [(OtherType,[_|TypedVars])|Vars], Type) :-
+  has_type(Var, [(OtherType,TypedVars)|Vars], Type).
+has_type(Var, [(_,[]),Vars], Type) :-
+  has_type(Var, [Vars], Type).
+
+%% get_types_list(+Vars, +Types, -TypedVars)
+%
+%  Get a types list for all Vars, using the types defined by Types. This
+%  effectively filters Types by the names in Vars.
+get_types_of_list([], _, []).
+get_types_of_list([Var|Vars], AllTypes, [(Type,[Var])|TypedVars]) :-
+  has_type(Var, AllTypes, Type),
+  get_types_of_list(Vars, AllTypes, TypedVars).
+
 %% get_leave_nodes(-EffectTree, +LeaveNodes)
 %
 %  For the given tree, get a list of the leave nodes of the tree.
