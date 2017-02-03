@@ -240,6 +240,10 @@ simplify_or_fail(Term, SimplifiedTerm) :-
 % exists([],T) -> T
 simplify_or_fail(all([], Term), Term).
 simplify_or_fail(exists([], Term), Term).
+simplify_or_fail(all(Vars, Term), all(Vars, SimplifiedTerm)) :-
+  simplify_or_fail(Term, SimplifiedTerm).
+simplify_or_fail(exists(Vars, Term), exists(Vars, SimplifiedTerm)) :-
+  simplify_or_fail(Term, SimplifiedTerm).
 
 % flatten_on_op(+Op, +Terms, -FlattenedTerms)
 %
@@ -267,6 +271,7 @@ negated_term(Term,not(Term)).
 %  that it replaces with the empty effect instead of 'true' if there is no
 %  effect, e.g., 'and()' becomes '()' instead of 'true'.
 simplify_effect_or_fail(and(), nil).
+simplify_effect_or_fail(not(not(Effect)), Effect).
 simplify_effect_or_fail(and(Effect), SimplifiedEffect) :-
   simplify_effect(Effect, SimplifiedEffect).
 simplify_effect_or_fail(Effect, SimplifiedEffect) :-
@@ -288,13 +293,14 @@ simplify_effect_or_fail(Effect, SimplifiedEffect) :-
   Effect =.. [and|Effects],
   maplist(simplify_effect, Effects, SimplifiedEffects),
   Effects \= SimplifiedEffects,
-  SimplifiedEffect =.. [and|SimplifiedEffects].
+  IntermediateSimplifiedEffect =.. [and|SimplifiedEffects],
+  simplify_effect(IntermediateSimplifiedEffect, SimplifiedEffect).
 simplify_effect_or_fail(not(Effect), SimplifiedNegEffect) :-
   simplify_effect_or_fail(Effect, SimplifiedEffect),
   simplify_effect(not(SimplifiedEffect), SimplifiedNegEffect).
 simplify_effect_or_fail(all(Var,Effect), SimplifiedAllEffect) :-
   simplify_effect_or_fail(Effect, SimplifiedEffect),
-  simplify(all(Var,SimplifiedEffect), SimplifiedAllEffect).
+  simplify_effect(all(Var,SimplifiedEffect), SimplifiedAllEffect).
 simplify_effect_or_fail(when(Cond,Effect), SimplifiedCondEffect) :-
   simplify(Cond, SimplifiedCond),
   simplify_effect(Effect, SimplifiedEffect),
