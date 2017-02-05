@@ -120,6 +120,69 @@ resolve_conflicting_effect(
   !.
 
 resolve_conflicting_effect(
+  (PrevEffect,PrevParams),
+  (all(Vars,Effect),Params),
+  QuantifiedVars,
+  (all(Vars,ResEffect),ResParams)
+) :-
+  findall(Cond,
+    (
+      find_substitution(Vars, PrevParams, Substitution),
+      Substitution \= [],
+      reassign_types(Vars, Substitution, SubstitutedVars),
+      append(QuantifiedVars, SubstitutedVars, NewQuantifiedVars),
+      substitute_list([Effect], Substitution, [SubstitutedEffect]),
+      resolve_conflicting_effect(
+        (PrevEffect,PrevParams),
+        (SubstitutedEffect,Params),
+        NewQuantifiedVars,
+        (ResQuantifiedEffect,ResQuantifiedParams)
+      ),
+      ResQuantifiedEffect \= SubstitutedEffect,
+      maplist(pair_as_equality, Substitution, Equalities),
+      Cond =.. [and|Equalities]
+    ),
+    AlternativeConds
+  ),
+  AlternativeConds \= [],
+  Cond =.. [or|AlternativeConds],
+  ResEffect = when(not(Cond),Effect),
+  get_free_vars(Cond, CondVars),
+  include(\Var^is_in_typed_list(Var, PrevParams),
+    CondVars, FreeCondVars),
+  get_types_of_list(FreeCondVars, PrevParams, TypedFreeCondVars),
+  append(ResQuantifiedParams, TypedFreeCondVars, ResParams),
+  !.
+
+resolve_conflicting_effect(
+  (PrevEffect,PrevParams),
+  (when(Cond,CondEffect),Params),
+  QuantifiedVars,
+  (ResEffect,ResParams)
+) :-
+  get_free_vars(CondEffect, EffectVars),
+  include(\Var^is_in_typed_list(Var, Params), EffectVars, UntypedNewParams),
+  get_types_of_list(UntypedNewParams, Params, NewParams),
+  resolve_conflicting_effect(
+    (PrevEffect,PrevParams),
+    (CondEffect,NewParams),
+    QuantifiedVars,
+    (ResCondEffect,ResCondParams)
+  ),
+  ( ResCondEffect = nil -> ResEffect = ResCondEffect,
+    ResParams = ResCondParams
+  ;
+    ResEffect = when(Cond,ResCondEffect),
+    get_free_vars(Cond, CondVars),
+    include(\Var^is_in_typed_list(Var, Params), CondVars, UntypedNewCondVars),
+    exclude(\Var^is_in_typed_list(Var, ResCondParams), UntypedNewCondVars,
+      UntypedFilteredCondVars),
+    get_types_of_list(UntypedFilteredCondVars, Params, NewCondVars),
+    append(ResCondParams, NewCondVars, ResParams)
+  ),
+  !.
+
+resolve_conflicting_effect(
   (all(QuantifiedVars, QuantifiedEffect),PrevParams), (Effect,Params),
   FreeVars, (ResEffect,ResParams)
 ) :-
@@ -194,6 +257,11 @@ find_substitution(
   ),
   member(NewVar, NewTypedVars),
   find_substitution([(Type,TypedVars)|OldVars], NewVars, Substitution).
+
+%% pair_as_equality(?Pair, ?Formula)
+%
+%  Transform the Pair (X,Y) into a formula X=Y or vice versa.
+pair_as_equality((X,Y),X=Y).
 
 
 %% get_reassigned_effect(+ParameterizedAction, -ReassignedEffect)
@@ -820,13 +888,6 @@ test(forall_in_both_effects) :-
     R3
   ),
   assertion(R3=(nil,[])).
-test(forall_with_conditional, [fixme(not_implemented)]) :-
-  resolve_conflicting_effects(
-    [(all([(obj,[o])],p(o)),[])],
-    (all([(obj,[o])],when(q(o),not(p(o)))),[]),
-    R1
-  ),
-  R1=(nil,[]).
 test(collect_vars_from_previous_effect_in_forall) :-
   resolve_conflicting_effects(
   [(all([(obj,[o1,o2])],when(c(o3),p(o1,o2))),[(obj,[o3])])],
@@ -835,5 +896,57 @@ test(collect_vars_from_previous_effect_in_forall) :-
   assertion(
     R=(all([(obj,[a])],when(not(c(o3)),not(p(a,a)))),[(obj,[o3])])
   ).
+test(conditional_in_current_effect) :-
+  resolve_conflicting_effects(
+    [(p(a),[(obj,[a])])],
+    (when(q(a),not(p(a))),[(obj,[a])]),
+    R1
+  ),
+  assertion(R1 = (nil,[])),
+  resolve_conflicting_effects(
+    [(all([(obj,[o])],p(o)),[])],
+    (when(q(a),not(p(a))),[(obj,[a])]),
+    R2
+  ),
+  assertion(R2 = (nil,[])).
+test(forall_with_conditional) :-
+  resolve_conflicting_effects(
+    [(all([(obj,[o])],p(o)),[])],
+    (all([(obj,[o])],when(q(o),not(p(o)))),[]),
+    R1
+  ),
+  R1=(nil,[]).
+test(simple_effect_constraint) :-
+  resolve_conflicting_effects(
+    [(p(a), [(obj,[a])])],
+    (all([(obj,[o])],not(p(o))),[]),
+    R
+  ),
+  assertion(R = (all([(obj,[o])],when(not(o=a),not(p(o)))),[(obj,[a])])).
+test(effect_constraint_with_two_vars) :-
+  resolve_conflicting_effects(
+    [(p(a,b), [(obj,[a,b])])],
+    (all([(obj,[o1,o2])],not(p(o1,o2))),[]),
+    R
+  ),
+  assertion(R =
+    (all([(obj,[o1,o2])], when(not(and(o1=a,o2=b)),not(p(o1,o2)))),
+     [(obj, [a]), (obj, [b])])
+  ).
+ test(effect_constraint_with_quantified_effect, fixme(quantifier_vars)) :-
+   resolve_conflicting_effects(
+    [(all([(obj,[o])],p(a,o)), [(obj,[a])])],
+    (all([(obj,[o1,o2])],not(p(o1,o2))),[]),
+    R
+  ),
+  R=(all([(obj,[o1,o2])],when(not(o1=a),not(p(o1,o2)))),[(obj,[a])]).
+test(conditional_with_partial_conflict) :-
+  resolve_conflicting_effects(
+    [(p(a),[(obj,[a])])],
+    (when(q(b),all([(obj,[o])],not(p(o)))),[(obj,[b])]),
+    R1
+  ),
+  R1 = (when(q(b),all([(obj,[o])],when(not(o=a),not(p(o))))),
+    [(obj,[a]),(obj,[b])]).
 
 :- end_tests(effect_conflicts).
