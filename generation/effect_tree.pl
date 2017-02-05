@@ -163,8 +163,8 @@ is_in_typed_list(Var, [(Type,[_|TypedVars])|Vars]) :-
 has_type(Var, [(Type,[Var|_])|_], Type).
 has_type(Var, [(OtherType,[_|TypedVars])|Vars], Type) :-
   has_type(Var, [(OtherType,TypedVars)|Vars], Type).
-has_type(Var, [(_,[]),Vars], Type) :-
-  has_type(Var, [Vars], Type).
+has_type(Var, [(_,[])|Vars], Type) :-
+  has_type(Var, Vars, Type).
 
 %% get_types_list(+Vars, +Types, -TypedVars)
 %
