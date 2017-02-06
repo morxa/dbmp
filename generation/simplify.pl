@@ -84,6 +84,9 @@ simplify_or_fail(not(true), false).
 simplify_or_fail(not(false), true).
 % not(not(Term)) -> Term
 simplify_or_fail(not(not(Term)), Term).
+% simplify 'not' recursively
+simplify_or_fail(not(Term), not(SimplifiedTerm)) :-
+  simplify_or_fail(Term, SimplifiedTerm).
 % and() -> true
 simplify_or_fail(and(), true).
 % or() -> false
