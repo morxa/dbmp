@@ -30,10 +30,15 @@
 
 % Effect trees are only used if enable_effect_trees is true.
 :- dynamic enable_effect_trees/0.
-% Comment the following line to disable effect trees.
-enable_effect_trees.
+:- dynamic limit_to_strips_effects/0.
+% Comment/uncomment the following line to disable/enable effect trees.
+%enable_effect_trees.
+% Comment/uncomment the following line to limit to STRIPS effects, which uses a
+% different method to compute effects.
+%limit_to_strips_effects.
 
-:- enable_effect_trees -> ensure_loaded(effect_tree) ; true.
+
+:- ensure_loaded(effect_tree).
 
 %  compute_effect(*Actions, *ParameterAssignment, -Effect)
 %
@@ -71,9 +76,36 @@ compute_effect(Actions, Effect) :-
   get_effect_from_tree(EffectTree, Effect).
 
 compute_effect(Actions, Effect) :-
-  \+ enable_effect_trees,
+  limit_to_strips_effects,
   add_action_effects(Actions, Effects),
   merge_effects(Effects, Effect).
+
+compute_effect(Actions, SimplifiedResultingEffect) :-
+  \+ limit_to_strips_effects,
+  \+ enable_effect_trees,
+  maplist(get_reassigned_effect, Actions, Effects),
+  regress_cond_effects(Effects, RegressedEffects),
+  reverse(RegressedEffects, ReversedEffects),
+  maplist(split_effect, ReversedEffects, SplitReversedEffects),
+  combine_effects([], SplitReversedEffects, CombinedEffects),
+  maplist(\Effect^Param^(=((Effect,Param))),
+    ResultingEffects, _, CombinedEffects),
+  ResultingEffect =.. [and|ResultingEffects],
+  simplify_effect(ResultingEffect, SimplifiedResultingEffect).
+
+combine_effects(_, [], []).
+combine_effects(
+  PreviousEffects,
+  [CurrentEffects|Effects],
+  NewCombinedEffects
+) :-
+  maplist(
+    \CurrentEffect^resolve_conflicting_effects(PreviousEffects, CurrentEffect),
+    CurrentEffects, ResultingEffects
+  ),
+  append(ResultingEffects, PreviousEffects, NewPreviousEffects),
+  combine_effects(NewPreviousEffects, Effects, CombinedEffects),
+  append(ResultingEffects, CombinedEffects, NewCombinedEffects).
 
 %% resolve_conflicting_effects(+PreviousEffects, +Effect, -ResultingEffect)
 %
@@ -375,6 +407,9 @@ reassign_type((Type, Vars), [(OldParam,NewParam)|Params], (Type, NewVars)) :-
 %% split_effect(+Effect, -Effects)
 %
 %  Split the given Effect into a list of atomic Effects.
+split_effect((Effect, Params), SplitEffects) :-
+  split_effect(Effect, Effects),
+  maplist(\SplitEffect^(=((SplitEffect,Params))), Effects, SplitEffects).
 split_effect(Effect, [Effect]) :- atomic_formula(Effect).
 split_effect(Effect, FlattenedSplitConjuncts) :-
   Effect =.. [and|Conjuncts],
