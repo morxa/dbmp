@@ -129,7 +129,7 @@ resolve_conflicting_effects(
 %  Compute any conflict of Effect with PreviousEffect and resolve the conflict
 %  to ResEffect. QuantifiedVars are free vars in PreviousEffect and Effect.
 %  These variables are expected to be bound by a quantifier.
-resolve_conflicting_effect((Effect,_), (Effect,_), _, (nil,[])) :- !.
+resolve_conflicting_effect((Effect,_), (Effect,Params), _, (Effect,Params)) :- !.
 resolve_conflicting_effect((PrevEffect,_), (Effect,_), _, (nil,[])) :-
   negated_formula(PrevEffect, Effect), !.
 resolve_conflicting_effect(
@@ -826,7 +826,7 @@ test(regress_cond_effects) :-
 :- begin_tests(effect_conflicts).
 test(simple) :-
   resolve_conflicting_effects([(p(a),[(obj,[a])])], (p(a), [(obj,[a])]), R1),
-  assertion(R1=(nil,[])),
+  assertion(R1=(p(a), [(obj,[a])])),
   resolve_conflicting_effects(
     [(p(a),[(obj,[a])])], (not(p(a)), [(obj,[a])]), R2
   ),
@@ -834,10 +834,16 @@ test(simple) :-
 test(two_previous_effects) :-
   resolve_conflicting_effects(
     [(q(a),[(obj,[a])]),(p(a),[(obj,[a])])], (p(a), [(obj,[a])]), R1),
-  assertion(R1=(nil,[])),
+  assertion(R1=(p(a), [(obj,[a])])),
   resolve_conflicting_effects(
     [(p(a),[(obj,[a])]),(q(a),[(obj,[a])])], (p(a), [(obj,[a])]), R2),
-  assertion(R2=(nil,[])).
+  assertion(R2=(p(a), [(obj,[a])])),
+  resolve_conflicting_effects(
+    [(q(a),[(obj,[a])]),(not(p(a)),[(obj,[a])])], (p(a), [(obj,[a])]), R3),
+  assertion(R3=(nil,[])),
+  resolve_conflicting_effects(
+    [(not(p(a)),[(obj,[a])]),(q(a),[(obj,[a])])], (p(a), [(obj,[a])]), R4),
+  assertion(R4=(nil,[])).
 test(quantified_previous_effect) :-
   resolve_conflicting_effects(
     [(all([(location,[p])],at(p)),[])],(not(at(l)),[(location,[l])]),
@@ -868,7 +874,7 @@ test(conditional_previous_effect) :-
   resolve_conflicting_effects(
     [(when(c(p),at(p)),[(location,[p])])],(at(p),[(location,[p])]), R3
   ),
-  assertion(R3=(when(not(c(p)),at(p)),[(location,[p])])),
+  assertion(R3=(at(p),[(location,[p])])),
   resolve_conflicting_effects(
     [(when(c(p),q(p)),[(location,[p])])],(not(at(p)),[(location,[p])]), R4
   ),
@@ -910,7 +916,7 @@ test(forall_in_both_effects) :-
     (all([(obj,[o])],p(o)),[]),
     R1
   ),
-  assertion(R1=(nil,[])),
+  assertion(R1=(all([(obj,[o])],p(o)),[])),
   resolve_conflicting_effects(
     [(all([(obj,[o])],p(o)),[])],
     (all([(obj,[o])],not(p(o))),[]),
