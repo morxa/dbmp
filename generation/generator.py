@@ -284,7 +284,7 @@ def main():
             # remove the ID so we can upload the domain as a new document
             augmented_domain_entry['base_domain'] = domain_entry['_id']
             del augmented_domain_entry['_id']
-            augmented_domain_entry['macro'] = macro._id
+            augmented_domain_entry['macros'] = [macro._id]
             augmented_domain_entry['augmented'] = True
             augmented_domain_entry['raw'] = augment_domain(domain_entry['raw'],
                 macro.macro)
