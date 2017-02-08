@@ -300,7 +300,8 @@ def main():
         if args.augment_domain:
             assert(args.save), \
                 'You need to provide --save if you want to augment the domain'
-            domain_entry = domain_coll.find_one({'name': args.domain})
+            domain_entry = domain_coll.find_one(
+                {'name': args.domain, 'augmented': { '$ne': True }})
             assert(domain_entry), 'Could not find domain {}'.format(args.domain)
             augmented_domain_entry = domain_entry
             # remove the ID so we can upload the domain as a new document
