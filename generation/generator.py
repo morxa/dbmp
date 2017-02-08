@@ -44,7 +44,7 @@ class MacroAction(object):
         self.type = 'dbmp'
         self.evaluation = {}
         self.domain = ''
-    def __init__(self, db_macro):
+    def from_db(self, db_macro):
         """ Initialize the macro from the existing database entry. """
         self.initialized = True
         self.actions = db_macro['actions']
@@ -316,7 +316,8 @@ def main():
             domain_coll.insert(augmented_domain_entry)
     if args.re_evaluate:
         for db_macro in macros_coll.find():
-            macro = MacroAction(db_macro)
+            macro = MacroAction()
+            macro.from_db(db_macro)
             evaluation = {}
             for evaluator in evaluators:
                 evaluation[evaluator.name()] = evaluator.evaluate(macro)
