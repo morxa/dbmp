@@ -32,6 +32,8 @@ import tempfile
 
 """
 
+import itertools
+
 class MacroAction(object):
     """A macro with all its properties."""
     def __init__(self):
@@ -183,6 +185,8 @@ def main():
     parser.add_argument('-g', '--augment-domain', action='store_true',
                         help='augment the domain with the macro and upload the '
                              'resulting domain macro')
+    parser.add_argument('-m', '--max-num-macros', type=int, default=1,
+                        help='the maximum number of macros to add to a domain')
     parser.add_argument('-e', '--evaluate', action='store_true',
                         help='evaluate the resulting macros for their '
                              'usefulness')
@@ -197,6 +201,8 @@ def main():
             + str(args.actions)
     assert(args.domain or args.domainfile), \
             'Please specify a domain name or a domain file'
+    assert(args.max_num_macros > 0), \
+            'Max number of macros needs to be higher than 0'
     if args.re_evaluate:
         args.from_db = True
         args.evaluate = True
@@ -297,23 +303,40 @@ def main():
             macros_coll.insert_one(macro.__dict__)
         if args.verbose:
             print(macro.__dict__)
-        if args.augment_domain:
-            assert(args.save), \
-                'You need to provide --save if you want to augment the domain'
-            domain_entry = domain_coll.find_one(
-                {'name': args.domain, 'augmented': { '$ne': True }})
-            assert(domain_entry), 'Could not find domain {}'.format(args.domain)
-            augmented_domain_entry = domain_entry
-            # remove the ID so we can upload the domain as a new document
-            augmented_domain_entry['base_domain'] = domain_entry['_id']
-            del augmented_domain_entry['_id']
-            augmented_domain_entry['macros'] = [macro._id]
-            augmented_domain_entry['augmented'] = True
-            augmented_domain_entry['raw'] = augment_domain(domain_entry['raw'],
-                macro.macro)
-            if args.verbose:
-                print('Inserting {}'.format(augmented_domain_entry))
-            domain_coll.insert(augmented_domain_entry)
+    if args.augment_domain:
+        evaluators = []
+        for weight in range(0,101,10):
+            evaluators.append(
+                macro_evaluator.MacroComplementarityWeightedFPEvaluator(
+                    weight, 100 - weight))
+        for num_macros in range(1, args.max_num_macros+1):
+            for macro_combination in itertools.combinations(macros, num_macros):
+                assert(args.save), \
+                    'You must provide --save if you want to augment the domain'
+                domain_entry = domain_coll.find_one(
+                    {'name': args.domain, 'augmented': { '$ne': True }})
+                assert(domain_entry), \
+                        'Could not find domain {}'.format(args.domain)
+                augmented_domain_entry = domain_entry
+                # remove the ID so we can upload the domain as a new document
+                augmented_domain_entry['base_domain'] = domain_entry['_id']
+                del augmented_domain_entry['_id']
+                augmented_domain_entry['macros'] = \
+                        [ macro._id for macro in macro_combination ]
+                augmented_domain_entry['augmented'] = True
+                domain_string = domain_entry['raw']
+                for macro in macro_combination:
+                    domain_string = augment_domain(domain_string, macro.macro)
+                augmented_domain_entry['raw'] = domain_string
+                evaluation = {}
+                for evaluator in evaluators:
+                    evaluation[evaluator.name()] = \
+                        evaluator.evaluate_list(list(macro_combination))
+                augmented_domain_entry['evaluation'] = evaluation
+                if args.verbose:
+                    print('Inserting {}'.format(augmented_domain_entry))
+                    print('Evaluation: {}'.format(evaluation))
+                domain_coll.insert(augmented_domain_entry)
     if args.re_evaluate:
         for db_macro in macros_coll.find():
             macro = MacroAction()
