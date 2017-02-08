@@ -32,6 +32,19 @@ class Evaluator(object):
             A score for the macro; the higher the score the better the macro.
         """
         raise NotImplementedError()
+    def evaluate_list(self, macros):
+        """ Evaluate the given list of macros and return an evaluation score.
+
+        This evaluates the usefulness of the combination of the macros in the
+        given list.
+
+        Args:
+            macros: A list of macros represented as dictionaries.
+        Returns:
+            A score for the macro list.
+        """
+        macro_evaluations = [ self.evaluate(macro) for macro in macros ]
+        return sum(macro_evaluations)
     def name(self):
         """ The name of the evaluator.
 
