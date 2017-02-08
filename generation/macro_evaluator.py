@@ -97,7 +97,7 @@ class ReductionEvaluator(Evaluator):
         return 'reduction_evaluator'
 
 class WeightedFPEvaluator(Evaluator):
-    """ An evaluator that combines frequency and paramter reduction.
+    """ An evaluator that combines frequency and parameter reduction.
 
     This evaluator combines the FrequencyEvaluator and the ReductionEvaluator
     according to the given weights.
@@ -136,3 +136,34 @@ class WeightedFPEvaluator(Evaluator):
     def name(self):
         return 'weighted_fp_evaluator_{}_{}'.format(self.frequency_weight,
                                                     self.reduction_weight)
+
+class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
+    """ An evaluator that additionally considers the macros' complementarity.
+
+    This evaluator evaluates each single macro in the same way as the
+    WeightedFPEvaluator, but it additionally computes how different the macros
+    in the given macro list are. Completely complementary actions in the macros
+    are evaluated higher than macros that consist of the same actions.
+    """
+    def evaluate_list(self, macros):
+        """ Evaluate the complementarity of the given macros.
+
+        Args:
+            macros: A list of dictionaries representing macros.
+
+        Returns:
+            A score for the macros.
+        """
+        # The sum over distinct actions in each macro.
+        num_actions = sum([ len(set(macro.actions)) for macro in macros ])
+        distinct_actions = set()
+        for macro in macros:
+            distinct_actions.update(macro.actions)
+        # The number of distinct actions in all macros
+        num_distinct_actions = len(distinct_actions)
+        complementarity = num_distinct_actions / num_actions
+        list_evaluation = super(WeightedFPEvaluator, self).evaluate_list(macros)
+        return complementarity * list_evaluation
+    def name(self):
+        return 'complementarity_weighted_fp_evaluator_{}_{}'.format(
+            self.frequency_weight, self.reduction_weight)
