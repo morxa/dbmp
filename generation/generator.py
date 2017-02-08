@@ -43,6 +43,15 @@ class MacroAction(object):
         self.count = 0
         self.type = 'dbmp'
         self.evaluation = {}
+    def __init__(self, db_macro):
+        """ Initialize the macro from the existing database entry. """
+        self.initialized = True
+        self.actions = db_macro['actions']
+        self.num_actions = len(self.actions)
+        self.parameters = db_macro['parameters']
+        self.parameter_reduction = db_macro['parameter_reduction']
+        self.evaluation = db_macro['evaluation']
+        self.count = db_macro['count']
     def generate(self, domain_file_path, actions, parameters):
         """ Generate the macro.
 
@@ -175,6 +184,8 @@ def main():
     parser.add_argument('-e', '--evaluate', action='store_true',
                         help='evaluate the resulting macros for their '
                              'usefulness')
+    parser.add_argument('--re-evaluate', action='store_true',
+                        help='re-evaluate the macros in the database')
     parser.add_argument('action', nargs='*',
                         help='an action and its parameters to include into the '
                              'macro, e.g. "unstack 1,2"')
@@ -184,6 +195,13 @@ def main():
             + str(args.actions)
     assert(args.domain or args.domainfile), \
             'Please specify a domain name or a domain file'
+    if args.re_evaluate:
+        args.from_db = True
+        args.evaluate = True
+        assert(not args.action), 'Cannot re-evaluate locally'
+        assert(not args.save), 'Cannot save macros when re-evaluating'
+        assert((not args.all) and (not args.augment_domain)), \
+                'Cannot generate macro or augment domain when re-evaluating'
     db_host = 'localhost'
     db_user = 'planner'
     db_passwd = ''
@@ -292,6 +310,15 @@ def main():
             if args.verbose:
                 print('Inserting {}'.format(augmented_domain_entry))
             domain_coll.insert(augmented_domain_entry)
+    if args.re_evaluate:
+        for db_macro in macros_coll.find():
+            macro = MacroAction(db_macro)
+            evaluation = {}
+            for evaluator in evaluators:
+                evaluation[evaluator.name()] = evaluator.evaluate(macro)
+            macros_coll.update_one({'_id': db_macro['_id']},
+                                   { '$set': { 'evaluation': evaluation } })
+
 
 if __name__ == "__main__":
     main()
