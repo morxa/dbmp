@@ -43,6 +43,7 @@ class MacroAction(object):
         self.count = 0
         self.type = 'dbmp'
         self.evaluation = {}
+        self.domain = ''
     def __init__(self, db_macro):
         """ Initialize the macro from the existing database entry. """
         self.initialized = True
@@ -52,6 +53,7 @@ class MacroAction(object):
         self.parameter_reduction = db_macro['parameter_reduction']
         self.evaluation = db_macro['evaluation']
         self.count = db_macro['count']
+        self.domain = db_macro['domain']
     def generate(self, domain_file_path, actions, parameters):
         """ Generate the macro.
 
@@ -276,6 +278,7 @@ def main():
         assert(args.domainfile), 'Domain was not specified'
         m = MacroAction()
         m.generate(args.domainfile, actions, parameters)
+        m.domain = args.domain
         # We don't really know the count, so assume it is 1.
         m.count = 1
         macros.add(m)
