@@ -162,7 +162,8 @@ def main():
     parser.add_argument('--from-db', action='store_true',
                         help='fetch domain and actions from the database')
     parser.add_argument('-a', '--all', action='store_true',
-                        help='start jobs for all problems in the domain')
+                        help='generate macros for all action sequences in the '
+                             'database for the given domain')
     parser.add_argument('-l', '--occurrence-threshold', type=int, default=1,
                         help='the minimal number of occurrences of the action '
                              'sequence such that a macro is generated from it')
