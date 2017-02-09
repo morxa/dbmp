@@ -51,7 +51,7 @@ regress_(Effects, Types, Cond, SimplifiedCondRes) :-
   CondRes =.. [Op|RegressedConjuncts],
   simplify(CondRes, SimplifiedCondRes).
 regress_(Effects, Types, Cond, CondRes) :-
-  Cond =.. [impl,Implicant,Implicate],
+  Cond =.. [imply,Implicant,Implicate],
   !,
   regress_(Effects, Types, or(not(Implicant),Implicate), CondRes).
 % TODO this expects exactly one var, but PDDL allows lists of vars
@@ -131,8 +131,7 @@ regress_(Effects, Types, all(Vars,Term), TermRes) :-
   member(TermRes, [true,false]),
   regress_(Effects, NewTypes, Term, TermRes).
 
-% TODO rename operator to imply
-regress_([impl(Cond,Effect)|Effects], Types, Term, TermRes) :-
+regress_([imply(Cond,Effect)|Effects], Types, Term, TermRes) :-
   % cut here because we don't want to skip the cond effect if regression fails
   !,
   regress_([Effect|Effects], Types, Term, TermResIfCond),
@@ -187,10 +186,10 @@ init_typed_clearall_action :-
   assertz(domain:subtype_of_type(cup,object)),
   assertz(domain:action_effect(clearall,all(o,object,clear(o)))).
 init_condeffect_action :-
-  assertz(domain:action_effect(drop(O),impl(fragile(O),broken(O)))).
+  assertz(domain:action_effect(drop(O),imply(fragile(O),broken(O)))).
 init_fix_action :-
-  assertz(domain:action_effect(fix_green(C),impl(green(C),fixed(C)))),
-  assertz(domain:action_effect(fix_other(C),impl(not(green(C)),fixed(C)))).
+  assertz(domain:action_effect(fix_green(C),imply(green(C),fixed(C)))),
+  assertz(domain:action_effect(fix_other(C),imply(not(green(C)),fixed(C)))).
 cleanup_actions :-
   retractall(domain:action_effect(_,_)),
   retractall(type_of_object(_,_)),
@@ -265,7 +264,7 @@ test(
   regress_implication,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress_on_actions([goto(hall,kitchen)], impl(true,at(kitchen)), true).
+  regress_on_actions([goto(hall,kitchen)], imply(true,at(kitchen)), true).
 
 test(
   regress_existential_quantifier,
