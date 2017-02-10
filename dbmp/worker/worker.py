@@ -25,20 +25,12 @@ planner, saves the result to the database, and exits.
 import argparse
 import bson.objectid
 import datetime
-import glob
 import os
 import pymongo
 import re
 import resource
-import subprocess
 
-class Error(Exception):
-    """Base class for errors in this module."""
-    pass
-
-class NoSolutionFoundError(Error):
-    """Error thrown when no solution was found."""
-    pass
+from planner import Planner
 
 def memory_limit_in_megabytes(memory_string):
     """Translate the given memory limit as string into an int limit in MBs.
@@ -142,131 +134,6 @@ class DatabaseConnector(object):
         """
         result['end_time'] = datetime.datetime.utcnow()
         self.db.solutions.insert_one(result)
-
-class Planner(object):
-    def __init__(self, domain, problem, time_limit, memory_limit):
-        self.domain = domain
-        self.problem = problem
-        self.time_limit = time_limit
-        self.memory_limit = memory_limit
-        self.common_kwargs = {
-            'stdout': subprocess.PIPE,
-            'stderr': subprocess.STDOUT,
-            'universal_newlines': True,
-        }
-    def run(self):
-        """Run the planner."""
-        raise NotImplementedError
-    def get_solution(self):
-        """Get the solution as a string."""
-        raise NotImplementedError
-    def get_resources(self):
-        """Get the resources the planner needed to find a solution."""
-        return resource.getrusage(resource.RUSAGE_CHILDREN)
-    def get_success_return_codes(self):
-        """Get a list of return codes that indicate success."""
-        raise NotImplementedError
-    def obeys_limits(self):
-        """Whether this planner has its own resource manager to obey limits."""
-        return False
-    def factory(planner, *args, **kwargs):
-        if planner in ['ff', 'fastforward', 'fast-forward']:
-            return FFPlanner(*args, **kwargs)
-        elif planner in ['fd', 'fastdownward', 'fast-downward']:
-            return FDPlanner(*args, **kwargs)
-        elif planner in ['macroff', 'macro-ff']:
-            return MacroFFPlanner(*args, **kwargs)
-        elif planner in ['macroff-solep', 'macro-ff-solep']:
-            return MacroFFSolEPlanner(*args, **kwargs)
-        elif planner == 'marvin':
-            return MarvinPlanner(*args, **kwargs)
-        else:
-            raise NotImplementedError
-    factory = staticmethod(factory)
-
-class FFPlanner(Planner):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    def run(self):
-        result = subprocess.run(
-            ['ff', '-o', self.domain, '-f', self.problem],
-            **self.common_kwargs
-        )
-        return result
-    def get_success_return_codes(self):
-        """Get a list of return codes that indicate success."""
-        return [0]
-    def get_solution(self):
-        try:
-            solution_file = open('problem.pddl.soln', 'r')
-            return solution_file.read()
-        except IOError:
-            raise NoSolutionFoundError
-
-class MacroFFPlanner(FFPlanner):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    def run(self):
-        result = subprocess.run(
-            ['macroff', '-m', 'C', '-o', self.domain, '-f', self.problem],
-            **self.common_kwargs
-        )
-        return result
-
-class MacroFFSolEPlanner(FFPlanner):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    def run(self):
-        result = subprocess.run(
-            ['macroff', '-q', 'macros.pddl',
-             '-o', self.domain, '-f', self.problem],
-            **self.common_kwargs
-        )
-        return result
-
-class FDPlanner(Planner):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    def run(self):
-        result = subprocess.run(
-            ['fast-downward',
-             '--overall-memory-limit', str(self.memory_limit),
-             '--overall-time-limit', str(self.time_limit),
-             '--alias', 'seq-sat-lama-2011',
-             self.domain, self.problem],
-            **self.common_kwargs
-        )
-        return result
-    def get_success_return_codes(self):
-        """Get a list of return codes that indicate success."""
-        return [0, 6, 7, 8]
-    def get_solution(self):
-        """Get the last solution, which is always the best solution."""
-        solutions = glob.glob('sas_plan*')
-        solutions.sort()
-        if solutions:
-            solution_file = open(solutions[-1], 'r')
-            return solution_file.read()
-        else:
-            raise NoSolutionFoundError
-    def obeys_limits(self):
-        """Whether this planner has its own resource manager to obey limits."""
-        return True
-
-class MarvinPlanner(Planner):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    def run(self):
-        self.result = subprocess.run(
-            ['marvin', self.domain, self.problem],
-            **self.common_kwargs)
-        return self.result
-    def get_solution(self):
-        stdout_lines = self.result.stdout.splitlines()
-        for i, line in enumerate(stdout_lines):
-            if re.match(';+\s*Solution Found.*', line):
-                return '\n'.join(stdout_lines[i:])
-        raise NoSolutionFoundError
 
 def main():
     parser = argparse.ArgumentParser(

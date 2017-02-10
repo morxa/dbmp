@@ -26,4 +26,4 @@ RUN dnf -y --refresh install 'dnf-command(copr)' && \
       python3-pymongo \
     && \
     dnf clean all
-COPY worker.py /usr/bin/
+COPY worker.py planner.py /usr/bin/
