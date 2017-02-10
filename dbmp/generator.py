@@ -77,8 +77,8 @@ class MacroAction(object):
         """ Generate a macro using pyswip.
 
         This generates a macro by using pyswip to call generate_macro from
-        macro_generator.pl. Note that this currently does not work because of
-        serveral issues in pyswip.
+        ../generation/macro_generator.pl. Note that this currently does not work
+        because of serveral issues in pyswip.
 
         Args:
             domain_file_path: The path to the domain file to read from.
@@ -87,7 +87,7 @@ class MacroAction(object):
         """
         macro_file = tempfile.NamedTemporaryFile()
         prolog = pyswip.Prolog()
-        prolog.consult('macro_generator.pl')
+        prolog.consult('../generation/macro_generator.pl')
         query_string = 'generate_macro_to_file({}, {}, {}, {})'.format(
             domain_file_path, actions, parameters, macro_file.name)
         prolog_query = prolog.query(query_string)
@@ -110,7 +110,8 @@ class MacroAction(object):
         macro_file = tempfile.NamedTemporaryFile(mode='r')
         query = 'generate_macro_to_file("{}", {}, {}, "{}").'.format(
             domain_file_path, actions, parameters, macro_file.name)
-        subprocess.call(["swipl", "-q", "-l", "macro_generator.pl", "-t", query])
+        subprocess.call(["swipl", "-q", "-l",
+                         "../generation/macro_generator.pl", "-t", query])
         self.macro = macro_file.read()
         self.initialized = True
 
