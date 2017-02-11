@@ -51,7 +51,9 @@ generate_macro(
   % Cut here, we really only want to generate the macro once.
   !,
   atomic_list_concat(Actions, '-', Name),
-  generate_pddl_action(Name, Parameters, Precondition, Effect, Macro).
+  generate_pddl_action(Name, Parameters, Precondition, Effect, MacroAction),
+  format(string(Macro), '; MACRO ~w ACTIONS ~w PARAMETERS ~w\n~w',
+    [Name, Actions, ParameterEnumeration, MacroAction]).
 
 %% generate_macro_to_file(+DomainFile, +Actions, +ParameterEnum, +Filename)
 %
