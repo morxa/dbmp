@@ -187,17 +187,34 @@ remove_duplicate_parameters(
   CurrentParameters,
   ResultingParameters
 ) :-
-  member((Type,TypedParameters),CurrentParameters),
+  member((SubType,TypedParameters),CurrentParameters),
+  ( Type = SubType ; domain:subtype_of_type(SubType, Type) ),
   member(Parameter,TypedParameters),
   remove_duplicate_parameters(
     [(Type,Parameters)|R], CurrentParameters, ResultingParameters).
+remove_duplicate_parameters(
+  [(SubType,[Parameter|Parameters])|R],
+  CurrentParameters,
+  ResultingParameters
+) :-
+  domain:subtype_of_type(SubType, Type),
+  SubType \= Type,
+  member((Type,TypedParameters), CurrentParameters),
+  member(Parameter, TypedParameters),
+  !,
+  exclude(=(Parameter), TypedParameters, FilteredParameters),
+  substitute((Type,TypedParameters), CurrentParameters,
+    (Type,FilteredParameters), NewCurrentParameters),
+  remove_duplicate_parameters(
+    [(SubType,[Parameter|Parameters])|R], NewCurrentParameters, ResultingParameters).
 remove_duplicate_parameters(
   [(Type,[Parameter|Parameters])|R],
   CurrentParameters,
   ResultingParameters
 ) :-
-  member((Type,TypedParameters),CurrentParameters),
-  \+ member(Parameter,TypedParameters),
+  forall(member((_,TypedParameters),CurrentParameters),
+    \+ member(Parameter,TypedParameters)
+  ),
   exclude(=((Type,TypedParameters)), CurrentParameters, FilteredParameters),
   append(TypedParameters,[Parameter],NewTypedParameters),
   append(FilteredParameters, [(Type,NewTypedParameters)], NewCurrentParameters),
@@ -243,6 +260,9 @@ compute_precondition(
   simplify(and(SubstitutedPrecondition,RegressedPreconditionR), Precondition).
 
 
+% TODO all these tests have choicepoints; only by grounding the result in the
+% assertion we obtain determistic results. fix remove_duplicate_parameters such
+% that no choicepoints exist.
 :- begin_tests(remove_duplicate_parameters).
 test(no_duplicates) :-
   assertion(remove_duplicate_parameters([(typeA,[a,b])], [(typeA,[a,b])])).
@@ -257,6 +277,17 @@ test(two_types_with_same_parameter) :-
 test(split_duplicate_types) :-
   assertion(remove_duplicate_parameters(
     [(typeA,[a,b]),(typeA,[b,c])], [(typeA, [a,b,c])])).
+test(
+  duplicate_parameters_with_subtypes,
+  [ setup(assertz(domain:subtype_of_type(subtype,type))),
+    cleanup(retractall(domain:subtype_of_type(_,_)))
+  ]
+) :-
+  assertion(remove_duplicate_parameters(
+    [(type,[a,b]),(subtype,[b])], [(type,[a]),(subtype,[b])])),
+  remove_duplicate_parameters(
+    [(subtype,[b]),(type,[a,b])], R),
+  assertion(R=[(subtype,[b]),(type,[a])]).
 :- end_tests(remove_duplicate_parameters).
 
 :- begin_tests(parameter_assignment).
