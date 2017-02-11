@@ -111,7 +111,8 @@ def main():
     solutions_coll = client.macro_planning.solutions
     domains = set()
     for macro in args.macros:
-        domain = domain_coll.find_one({'macro': bson.objectid.ObjectId(macro)})
+        domain = domain_coll.find_one(
+            {'macros': bson.objectid.ObjectId(macro)})
         if domain:
             domains.add(domain['_id'])
         else:
@@ -124,7 +125,7 @@ def main():
         sorter = [ ('evaluation.' + args.evaluator, -1) ]
         for macro in \
                 macro_coll.find(query).sort(sorter).limit(args.num_macros):
-            domain = domain_coll.find_one( {'macro': macro['_id'] })
+            domain = domain_coll.find_one( {'macros': macro['_id'] })
             if domain:
                 domains.add(domain['_id'])
             else:
