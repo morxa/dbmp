@@ -304,12 +304,12 @@ def main():
             macros_coll.insert_one(macro.__dict__)
         if args.verbose:
             print(macro.__dict__)
+    evaluators = []
+    for weight in range(0,101,10):
+        evaluators.append(
+            macro_evaluator.MacroComplementarityWeightedFPEvaluator(
+                weight, 100 - weight))
     if args.augment_domain:
-        evaluators = []
-        for weight in range(0,101,10):
-            evaluators.append(
-                macro_evaluator.MacroComplementarityWeightedFPEvaluator(
-                    weight, 100 - weight))
         for num_macros in range(1, args.max_num_macros+1):
             for macro_combination in itertools.combinations(macros, num_macros):
                 assert(args.save), \
@@ -347,6 +347,21 @@ def main():
                 evaluation[evaluator.name()] = evaluator.evaluate(macro)
             macros_coll.update_one({'_id': db_macro['_id']},
                                    { '$set': { 'evaluation': evaluation } })
+        for domain in domain_coll.find(
+                {'augmented': True, 'name': args.domain}):
+            domain_macros = []
+            for macro_id in domain['macros']:
+                macro = MacroAction()
+                macro.from_db(macros_coll.find_one({'_id': macro_id}))
+                domain_macros.append(macro)
+            evaluation = {}
+            for evaluator in evaluators:
+                evaluation[evaluator.name()] = \
+                    evaluator.evaluate_list(domain_macros)
+            domain_coll.update_one({'_id': domain['_id']},
+                                   { '$set': { 'evaluation': evaluation } })
+
+
 
 
 if __name__ == "__main__":
