@@ -88,7 +88,7 @@ class FFPlanner(Planner):
         return [0]
     def get_solution(self):
         try:
-            solution_file = open('problem.pddl.soln', 'r')
+            solution_file = open(self.problem + '.soln', 'r')
             return solution_file.read()
         except IOError:
             raise NoSolutionFoundError
