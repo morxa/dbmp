@@ -21,6 +21,8 @@
 Evaluate the usefulness of macros.
 """
 
+import math
+
 class Evaluator(object):
     def evaluate(self, macro):
         """ Evaluate the given macro and return an evaluation score.
@@ -44,7 +46,7 @@ class Evaluator(object):
             A score for the macro list.
         """
         macro_evaluations = [ self.evaluate(macro) for macro in macros ]
-        return sum(macro_evaluations)
+        return sum(macro_evaluations) / math.sqrt(len(macros))
     def name(self):
         """ The name of the evaluator.
 
