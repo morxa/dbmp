@@ -136,7 +136,8 @@ def main():
         for problem in problem_coll.find({ 'domain': args.domain }):
             if not args.all and None != solutions_coll.find_one(
                 { 'domain': bson.objectid.ObjectId(domain),
-                  'problem': bson.objectid.ObjectId(problem['_id']) }):
+                  'problem': bson.objectid.ObjectId(problem['_id']),
+                  'planner': args.planner }):
                 # solution already exists, skip this problem
                 continue
             start_job(args.planner, args.kubernetes_template, domain,
