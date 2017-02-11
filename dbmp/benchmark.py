@@ -63,7 +63,7 @@ def main():
     parser.add_argument('-H', '--db-host', help='the database hostname')
     parser.add_argument('-u', '--db-user', help='the database username')
     parser.add_argument('-p', '--db-passwd', help='the database password')
-    parser.add_argument('--planner', help='the planner to use')
+    parser.add_argument('--planner', default='ff', help='the planner to use')
     parser.add_argument('-t', '--kubernetes-template',
                         help='the job template for the Kubernetes job')
     parser.add_argument('--domain', help='the name of the domain to run')
@@ -71,13 +71,16 @@ def main():
                         help='run all macros that fit the given criteria')
     parser.add_argument('--missing', action='store_true',
                         help='run all problems without a solution')
-    parser.add_argument('--evaluator',
-                        help='the name of the evaluation function'
+    parser.add_argument('--macro-evaluator',
+                        help='the name of the evaluation function '
                              'to use for filtering macros')
+    parser.add_argument('--domain-evaluator',
+                        help='the name of the evaluation function '
+                             'to use for filtering domains')
     parser.add_argument('--min-score', type=int, default=0,
                         help='the min score the macro has to have')
-    parser.add_argument('--num-macros', type=int, default=0,
-                        help='limit to the n highest scoring macros')
+    parser.add_argument('--best', type=int, default=0,
+                        help='limit to the n highest scoring macros or domains')
     parser.add_argument('macros', metavar='macro', nargs='*',
                         help='the ID of a macro to use')
     args = parser.parse_args()
@@ -120,18 +123,28 @@ def main():
                  'generate the augmented domain?'.format(macro),
                  file=sys.stderr)
     if args.all or args.missing:
-        assert(args.evaluator), 'Please provide an evaluator'
-        query = { 'evaluation.' + args.evaluator: { '$gte': args.min_score }}
-        sorter = [ ('evaluation.' + args.evaluator, -1) ]
-        for macro in \
-                macro_coll.find(query).sort(sorter).limit(args.num_macros):
-            domain = domain_coll.find_one( {'macros': macro['_id'] })
-            if domain:
+        assert(args.macro_evaluator or args.domain_evaluator), \
+                'Please provide a macro or domain evaluator'
+        if args.macro_evaluator:
+            query = { 'evaluation.' + args.macro_evaluator:
+                     { '$gte': args.min_score }}
+            sorter = [ ('evaluation.' + args.macro_evaluator, -1) ]
+            for macro in \
+                    macro_coll.find(query).sort(sorter).limit(args.best):
+                domain = domain_coll.find_one( {'macros': macro['_id'] })
+                if domain:
+                    domains.add(domain['_id'])
+                else:
+                    print('Warning: Could not find a domain with macro {}. '
+                          'Did you generate the augmented domain?'.format(
+                              macro['_id']),
+                         file=sys.stderr)
+        if args.domain_evaluator:
+            query = { 'evaluation.' + args.domain_evaluator:
+                     { '$gte': args.min_score }}
+            sorter = [ ('evaluation.' + args.domain_evaluator, -1) ]
+            for domain in domain_coll.find(query).sort(sorter).limit(args.best):
                 domains.add(domain['_id'])
-            else:
-                print('Warning: Could not find a domain with macro {}. Did you '
-                      'generate the augmented domain?'.format(macro['_id']),
-                     file=sys.stderr)
     for domain in domains:
         for problem in problem_coll.find({ 'domain': args.domain }):
             if not args.all and None != solutions_coll.find_one(
