@@ -126,8 +126,9 @@ def main():
         assert(args.macro_evaluator or args.domain_evaluator), \
                 'Please provide a macro or domain evaluator'
         if args.macro_evaluator:
-            query = { 'evaluation.' + args.macro_evaluator:
-                     { '$gte': args.min_score }}
+            query = { 'domain': args.domain,
+                      'evaluation.' + args.macro_evaluator:
+                        { '$gte': args.min_score }}
             sorter = [ ('evaluation.' + args.macro_evaluator, -1) ]
             for macro in \
                     macro_coll.find(query).sort(sorter).limit(args.best):
@@ -140,8 +141,9 @@ def main():
                               macro['_id']),
                          file=sys.stderr)
         if args.domain_evaluator:
-            query = { 'evaluation.' + args.domain_evaluator:
-                     { '$gte': args.min_score }}
+            query = { 'name': args.domain,
+                      'evaluation.' + args.domain_evaluator:
+                        { '$gte': args.min_score }}
             sorter = [ ('evaluation.' + args.domain_evaluator, -1) ]
             for domain in domain_coll.find(query).sort(sorter).limit(args.best):
                 domains.add(domain['_id'])
