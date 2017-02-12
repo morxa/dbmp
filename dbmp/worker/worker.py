@@ -31,6 +31,7 @@ import re
 import resource
 
 from planner import Planner
+from planner import NoSolutionFoundError
 
 def memory_limit_in_megabytes(memory_string):
     """Translate the given memory limit as string into an int limit in MBs.
