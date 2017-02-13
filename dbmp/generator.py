@@ -245,8 +245,9 @@ def main():
         client = pymongo.MongoClient(host=db_host)
         database = client.macro_planning
         database.authenticate(db_user, db_passwd)
-        # TODO: need to adapt identificaton scripts to write result here
         action_seqs_coll = client.macro_planning.action_sequences
+        action_seqs_coll = \
+                client.macro_planning['action_sequences_' + args.domain]
         domain_coll = client.macro_planning.domains
         macros_coll = client.macro_planning.macros
         if not args.domainfile:
