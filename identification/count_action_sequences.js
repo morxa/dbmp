@@ -20,51 +20,94 @@
  * This function finds all action sequences of length 2 to maxSequenceLength
  * and determines common parameters in each sequence.
  * It emits (key,value) pairs, where the key is the action sequences (without
- * parameters), and the value is the most specific parameterAssignment possible.
+ * parameters), and the value is a dictionary that contains all parameter
+ * assignments.
  * The parameter assignment is defined by increasing parameter indices.
  * As an example, for the action sequence [pick-up,stack], a possible value for
  * the parameters is [ [1], [1, 2] ], meaning that the first argument of stack
  * is the same as the (first) argument of pick-up.
+ * The emitted values have the following structure:
+ * { [[1,1],[2]]: { count: 1, parameters: [[1,1],[2]] },
+ *   [[1,2],[3]]: { count: 1, parameters: [[1,2],[3]] } }
  */
 var findSequencesInPlan = function() {
-  for (var i = 0; i < this.actions.length - 1; i++) {
-    for (var l = 2; l <= maxSequenceLength; l++) {
-      if (i + l > this.actions.length) {
+  // loop over all starting points for sequences
+  for (var start = 0; start < this.actions.length - 1; start++) {
+    // loop over all sequences that start at the given point
+    for (var length = 2; length <= maxSequenceLength; length++) {
+      if (start + length > this.actions.length) {
         break;
       }
-      // create a new action sequence
-      var sequence = [];
       var actions = [];
-      var parameterAssignment = [];
-      var nextParam = 1;
-      for (var j = 0; j < l; j++) {
-        sequence.push(this.actions[i+j].operator)
-        // compare this action's parameters with the parameters of the previous
-        // actions
-        actionParams = [];
-        actionParamLoop:
-        for (var k = 0; k < this.actions[i+j].parameters.length; k++) {
-          // loop over actions in this sequence prior to this action
-          for (var m = 0; m < j; m++) {
-            // loop over that action's parameters
-            for (var n = 0; n < this.actions[i+m].parameters.length; n++) {
-              if (this.actions[i+m].parameters[n] ==
-                  this.actions[i+j].parameters[k]) {
-                actionParams.push(parameterAssignment[m][n]);
-                continue actionParamLoop;
-              }
+      var parameters = [];
+      // loop over action sequence to collect parameters
+      for (var action_i = 0; action_i < length; action_i++) {
+        action = this.actions[start + action_i];
+        actions.push(action.operator);
+        Array.prototype.push.apply(parameters, action.parameters);
+      }
+      var assignmentsList = [[]];
+      var enumerationsList = [[]];
+      var nextParams = [0];
+      // loop over all parameters of the sequence
+      for ( var parameter_i = 0;
+            parameter_i < parameters.length;
+            parameter_i++) {
+        //var newAssignmentsList = assignmentsList.slice();
+        //var newEnumerationsList = enumerationsList.slice();
+        var newAssignmentsList = [];
+        var newEnumerationsList = [];
+        var newNextParams = [];
+        for ( var assignments_i = 0;
+              assignments_i < assignmentsList.length;
+              assignments_i++) {
+          var assignment = assignmentsList[assignments_i];
+          var enumeration = enumerationsList[assignments_i];
+          var nextParam = nextParams[assignments_i];
+          for ( var possible_p = 0; possible_p < nextParam; possible_p++) {
+            if (parameters[parameter_i] == assignment[possible_p]) {
+              newAssignmentsList.push(assignment);
+              var newEnumeration = enumerationsList[assignments_i].slice();
+              newEnumeration.push(possible_p + 1);
+              newEnumerationsList.push(newEnumeration);
+              newNextParams.push(nextParam);
             }
           }
-          actionParams.push(nextParam++);
+          var newAssignment = assignment.slice();
+          newAssignment.push(parameters[parameter_i]);
+          newAssignmentsList.push(newAssignment);
+          var newEnumeration = enumeration.slice();
+          newEnumeration.push(nextParam + 1);
+          newEnumerationsList.push(newEnumeration);
+          newNextParams.push(nextParam + 1);
+          nextParam++;
         }
-        parameterAssignment.push(actionParams);
+        assignmentsList = newAssignmentsList;
+        enumerationsList = newEnumerationsList;
+        nextParams = newNextParams;
       }
-      var val = { actions: sequence, totalCount: 1 };
-      val[parameterAssignment] = {
-        'parameters': parameterAssignment,
-        'count': 1
-      };
-      emit(sequence.join(), val);
+      var result = { actions: actions, totalCount: 1 };
+      // reconstruct list of lists of parameters for each list of parameters
+      // each action has a list of parameters; so far, the enumerationsList is
+      // a single list; the individual actions are not split
+      for (var enum_i = 0; enum_i < enumerationsList.length; enum_i++) {
+        enumeration = enumerationsList[enum_i];
+        newEnumeration = [];
+        var nextActionParam = 0;
+        for (var action_i = 0; action_i < length; action_i++) {
+          action_num_params = this.actions[start + action_i].parameters.length;
+          actionEnum = enumeration.slice(
+              nextActionParam, nextActionParam + action_num_params);
+          newEnumeration.push(actionEnum);
+          nextActionParam += action_num_params;
+        }
+        result[newEnumeration] = {
+          'parameters': newEnumeration,
+          'count': 1
+        };
+      }
+      emit(actions.join(), result);
+
     }
   }
 }
