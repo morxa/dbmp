@@ -318,6 +318,7 @@ def main():
             macro_evaluator.MacroComplementarityWeightedFPEvaluator(
                 weight, 100 - weight))
     if args.augment_domain:
+        num_domains = 0
         for num_macros in range(1, args.max_num_macros+1):
             for macro_combination in itertools.combinations(macros, num_macros):
                 assert(args.save), \
@@ -375,8 +376,10 @@ def main():
                     evaluator.evaluate_list(domain_macros)
             domain_coll.update_one({'_id': domain['_id']},
                                    { '$set': { 'evaluation': evaluation } })
-
-
+    if args.verbose:
+        print('Total number of macros: {}'.format(len(macros)))
+        if args.augment_domain:
+            print('Total number of augmented domains: {}.'.format(num_domains))
 
 
 if __name__ == "__main__":
