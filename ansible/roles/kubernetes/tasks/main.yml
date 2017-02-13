@@ -14,3 +14,12 @@
     src: certs/ca.crt
     dest: /etc/kubernetes/ssl/ca.crt
     mode: u=rw,go=r
+- name: enable systemd setting KillUserProcesses
+  lineinfile:
+    dest: /etc/systemd/logind.conf
+    regexp: .*KillUserProcesses=.*
+    line: KillUserProcesses=yes
+- name: add polkit rule so users can use set-linger
+  copy:
+    src: polkit-self-linger.rules
+    dest: /etc/polkit-1/rules.d/60-self-linger.rules

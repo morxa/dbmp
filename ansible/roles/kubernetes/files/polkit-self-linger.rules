@@ -1,0 +1,8 @@
+/** Allow all users to set-self-linger to run processes in the background */
+polkit.addRule(function(action, subject) {
+  if (action.id == "org.freedesktop.login1.set-self-linger" &&
+      subject.isInGroup("robotics"))
+  {
+    return polkit.Result.YES;
+  }
+});
