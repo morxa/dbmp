@@ -178,6 +178,8 @@ def main():
     parser.add_argument('-a', '--all', action='store_true',
                         help='generate macros for all action sequences in the '
                              'database for the given domain')
+    parser.add_argument('--best', type=int, default=0,
+                        help='limit to the the n most occurring sequences')
     parser.add_argument('-l', '--occurrence-threshold', type=int, default=1,
                         help='the minimal number of occurrences of the action '
                              'sequence such that a macro is generated from it')
@@ -230,6 +232,10 @@ def main():
         db_user = args.db_user
     if args.db_passwd:
         db_passwd = db_passwd
+    if not args.domain:
+        dfile = open(args.domainfile, 'r')
+        domain_string = dfile.read()
+        args.domain = get_domainname(domain_string)
     macros = set()
     if args.from_db:
         assert(db_host and db_user), \
@@ -257,7 +263,8 @@ def main():
             domain_id = domain_coll.find_one(
                 {'name': args.domain, 'augmented': { '$ne': True }})['_id']
             for sequence in action_seqs_coll.find(
-                    { 'value.domain': domain_id }):
+                    { 'value.domain': domain_id }).sort(
+                        [('value.totalCount', -1)]).limit(args.best):
                 for parameters in sequence['value']['parameters']:
                     if parameters['count'] < args.occurrence_threshold:
                         continue
@@ -270,10 +277,6 @@ def main():
                     m.count = int(parameters['count'])
                     m.domain = args.domain
                     macros.add(m)
-    if not args.domain:
-        dfile = open(args.domainfile, 'r')
-        domain_string = dfile.read()
-        args.domain = get_domainname(domain_string)
     if args.action:
         actions = args.action[0::2]
         parameters = []
