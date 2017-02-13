@@ -305,7 +305,11 @@ def main():
             macro.evaluation = evaluation
     for macro in macros:
         if args.save:
-            macros_coll.insert_one(macro.__dict__)
+            macro._id = macros_coll.find_one_and_replace(
+                {'type': 'dbmp',
+                 'actions': macro.actions, 'parameters': macro.parameters },
+                macro.__dict__,
+                upsert = True)['_id']
         if args.verbose:
             print(macro.__dict__)
     evaluators = []
@@ -341,7 +345,14 @@ def main():
                 if args.verbose:
                     print('Inserting {}'.format(augmented_domain_entry))
                     print('Evaluation: {}'.format(evaluation))
-                domain_coll.insert(augmented_domain_entry)
+                updated_domain_id = domain_coll.find_one_and_replace(
+                    { 'name': augmented_domain_entry['name'],
+                      'macros': augmented_domain_entry['macros'] },
+                    augmented_domain_entry,
+                    upsert=True)['_id']
+                num_domains += 1
+                if args.verbose:
+                    print('Updated domain {}.'.format(updated_domain_id))
     if args.re_evaluate:
         for db_macro in macros_coll.find():
             macro = MacroAction()
