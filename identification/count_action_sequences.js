@@ -162,7 +162,8 @@ var cleanupResult = function(key, actionSequence) {
 }
 
 
-function get_macros(domain_name, max_length, out) {
+function get_macros(domain_name, max_length) {
+  var out = 'action_sequences_' + domain_name;
   var domain = db.domains.findOne(
       { name: domain_name, augmented: {$ne : true}})['_id']
   db.solutions.mapReduce(
