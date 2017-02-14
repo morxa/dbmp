@@ -131,7 +131,7 @@ regress_(Effects, Types, all(Vars,Term), TermRes) :-
   member(TermRes, [true,false]),
   regress_(Effects, NewTypes, Term, TermRes).
 
-regress_([imply(Cond,Effect)|Effects], Types, Term, TermRes) :-
+regress_([when(Cond,Effect)|Effects], Types, Term, TermRes) :-
   % cut here because we don't want to skip the cond effect if regression fails
   !,
   regress_([Effect|Effects], Types, Term, TermResIfCond),
@@ -186,10 +186,10 @@ init_typed_clearall_action :-
   assertz(domain:subtype_of_type(cup,object)),
   assertz(domain:action_effect(clearall,all(o,object,clear(o)))).
 init_condeffect_action :-
-  assertz(domain:action_effect(drop(O),imply(fragile(O),broken(O)))).
+  assertz(domain:action_effect(drop(O),when(fragile(O),broken(O)))).
 init_fix_action :-
-  assertz(domain:action_effect(fix_green(C),imply(green(C),fixed(C)))),
-  assertz(domain:action_effect(fix_other(C),imply(not(green(C)),fixed(C)))).
+  assertz(domain:action_effect(fix_green(C),when(green(C),fixed(C)))),
+  assertz(domain:action_effect(fix_other(C),when(not(green(C)),fixed(C)))).
 cleanup_actions :-
   retractall(domain:action_effect(_,_)),
   retractall(type_of_object(_,_)),
