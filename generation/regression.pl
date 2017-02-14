@@ -290,77 +290,86 @@ test(
   regress_on_actions([clearall], all(c,cup,clear(c)), true).
 
 test(regress_unrelated_term) :-
-  assertion(regress([holding(x)], [[]], at(l), at(l))).
+  regress([holding(x)], [[]], at(l), R),
+  assertion(R=at(l)).
 
 test(regress_forall_with_multiple_parameters) :-
-  assertion(regress([all(o,object,p(o))], [(object,[a,b])], p(b), true)).
+  regress([all(o,object,p(o))], [(object,[a,b])], p(b), R),
+  assertion(R=true).
 
 test(regress_complementary_forall) :-
-  assertion(regress([all(o,object,p(o))], [], all(o,object,not(p(o))), false)).
+  regress([all(o,object,p(o))], [], all(o,object,not(p(o))),R),
+  assertion(R=false).
 
 test(regress_exists_with_multiple_parameters) :-
-  assertion(
-    regress([p(b)], [(object,[a,b])], exists([(object,[o])],p(o)), true)
-  ).
+  regress([p(b)], [(object,[a,b])], exists([(object,[o])],p(o)), R),
+  assertion(R=true).
 
 test(regress_exists_with_alternatives) :-
-  assertion(
-    regress(
-      [p(a),q(b)],
-      [(object,[a,b])],
-      exists([(object,[o])], and(p(o),q(o))),
-      or(exists([(object,[o])],and(p(o),q(o))),q(a),p(b))
-  )).
+  regress(
+    [p(a),q(b)],
+    [(object,[a,b])],
+    exists([(object,[o])], and(p(o),q(o))),
+    R),
+  assertion(R=or(exists([(object,[o])],and(p(o),q(o))),q(a),p(b))).
 
 test(regress_forall_with_conjunctions) :-
-  assertion(regress(
+  regress(
     [all(o,object,p(o)),all(o,object,q(o))],
     [(object,[a]), (object,[a])],
     and(p(a),q(a)),
-    true
-  )).
+    R),
+  assertion(R=true).
 
 test(regress_forall_with_var_lists) :-
-  assertion(regress(
+  regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     p(a,b,c,d),
-    true)),
-  assertion(regress(
+    R1),
+  assertion(R1=true),
+  regress(
     [all([(t2,[o4,o3]),(t1,[o1,o2])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     p(a,b,c,d),
-    true)),
-  assertion(regress(
+    R2),
+  assertion(R2=true),
+  regress(
     [all([(t1,[o1,o2]),(t2,[o3])], p(o1,o2,o3,o3))],
     [(t1,[a,b]),(t2,[c,d])],
     p(a,b,c,d),
-    p(a,b,c,d))),
-  assertion(regress(
+    R3),
+  assertion(R3=p(a,b,c,d)),
+  regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     not(p(a,b,c,d)),
-    false)).
+    R4),
+  assertion(R4=false).
 test(regress_forall_with_var_lists_in_term) :-
-  assertion(regress(
+  regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     all([(t1,[a,b]),(t2,[c,d])],p(a,b,c,d)),
-    true)),
-  assertion(regress(
+    R1),
+  assertion(R1=true),
+  regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     all([(t2,[d,c]),(t1,[a,b])],p(a,b,c,d)),
-    true)),
-  assertion(regress(
+    R2),
+  assertion(R2=true),
+  regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     all([(t1,[a,b]),(t2,[c,d])],not(p(a,b,c,d))),
-    false)),
-  assertion(regress(
+    R3),
+  assertion(R3=false),
+  regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
     not(all([(t1,[a,b]),(t2,[c,d])],p(a,b,c,d))),
-    false)).
+    R4),
+  assertion(R4=false).
 
 :- end_tests(regression).
