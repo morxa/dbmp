@@ -308,8 +308,8 @@ def main():
             macro._id = macros_coll.find_one_and_replace(
                 {'type': 'dbmp',
                  'actions': macro.actions, 'parameters': macro.parameters },
-                macro.__dict__,
-                upsert = True)['_id']
+                macro.__dict__, upsert=True,
+                return_document=pymongo.ReturnDocument.AFTER)['_id']
         if args.verbose:
             print(macro.__dict__)
     evaluators = []
@@ -349,8 +349,8 @@ def main():
                 updated_domain_id = domain_coll.find_one_and_replace(
                     { 'name': augmented_domain_entry['name'],
                       'macros': augmented_domain_entry['macros'] },
-                    augmented_domain_entry,
-                    upsert=True)['_id']
+                    augmented_domain_entry, upsert=True,
+                    return_document=pymongo.ReturnDocument.AFTER)['_id']
                 num_domains += 1
                 if args.verbose:
                     print('Updated domain {}.'.format(updated_domain_id))
