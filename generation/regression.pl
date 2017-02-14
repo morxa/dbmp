@@ -88,25 +88,6 @@ regress_(Effects, Types, not(Term), true) :-
   regress_(Effects, Types, Term, false).
 regress_(Effects, Types, not(Term), false) :-
   regress_(Effects, Types, Term, true).
-% Note: subtype_of_type must be reflexive.
-regress_(
-  [all(Y,EffectType,Effect)|R], Types, all(X,TermType,Term), TermRes
-) :-
-  ( EffectType = TermType ; domain:subtype_of_type(TermType, EffectType) ),
-  substitute(X, [Term], _, [NewTerm]),
-  substitute(Y, [Effect], _,[NewEffect]),
-  regress_([NewEffect|R], Types, NewTerm, TermRes),
-  member(TermRes, [true,false]).
-regress_([all(X,Type,Effect)|R], Types, Term, TermRes) :-
-  Effect =.. [Predicate|Args],
-  member((ParameterType, TypedParameters), Types),
-  ( ParameterType = Type ; domain:subtype_of_type(ParameterType, Type)),
-  member(Parameter, TypedParameters),
-  substitute(X, Args, Parameter, NArgs),
-  QuantifiedEffect =.. [Predicate|NArgs],
-  regress_([QuantifiedEffect|R], Types, Term, TermRes),
-  member(TermRes, [true,false]).
-
 regress_([all([],Effect)|R], Types, Term, TermRes) :-
   member(TermRes, [true,false]),
   regress_([Effect|R], Types, Term, TermRes).
@@ -180,11 +161,11 @@ init_goto_action :-
   assertz(domain:action_effect(goto(L1,L2),and(not(at(L1)),at(L2)))),
   init_location_types.
 init_dropall_action :-
-  assertz(domain:action_effect(dropall,all(o,object,not(holding(o))))).
+  assertz(domain:action_effect(dropall,all([(object,[o])],not(holding(o))))).
 init_typed_clearall_action :-
   assertz(domain:subtype_of_type(T,T)),
   assertz(domain:subtype_of_type(cup,object)),
-  assertz(domain:action_effect(clearall,all(o,object,clear(o)))).
+  assertz(domain:action_effect(clearall,all([(object,[o])],clear(o)))).
 init_condeffect_action :-
   assertz(domain:action_effect(drop(O),when(fragile(O),broken(O)))).
 init_fix_action :-
@@ -281,25 +262,31 @@ test(
   regress_universal_quantifier_with_types,
   [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
 ) :-
-  regress_on_actions([clearall], all(c,object,clear(c)), true).
+  regress_on_actions([clearall], all([(object,[c])],clear(c)), R),
+  assertion(R=true).
 
 test(
   regress_universal_quantifier_with_subtypes,
   [setup(init_typed_clearall_action),cleanup(cleanup_actions_and_types)]
 ) :-
-  regress_on_actions([clearall], all(c,cup,clear(c)), true).
+  regress_on_actions([clearall], all([(cup,[c])],clear(c)), R),
+  assertion(R=true).
 
 test(regress_unrelated_term) :-
   regress([holding(x)], [[]], at(l), R),
   assertion(R=at(l)).
 
 test(regress_forall_with_multiple_parameters) :-
-  regress([all(o,object,p(o))], [(object,[a,b])], p(b), R),
+  regress([all([(object,[o])],p(o))], [(object,[a,b])], p(b), R),
   assertion(R=true).
 
 test(regress_complementary_forall) :-
-  regress([all(o,object,p(o))], [], all(o,object,not(p(o))),R),
+  regress([all([(object,[o])],p(o))], [], all([(object,[o])],not(p(o))),R),
   assertion(R=false).
+
+test(regress_forall_against_single_fact) :-
+  regress([p(o)], [(object,[o])], all(o,object,p(o)), R),
+  assertion(R=all(o,object,p(o))).
 
 test(regress_exists_with_multiple_parameters) :-
   regress([p(b)], [(object,[a,b])], exists([(object,[o])],p(o)), R),
@@ -315,7 +302,7 @@ test(regress_exists_with_alternatives) :-
 
 test(regress_forall_with_conjunctions) :-
   regress(
-    [all(o,object,p(o)),all(o,object,q(o))],
+    [all([(object,[o])],p(o)),all([(object,[o])],q(o))],
     [(object,[a]), (object,[a])],
     and(p(a),q(a)),
     R),
