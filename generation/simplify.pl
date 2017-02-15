@@ -21,6 +21,8 @@
 
 :- module(simplify, [simplify/2, simplify_effect/2]).
 
+:- use_module(library(lambda)).
+
 
 %% simplify(*Term, -SimplifiedTerm)
 %
@@ -49,8 +51,9 @@
 %  - and(T,or(...,Ti,not(T),Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
 %  - and(not(T),or(...,Ti,T,Ti+1,...)) -> and(T,or(...,Ti,Ti+1,...))
 %  - or(and(T1,...,Ti,T,Ti+1,...,Tn),and(T1,...,Ti,Ti+1,...,Tn))
-%    -> or(and(T1,...,Ti,T,Ti+1,...,Tn)
+%    -> or(and(T1,...,Ti,T,Ti+1,...,Tn))
 %  - or(...,T,and(...,T,...),...) -> or(...,T,...)
+%  - not(or(T1,...,Tn)) -> and(not(T1),...,not(Tn))
 %  - all([], T) -> T
 %  - exists([], T) -> T
 %
@@ -85,8 +88,9 @@ simplify_or_fail(not(false), true).
 % not(not(Term)) -> Term
 simplify_or_fail(not(not(Term)), Term).
 % simplify 'not' recursively
-simplify_or_fail(not(Term), not(SimplifiedTerm)) :-
-  simplify_or_fail(Term, SimplifiedTerm).
+simplify_or_fail(not(Term), SimplifiedTerm) :-
+  simplify_or_fail(Term, IntermediateTerm),
+  simplify(not(IntermediateTerm), SimplifiedTerm).
 % and() -> true
 simplify_or_fail(and(), true).
 % or() -> false
@@ -239,6 +243,14 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   append(TermPrefix, [FilteredSubTerm|TermSuffix], FilteredSubTerms),
   FilteredTerm =.. [or|FilteredSubTerms],
   simplify(FilteredTerm, SimplifiedTerm).
+% not(or(T1,...,Tn)) -> and(not(T1),...,not(Tn))
+simplify_or_fail(not(Term), SimplifiedTerm) :-
+  Term =.. [or|SubTerms],
+  maplist(\T^(=(not(T))), SubTerms, NegatedSubTerms),
+  maplist(simplify, NegatedSubTerms, SimplifiedNegatedSubTerms),
+  IntermediateTerm =.. [and|SimplifiedNegatedSubTerms],
+  simplify(IntermediateTerm, SimplifiedTerm).
+
 % all([],T) -> T
 % exists([],T) -> T
 simplify_or_fail(all([], Term), Term).
@@ -357,6 +369,8 @@ test(simplify_remove_subset_conjunctions_in_disjunction) :-
   assertion(simplify(or(a,and(a,b)),a)).
 test(simplify_remove_negated_conjunct_in_disjunction) :-
   assertion(simplify(or(a,and(not(a),b)),or(a,b))).
+test(simplify_negated_disjunction) :-
+  assertion(simplify(not(or(a,b)),and(not(a),not(b)))).
 test(simplify_implication) :-
   assertion(simplify(imply(true,a),a)),
   assertion(simplify(and(imply(not(a),b),imply(a,b)), b)).
