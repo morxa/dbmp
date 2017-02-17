@@ -214,16 +214,18 @@ test(
   regress_simple_goto,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress_on_actions([goto(hall,kitchen)], at(kitchen), true),
-  regress_on_actions([goto(hall,kitchen)], not(at(hall)), true).
+  regress_on_actions([goto(a,b)], [(location, [a, b])], at(b), R1),
+  assertion(R1=not(a=b)),
+  regress_on_actions([goto(a,b)], [(location, [a, b])], not(at(a)), R2),
+  assertion(R2=true).
 
 test(
   regress_action_sequence,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
   regress_on_actions(
-    [goto(hall,kitchen),goto(kitchen,office)], at(office), true
-  ).
+    [goto(a,b),goto(b,c)], at(c), R),
+  assertion(R=not(a=c)).
 
 test(
   regress_forall,
@@ -277,7 +279,8 @@ test(
   regress_implication,
   [setup(init_goto_action),cleanup(cleanup_actions)]
 ) :-
-  regress_on_actions([goto(hall,kitchen)], imply(true,at(kitchen)), true).
+  regress_on_actions([goto(a,b)], imply(true,at(b)), R),
+  assertion(R=not(a=b)).
 
 test(
   regress_existential_quantifier,
@@ -285,10 +288,10 @@ test(
     setup(init_goto_action),
     cleanup(cleanup_actions_and_types)]
 ) :-
-  assertion(regress_on_actions(
-    [goto(hall,kitchen)], [(location, [kitchen])],
-    exists([(location,[l])],at(l)), true)
-  ).
+  regress_on_actions(
+    [goto(a,b)], [(location, [b])],
+    exists([(location,[l])],at(l)), R),
+  assertion(R=true).
 
 test(
   regress_universal_quantifier_with_types,
