@@ -99,7 +99,11 @@ regress_(
     regress_(Effects, Types, exists([(Type,RestTypedVars)|Vars],QuantifiedCond),
       C)
   ), CondBag),
-  CondRes =.. [or,exists([(Type,TypedVars)|Vars],Cond)|CondBag],
+  append(Types, TypedVars, NewTypes),
+  regress_(Effects, NewTypes, Cond, RegressedUnquantifiedCond),
+  CondRes =.. [or,
+    exists([(Type,TypedVars)|Vars],RegressedUnquantifiedCond)
+    |CondBag],
   simplify(CondRes, SimplifiedCondRes).
 
 regress_([not(Term)|_], _, Term, false).
