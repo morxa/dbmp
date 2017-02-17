@@ -45,6 +45,25 @@ regress(Effects, Types, Cond, SimplifiedRegressedCond) :-
 %  without simplification of the resulting term.
 
 regress_([], _, Cond, Cond) :- !.
+regress_(Effects, Types, not(Term), true) :-
+  regress_(Effects, Types, Term, false).
+regress_(Effects, Types, not(Term), false) :-
+  regress_(Effects, Types, Term, true).
+regress_([Term|_], _, Term, true).
+regress_(Effects, Types, not(Term), not(TermRes)) :-
+  regress_(Effects, Types, Term, TermRes).
+regress_([not(Term)|_], _, Term, false).
+regress_([Effect|_], _, Term, TermRes) :-
+  Effect =.. [Predicate|EffectArgs],
+  Term =.. [Predicate|TermArgs],
+  \+ member(Predicate, [and,or,all,imply,when]),
+  maplist(\EffectArg^TermArg^(=(EffectArg = TermArg)),
+    EffectArgs, TermArgs, Equations),
+    ( length(Equations, 1) -> [Constraint] = Equations ;
+      Constraint =.. [and|Equations]
+    ),
+  TermRes = or(Constraint,and(not(Constraint),Term)).
+
 regress_(Effects, Types, Cond, SimplifiedCondRes) :-
   Cond =.. [Op|Conjuncts],
   member(Op,[and,or]),
@@ -55,8 +74,13 @@ regress_(Effects, Types, Cond, CondRes) :-
   Cond =.. [imply,Implicant,Implicate],
   !,
   regress_(Effects, Types, or(not(Implicant),Implicate), CondRes).
-% TODO this expects exactly one var, but PDDL allows lists of vars
-% also rename the operator
+regress_(Effects, Types, all([],QuantifiedTerm), TermRes) :-
+  regress_(Effects, Types, QuantifiedTerm, TermRes).
+regress_(Effects, Types, all([(_,[])|Vars],QuantifiedTerm), TermRes) :-
+  regress_(Effects, Types, all(Vars,QuantifiedTerm), TermRes).
+regress_(Effects, Types, all(Vars,Term), TermRes) :-
+  append(Vars, Types, NewTypes),
+  regress_(Effects, NewTypes, Term, TermRes).
 regress_(Effects, Types, exists([],Cond), CondRes) :-
   regress_(Effects, Types, Cond, CondRes).
 regress_(Effects, Types, exists([(_,[])|Vars], Cond), CondRes) :-
@@ -78,29 +102,20 @@ regress_(
   CondRes =.. [or,exists([(Type,TypedVars)|Vars],Cond)|CondBag],
   simplify(CondRes, SimplifiedCondRes).
 
+regress_([not(Term)|_], _, Term, false).
+regress_([not(Effect)|R], Types, Term, ResTerm) :-
+  Effect =.. [Predicate|EffectArgs],
+  Term =.. [Predicate|TermArgs],
+  \+ member(Predicate, [and,or,all,imply,when]),
+  maplist(\EffectArg^TermArg^(=(not(EffectArg = TermArg))),
+    EffectArgs, TermArgs, Equations),
+  ResStepTerm =.. [and,Term|Equations],
+  regress_(R, Types, ResStepTerm, ResTerm).
 regress_([Effect|R], Types, Term, TermRes) :-
   Effect =.. [and|Conjuncts],
   append(Conjuncts, R, Effects),
   regress_(Effects, Types, Term, TermRes).
-regress_([Term|_], _, Term, true).
-regress_(Effects, Types, not(Term), not(TermRes)) :-
-  regress_(Effects, Types, Term, TermRes).
-regress_([not(Term)|_], _, Term, false).
-regress_([Effect|_], _, Term, TermRes) :-
-  Effect =.. [Predicate|EffectArgs],
-  Term =.. [Predicate|TermArgs],
-  \+ member(Predicate, [and,or,all,imply,when]),
-  maplist(\EffectArg^TermArg^(=(EffectArg = TermArg)),
-    EffectArgs, TermArgs, Equations),
-    ( length(Equations, 1) -> [Constraint] = Equations ;
-      Constraint =.. [and|Equations]
-    ),
-  TermRes = or(Constraint,and(not(Constraint),Term)).
 
-regress_(Effects, Types, not(Term), true) :-
-  regress_(Effects, Types, Term, false).
-regress_(Effects, Types, not(Term), false) :-
-  regress_(Effects, Types, Term, true).
 regress_([all([],Effect)|R], Types, Term, TermRes) :-
   member(TermRes, [true,false]),
   regress_([Effect|R], Types, Term, TermRes).
@@ -122,15 +137,6 @@ regress_([all([(VarType,[Var|Vars])|VarList],Effect)|R], Types, Term, TermRes) :
     ;
       TermRes =.. [or|TermResAlternatives]
     ).
-
-regress_(Effects, Types, all([],QuantifiedTerm), TermRes) :-
-  regress_(Effects, Types, QuantifiedTerm, TermRes).
-regress_(Effects, Types, all([(_,[])|Vars],QuantifiedTerm), TermRes) :-
-  regress_(Effects, Types, all(Vars,QuantifiedTerm), TermRes).
-regress_(Effects, Types, all(Vars,Term), TermRes) :-
-  append(Vars, Types, NewTypes),
-  member(TermRes, [true,false]),
-  regress_(Effects, NewTypes, Term, TermRes).
 
 regress_([when(Cond,Effect)|Effects], Types, Term, TermRes) :-
   % cut here because we don't want to skip the cond effect if regression fails
