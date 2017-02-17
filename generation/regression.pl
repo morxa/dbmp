@@ -107,14 +107,21 @@ regress_([all([],Effect)|R], Types, Term, TermRes) :-
 regress_([all([(_,[])|VarList],Effect)|R], Types, Term, TermRes) :-
   regress_([all(VarList,Effect)|R], Types, Term, TermRes).
 regress_([all([(VarType,[Var|Vars])|VarList],Effect)|R], Types, Term, TermRes) :-
-  member((ParamType, TypedParams), Types),
-  ( ParamType = VarType ; domain:subtype_of_type(ParamType, VarType) ),
-  member(Param, TypedParams),
-  substitute(Var, [Effect], Param, [QuantifiedEffect]),
-  member(TermRes, [true,false]),
-  regress_(
-    [all([(VarType,Vars)|VarList],QuantifiedEffect)|R], Types, Term, TermRes
-  ).
+  findall(TermResAlternative,
+    (
+      member((ParamType, TypedParams), Types),
+      ( ParamType = VarType ; domain:subtype_of_type(ParamType, VarType) ),
+      member(Param, TypedParams),
+      substitute(Var, [Effect], Param, [QuantifiedEffect]),
+      once(regress_(
+        [all([(VarType,Vars)|VarList],QuantifiedEffect)|R], Types,
+        Term, TermResAlternative
+      ))
+    ), TermResAlternatives),
+    ( TermResAlternatives = [] -> TermRes = false
+    ;
+      TermRes =.. [or|TermResAlternatives]
+    ).
 
 regress_(Effects, Types, all([],QuantifiedTerm), TermRes) :-
   regress_(Effects, Types, QuantifiedTerm, TermRes).
