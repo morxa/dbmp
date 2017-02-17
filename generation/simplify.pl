@@ -30,6 +30,7 @@
 %  tries to capture most easy simplifications:
 %  - not(true) -> false
 %  - not(false) -> true
+%  - a=a -> true
 %  - not(not(Term)) -> Term
 %  - and(...,false,...) -> false
 %  - or(...,true,...) -> true
@@ -43,6 +44,8 @@
 %  - or(or(...),...) -> or(...)
 %  - and(...,Term,...,Term,...) -> and(...,Term,...)
 %  - or(...,Term,...,Term,...) -> or(...,Term,...)
+%  - and(...,T1=T2,...,T2=T1,...) -> and(...,T1=T2,...)
+%  - or(...,T1=T2,...,T2=T1,...) -> or(...,T1=T2,...)
 %  - and(Term,not(Term)) -> false
 %  - or (Term,not(Term)) -> true
 %  - imply(Cond,Term) -> or(not(Cond),Term)
@@ -85,6 +88,8 @@ simplify_effect(Effect, SimplifiedEffect) :-
 simplify_or_fail(not(true), false).
 % not(false) -> true
 simplify_or_fail(not(false), true).
+% a=a -> true
+simplify_or_fail(a=a, true).
 % not(not(Term)) -> Term
 simplify_or_fail(not(not(Term)), Term).
 % simplify 'not' recursively
@@ -110,6 +115,16 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   SubTerms \= SimplifiedSubTerms,
   IntermediateSimplifiedTerm =.. [Op|SimplifiedSubTerms],
   simplify(IntermediateSimplifiedTerm, SimplifiedTerm).
+%  - and(...,T1=T2,...,T2=T1,...) -> and(...,T1=T2,...)
+%  - or(...,T1=T2,...,T2=T1,...) -> or(...,T1=T2,...)
+simplify_or_fail(Term, SimplifiedTerm) :-
+  Term =.. [Op|SubTerms],
+  member(Op, [and,or]),
+  member(Term1=Term2, SubTerms),
+  member(Term2=Term1, SubTerms),
+  exclude(=(Term2=Term1), SubTerms, FilteredSubTerms),
+  FilteredTerm =.. [Op|FilteredSubTerms],
+  simplify(FilteredTerm, SimplifiedTerm).
 % and(t1,...,Tn,true,Tn+1,...) -> and(T1,...,Tn,Tn+1,...)
 simplify_or_fail(Term, SimplifiedTerm) :-
   Term =.. [and|SubTerms],
@@ -250,7 +265,6 @@ simplify_or_fail(not(Term), SimplifiedTerm) :-
   maplist(simplify, NegatedSubTerms, SimplifiedNegatedSubTerms),
   IntermediateTerm =.. [and|SimplifiedNegatedSubTerms],
   simplify(IntermediateTerm, SimplifiedTerm).
-
 % all([],T) -> T
 % exists([],T) -> T
 simplify_or_fail(all([], Term), Term).
@@ -340,6 +354,10 @@ test(simplify_disjunction) :-
   assertion(simplify(or(true,b),true)),
   assertion(simplify(or(true,false),true)),
   assertion(simplify(or(false,true),true)).
+
+test(simplify_equalities) :-
+  assertion(simplify(and(a=b,b=a,c), and(a=b,c))),
+  assertion(simplify(or(a=b,b=a,c), or(a=b,c))).
 
 test(simplify_nested_disjunction) :-
   assertion(simplify(or(or(true,a),b),true)),
