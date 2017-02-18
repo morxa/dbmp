@@ -116,8 +116,12 @@ resolve_conflicting_effects([], Effect, Effect).
 resolve_conflicting_effects(
   [PreviousEffect|PreviousEffects], Effect, ResolvedEffect
 ) :-
-  once(resolve_conflicting_effect(PreviousEffect, Effect, [],
-    (IntermediateEffect,Params))),
+  ( once(resolve_conflicting_effect(PreviousEffect, Effect, [],
+    (IntermediateEffect,Params))) -> true
+    ;
+    format('Failed to resolve effects ~w and ~w!', [PreviousEffect, Effect]),
+    fail
+  ),
   simplify_effect(IntermediateEffect, SimplifiedIntermediateEffect),
   resolve_conflicting_effects(
     PreviousEffects, (SimplifiedIntermediateEffect,Params), ResolvedEffect
