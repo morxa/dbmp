@@ -166,6 +166,49 @@ has_type(Var, [(OtherType,[_|TypedVars])|Vars], Type) :-
 has_type(Var, [(_,[])|Vars], Type) :-
   has_type(Var, Vars, Type).
 
+merge_typed_lists([], []).
+merge_typed_lists([TypedList|TypedLists], MergedList) :-
+  merge_typed_lists(TypedLists, MergedRestList),
+  merge_typed_lists(TypedList, MergedRestList, MergedList).
+merge_typed_lists([], TypedList, TypedList).
+merge_typed_lists([(Type,Vars)|TypedList], OtherTypedList, MergedList) :-
+  member((Type, OtherVars), OtherTypedList),
+  append(Vars, OtherVars, MergedVars),
+  substitute((Type, OtherVars), OtherTypedList,
+             (Type, MergedVars), SubstitutedList),
+  merge_typed_lists(TypedList, SubstitutedList, MergedList).
+merge_typed_lists([(Type,Vars)|TypedList], OtherTypedList, MergedList) :-
+  \+ member((Type, _), OtherTypedList),
+  merge_typed_lists(TypedList, [(Type,Vars)|OtherTypedList], MergedList).
+
+remove_from_typed_list(_, [], []).
+remove_from_typed_list(
+  (Type, Var), [(Type,TypedVars)|Vars], [(Type,ResTypedVars)|Vars]
+) :-
+  member(Var, TypedVars),
+  !,
+  exclude(=(Var), TypedVars, ResTypedVars).
+remove_from_typed_list(
+  (Type, Var), [(OtherType,TypedVars)|Vars], [(OtherType,TypedVars)|ResVars]
+) :-
+  Type \= OtherType,
+  !,
+  remove_from_typed_list((Type,Var), Vars, ResVars).
+remove_from_typed_list(
+  (Type, Var), [(Type,TypedVars)|Vars], [(Type,TypedVars)|ResVars]
+) :-
+  \+ member(Var, TypedVars),
+  remove_from_typed_list((Type, Var), Vars, ResVars).
+
+remove_from_typed_list([], Vars, Vars).
+remove_from_typed_list([(_,[])|Vars], OldVars, NewVars) :-
+  remove_from_typed_list(Vars, OldVars, NewVars).
+remove_from_typed_list([(Type,[Var|TypedVars])|Vars], OldVars, CleanedVars) :-
+  remove_from_typed_list((Type, Var), OldVars, IntermediateVars),
+  remove_from_typed_list([(Type, TypedVars)|Vars], IntermediateVars, NewVars),
+  exclude(=((_,[])), NewVars, CleanedVars).
+
+
 %% get_types_list(+Vars, +Types, -TypedVars)
 %
 %  Get a types list for all Vars, using the types defined by Types. This
@@ -314,6 +357,14 @@ test(quantification) :-
     p('?a','?b','?c')),p('?d')),['?d'])).
 
 :- end_tests(free_vars).
+
+:- begin_tests(typed_list).
+test(remove_vars, [nondet]) :-
+  remove_from_typed_list((t,a), [(t,[a,b])], R1),
+  assertion(R1=[(t,[b])]),
+  remove_from_typed_list([(t,[a,b]),(t2,[c])], [(t2,[c,d]),(t,[a,b,e])], R2),
+  assertion(R2=[(t2,[d]),(t,[e])]).
+:- end_tests(typed_list).
 
 :- begin_tests(cond_effect).
 

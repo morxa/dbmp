@@ -338,6 +338,9 @@ simplify_effect_or_fail(when(Cond,Effect), SimplifiedCondEffect) :-
   ; Effect \= SimplifiedEffect
   ),
   simplify_effect(when(SimplifiedCond,SimplifiedEffect), SimplifiedCondEffect).
+simplify_effect_or_fail(when(Cond1,when(Cond2,Effect)), SimplifiedCondEffect) :-
+  simplify_effect(when(and(Cond1,Cond2),Effect), SimplifiedCondEffect).
+
 
 :- begin_tests(simplify).
 
