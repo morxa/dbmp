@@ -133,6 +133,15 @@ resolve_conflicting_effect((Effect,_), (Effect,Params), _, (Effect,Params)) :- !
 resolve_conflicting_effect((PrevEffect,_), (Effect,_), _, (nil,[])) :-
   negated_formula(PrevEffect, Effect), !.
 resolve_conflicting_effect(
+  (PrevEffect,_),
+  (Effect,Params),
+  _,
+  (Effect,Params)
+) :-
+  PrevEffect =.. [Predicate|_],
+  Effect =.. [Predicate|_],
+  \+ member(Predicate, [and,or,all,imply,when,not]).
+resolve_conflicting_effect(
   (PrevEffect,PrevParams),
   (not(Effect),Params),
   _,
@@ -846,6 +855,10 @@ test(simple) :-
     [(p(a),[(obj,[a])])], (not(p(a)), [(obj,[a])]), R2
   ),
   assertion(R2=(nil,[])).
+
+test(same_predicate_with_different_parameters) :-
+  resolve_conflicting_effects([(p(a), [(obj,[a])])], (p(b),[(obj,[b])]), R),
+  assertion(R=(p(b), [(obj,[b])])).
 test(two_previous_effects) :-
   resolve_conflicting_effects(
     [(q(a),[(obj,[a])]),(p(a),[(obj,[a])])], (p(a), [(obj,[a])]), R1),
