@@ -142,6 +142,15 @@ resolve_conflicting_effect(
   Effect =.. [Predicate|_],
   \+ member(Predicate, [and,or,all,imply,when,not]).
 resolve_conflicting_effect(
+  (not(PrevEffect),_),
+  (not(Effect),Params),
+  _,
+  (not(Effect),Params)
+) :-
+  PrevEffect =.. [Predicate|_],
+  Effect =.. [Predicate|_],
+  \+ member(Predicate, [and,or,all,imply,when,not]).
+resolve_conflicting_effect(
   (PrevEffect,PrevParams),
   (not(Effect),Params),
   _,
