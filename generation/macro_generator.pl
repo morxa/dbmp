@@ -47,6 +47,8 @@ generate_macro(
     Actions, ParameterEnumeration, ParameterAssignment),
   compute_parameters(Actions, ParameterAssignment, Parameters),
   compute_precondition(Actions, ParameterAssignment, Parameters, Precondition),
+  % Cut here, we don't want to backtrace if effect computation fails.
+  !,
   compute_effect(Actions, ParameterAssignment, Effect),
   % Cut here, we really only want to generate the macro once.
   !,
