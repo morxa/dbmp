@@ -161,6 +161,25 @@ resolve_conflicting_effect(
   ResEffect = when(not(Cond), not(Effect)),
   !.
 resolve_conflicting_effect(
+  (not(PrevEffect),PrevParams),
+  (Effect,Params),
+  _,
+  (ResEffect,ResParams)
+) :-
+  PrevEffect =.. [Predicate|PrevArgs],
+  Effect =.. [Predicate|Args],
+  \+ member(Predicate, [and,or,all,imply,when,not]),
+  maplist(\Arg^PrevArg^(=(Arg = PrevArg)),
+    Args, PrevArgs, Equations),
+  Cond =.. [and|Equations],
+  get_free_vars(Cond, CondVars),
+  include(\Var^is_in_typed_list(Var, PrevParams),
+    CondVars, FreeCondVars),
+  get_types_of_list(FreeCondVars, PrevParams, TypedFreeCondVars),
+  append(Params, TypedFreeCondVars, ResParams),
+  ResEffect = when(not(Cond), Effect),
+  !.
+resolve_conflicting_effect(
   (PrevEffect,_), (Effect,Params), _, (Effect,Params)
 ) :-
   % PN == positive/negative
