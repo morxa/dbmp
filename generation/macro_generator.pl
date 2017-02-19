@@ -271,7 +271,7 @@ test(split_duplicate_types) :-
     [(typeA,[a,b]),(typeA,[b,c])], [(typeA, [a,b,c])])).
 test(
   duplicate_parameters_with_subtypes,
-  [ setup(assertz(domain:subtype_of_type(subtype,type))),
+  [ fixme(nondet), setup(assertz(domain:subtype_of_type(subtype,type))),
     cleanup(retractall(domain:subtype_of_type(_,_)))
   ]
 ) :-
