@@ -212,13 +212,22 @@ resolve_conflicting_effect(
   QuantifiedVars,
   (all(Vars,ResEffect),FinalParams)
 ) :-
-  merge_typed_lists(QuantifiedVars, Vars, NewQuantifiedVars),
-  merge_typed_lists(Params, Vars, NewParams),
+  generate_new_vars(Vars, NewVars),
+  merge_typed_lists(QuantifiedVars, NewVars, NewQuantifiedVars),
+  merge_typed_lists(Params, NewVars, NewParams),
+  get_untyped_list(Vars, UntypedVars),
+  get_untyped_list(NewVars, UntypedNewVars),
+  maplist(\Var^NewVar^(=((Var,NewVar))),
+    UntypedVars, UntypedNewVars, Substitutions),
+  maplist(\Var^NewVar^(=((NewVar,Var))),
+    UntypedVars, UntypedNewVars, InverseSubstitutions),
+  substitute_list([Effect], Substitutions, [QuantifiedEffect]),
   resolve_conflicting_effect(
-    (PrevEffect,PrevParams), (Effect, NewParams), NewQuantifiedVars,
-    (ResEffect, ResParams)
+    (PrevEffect,PrevParams), (QuantifiedEffect, NewParams), NewQuantifiedVars,
+    (ResQuantifiedEffect, ResParams)
   ),
-  remove_from_typed_list(Vars, ResParams, FinalParams).
+  substitute_list([ResQuantifiedEffect], InverseSubstitutions, [ResEffect]),
+  remove_from_typed_list(NewVars, ResParams, FinalParams).
 
 resolve_conflicting_effect(
   (PrevEffect,PrevParams),

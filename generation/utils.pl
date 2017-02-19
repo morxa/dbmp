@@ -30,10 +30,12 @@
       get_types_of_list/3,
       get_untyped_list/2,
       get_free_vars/2,
-      get_free_vars_list/2
+      get_free_vars_list/2,
+      generate_new_vars/2
     ]
   ).
 
+:- use_module(substitute).
 
 %% is_in_typed_list(+Var, +TypedVars)
 %
@@ -166,6 +168,21 @@ get_free_vars_list(Formula, Vars) :-
   \+ member(Predicate, [and,or,some,all,when,imply]),
   maplist(get_free_vars_list, Params, ParamsVars),
   flatten(ParamsVars, Vars).
+
+%% generate_new_vars(TypedVars, NewTypedVars)
+%
+%  Generates a typed list of new variables that do not occur anywhere else.
+generate_new_vars([], []).
+generate_new_vars([(Type,[])|Vars], [(Type, [])|NewVars]) :-
+  generate_new_vars(Vars, NewVars).
+generate_new_vars(
+  [(Type,[_|TypedVars])|Vars], [(Type,[NewVar|NewTypedVars])|NewVars]
+) :-
+  once(with_output_to(atom(NewVar), ( write('?var'), var(X), write(X) ))),
+  once(
+    generate_new_vars([(Type,TypedVars)|Vars], [(Type,NewTypedVars)|NewVars])
+  ).
+
 
 
 :- begin_tests(typed_list).
