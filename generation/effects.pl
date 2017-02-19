@@ -21,6 +21,7 @@
 
 :- module(effects, [compute_effect/2, compute_effect/3]).
 
+:- use_module(utils).
 :- use_module(regression).
 :- use_module(simplify).
 :- use_module(substitute).

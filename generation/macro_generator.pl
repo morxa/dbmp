@@ -19,6 +19,7 @@
  *  Read the full text in the LICENSE.GPL file in the doc directory.
  */
 
+:- use_module(utils).
 :- use_module(pddl_parser).
 :- use_module(effects).
 :- use_module(regression).
@@ -80,7 +81,7 @@ generate_macro_to_file(DomainFile, Actions, ParameterEnum, Filename) :-
 %  parameters.
 get_parameter_assignment(Action, ParamEnumeration, ParamAssignment) :-
   domain:action_parameters(Action, TypedParameters),
-  get_parameter_list(TypedParameters, Parameters),
+  get_untyped_list(TypedParameters, Parameters),
   length(Parameters, ParameterLength),
   length(ParamEnumeration, EnumerationLength),
   ( ParameterLength \= EnumerationLength ->
@@ -94,17 +95,6 @@ get_parameter_assignment(Action, ParamEnumeration, ParamAssignment) :-
   maplist(atom_concat('?p'), ParamEnumeration, NewParams),
   maplist(\Param^NewParam^(=((Param,NewParam))),
     Parameters, NewParams, ParamAssignment).
-
-%% get_parameter_list(-TypedParameters, +UntypedParameterList)
-%
-%  Convert a typed parameter list of the form
-%  [(Type1,[Param1,Param2]),(Type2,[Param3]),...) to a list of the form
-%  [Param1,Param2,Param3].
-%  This is a helper predicate for get_parameter_assignment/3.
-get_parameter_list([], []).
-get_parameter_list([(_,TypedParameters)|RTypedParameters], Parameters) :-
-  get_parameter_list(RTypedParameters, RParameters),
-  append(TypedParameters, RParameters, Parameters).
 
 
 %% compute_parameters(+Actions, +Assignments, -Parameters)
