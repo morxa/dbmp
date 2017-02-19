@@ -24,6 +24,8 @@
     [substitute/4, substitute/5, substitute_list/3, substitute_list/4]
   ).
 
+:- use_module(utils).
+
 %% substitute(+Old, +Terms, +New, -NewTerms)
 %
 %  Replace all occurrences of Old in Terms by New, giving NewTerms.
@@ -70,6 +72,12 @@ substitute(Old, [Term|Terms], New, Constraint, [New|NewTerms]) :-
   % Cut here, otherwise the non-substituted list will succeed, too.
   !,
   substitute(Old, Terms, New, NewTerms).
+substitute(Old, [Term|Terms], New, Constraint, [Term|NewTerms]) :-
+  \+ atom(Term),
+  Term =.. [all,Vars,_],
+  is_in_typed_list(Old, Vars),
+  !,
+  substitute(Old, Terms, New, Constraint, NewTerms).
 substitute(Old, [Term|Terms], New, Constraint, [NewTerm|NewTerms]) :-
   \+ atom(Term),
   Term =.. Subterms,
@@ -137,6 +145,10 @@ test(substitute_atom_with_question_mark) :-
 
 test(substitute_string_with_question_mark) :-
   substitute('?x', ["?x"], '?y', ['?y']).
+
+test(no_substitution_of_quantified_vars) :-
+  substitute(a, [all([(obj,[a])], p(a))], b, R),
+  assertion(R=[all([(obj,[a])], p(a))]).
 
 test(substitute_list) :-
   substitute_list([a,p(b),p(b(a))], [(a,c),(b,d)], [c,p(d),p(d(c))]).
