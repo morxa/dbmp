@@ -245,7 +245,7 @@ compute_precondition(
   Precondition
 ) :-
   compute_precondition(Actions, Assignments, Parameters, PreconditionR),
-  compute_effect([Action], [Assignment], ActionEffect),
+  once(compute_effect([Action], [Assignment], ActionEffect)),
   regress([ActionEffect], Parameters, PreconditionR, RegressedPreconditionR),
   domain:action_precondition(Action, ActionPrecondition),
   substitute_list([ActionPrecondition], Assignment, [SubstitutedPrecondition]),
