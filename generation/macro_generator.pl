@@ -342,7 +342,7 @@ test(
 ) :-
   compute_precondition(['pick-up', 'put-down'], [[('?x','?y')],[]], [], R),
   assertion(
-    R=and(clear('?y'), ontable('?y'), handempty, or('?y'='?x',holding('?x')))
+    R=and(clear('?y'), ontable('?y'), handempty, or('?x'='?y',holding('?x')))
   ).
 
 :- end_tests(precondition).

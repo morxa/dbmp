@@ -1034,7 +1034,7 @@ test(simple_effect_constraint) :-
     (all([(obj,[o])],not(p(o))),[]),
     R
   ),
-  assertion(R = (all([(obj,[o])],when(not(o=a),not(p(o)))),[(obj,[a])])).
+  assertion(R = (all([(obj,[o])],when(not(a=o),not(p(o)))),[(obj,[a])])).
 test(effect_constraint_with_two_vars) :-
   resolve_conflicting_effects(
     [(p(a,b), [(obj,[a,b])])],
@@ -1042,7 +1042,7 @@ test(effect_constraint_with_two_vars) :-
     R
   ),
   assertion(R =
-    (all([(obj,[o1,o2])], when(not(and(o1=a,o2=b)),not(p(o1,o2)))),
+    (all([(obj,[o1,o2])], when(not(and(a=o1,b=o2)),not(p(o1,o2)))),
      [(obj, [a]), (obj, [b])])
   ).
  test(effect_constraint_with_quantified_effect, fixme(quantifier_vars)) :-
@@ -1051,7 +1051,7 @@ test(effect_constraint_with_two_vars) :-
     (all([(obj,[o1,o2])],not(p(o1,o2))),[]),
     R
   ),
-  R=(all([(obj,[o1,o2])],when(not(o1=a),not(p(o1,o2)))),[(obj,[a])]).
+  R=(all([(obj,[o1,o2])],when(not(a=o1),not(p(o1,o2)))),[(obj,[a])]).
 test(conditional_with_partial_conflict) :-
   resolve_conflicting_effects(
     [(p(a),[(obj,[a])])],
@@ -1059,7 +1059,7 @@ test(conditional_with_partial_conflict) :-
     R1
   ),
   assertion(R1 =
-    (when(q(b),all([(obj,[o])],when(not(o=a),not(p(o))))),
+    (when(q(b),all([(obj,[o])],when(not(a=o),not(p(o))))),
       [(obj,[a])])).
 
 :- end_tests(effect_conflicts).

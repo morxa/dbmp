@@ -31,7 +31,8 @@
 %  tries to capture most easy simplifications:
 %  - not(true) -> false
 %  - not(false) -> true
-%  - a=a -> true
+%  - Term=Term -> true
+%  - T1=T2 -> T2=T1 if T2 is sorted before T1
 %  - not(not(Term)) -> Term
 %  - and(...,false,...) -> false
 %  - or(...,true,...) -> true
@@ -92,6 +93,9 @@ simplify_or_fail(not(true), false).
 simplify_or_fail(not(false), true).
 % a=a -> true
 simplify_or_fail(Term=Term, true).
+% always sort equalities
+simplify_or_fail(T1=T2, T2=T1) :-
+  msort([T1,T2], [T2,T1]).
 % not(not(Term)) -> Term
 simplify_or_fail(not(not(Term)), Term).
 % simplify 'not' recursively

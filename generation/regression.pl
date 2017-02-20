@@ -384,7 +384,7 @@ test(regress_forall_with_var_lists) :-
     [(t1,[a,b]),(t2,[c,d])],
     p(a,b,c,d),
     R3),
-  assertion(R3=or(p(a,b,c,d),and(a=b,d=c),c=d,and(b=a,d=c))),
+  assertion(R3=or(p(a,b,c,d),c=d)),
   regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
@@ -431,7 +431,7 @@ test(negated_exists) :-
     not(exists([(loc,[l])], aligned(l))),
     R1),
     assertion(R1=
-      and(not(exists([(loc,[l])], and(aligned(l),not(p1=l)))),
+      and(not(exists([(loc,[l])], and(aligned(l),not(l=p1)))),
         not(and(aligned(p2),not(p1=p2))))
     ),
   regress(
@@ -439,7 +439,7 @@ test(negated_exists) :-
     not(exists([(loc,[l])], or(aligned(l), looking_at(l)))),
     R2),
     assertion(R2=
-    and(not(exists([ (loc,[l])],or(and(aligned(l),not(p1=l)),looking_at(l)))),
+    and(not(exists([ (loc,[l])],or(and(aligned(l),not(l=p1)),looking_at(l)))),
       not(looking_at(p1)),not(and(aligned(p2),not(p1=p2))),not(looking_at(p2)))
     ).
 
