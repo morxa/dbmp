@@ -273,6 +273,9 @@ simplify_or_fail(all([], Term), SimplifiedTerm) :-
   simplify(Term, SimplifiedTerm).
 simplify_or_fail(exists([], Term), SimplifiedTerm) :-
   simplify(Term, SimplifiedTerm).
+simplify_or_fail(exists(Vars, Term), SimplifiedTerm) :-
+  simplify_typed_list_or_fail(Vars, SimplifiedVars),
+  simplify(exists(SimplifiedVars, Term), SimplifiedTerm).
 simplify_or_fail(all(Vars, Term), all(Vars, SimplifiedTerm)) :-
   simplify_or_fail(Term, SimplifiedTerm).
 simplify_or_fail(exists(Vars, ETerm), SimplifiedTerm) :-
@@ -287,6 +290,23 @@ simplify_or_fail(exists(Vars, ETerm), SimplifiedTerm) :-
   % No backtracking over variables that do not occur in FreeTypedVars.
   !,
   simplify(exists(FreeTypedVars, ETerm), SimplifiedTerm).
+
+%% simplify_typed_list_or_fail(+TypedVars, -SimplifiedTypedVars)
+%
+%  Simplify the given typed list of vars TypedVars to SimplifiedTypedVars, or
+%  fail if no simplification is possible.
+simplify_typed_list_or_fail([(_,[])|Vars], Vars).
+simplify_typed_list_or_fail(Vars, SimplifiedVars) :-
+  list_to_set(Vars, SimplifiedVars),
+  Vars \= SimplifiedVars.
+simplify_typed_list_or_fail(Vars, SimplifiedVars) :-
+  member((Type,TypedVars), Vars),
+  member((Type,OtherTypedVars), Vars),
+  TypedVars \= OtherTypedVars,
+  exclude(=((Type,TypedVars)), Vars, VarsWithoutFirstTypedVars),
+  exclude(=((Type,OtherTypedVars)), VarsWithoutFirstTypedVars, FilteredVars),
+  append(TypedVars, OtherTypedVars, NewTypedVars),
+  SimplifiedVars = [(Type, NewTypedVars)|FilteredVars].
 
 % flatten_on_op(+Op, +Terms, -FlattenedTerms)
 %
