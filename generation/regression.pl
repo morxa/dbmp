@@ -139,12 +139,11 @@ regress_([all([(VarType,[Var|Vars])|VarList],Effect)|R], Types, Term, TermRes) :
       ( ParamType = VarType ; domain:subtype_of_type(ParamType, VarType) ),
       member(Param, TypedParams),
       substitute(Var, [Effect], Param, [QuantifiedEffect]),
-      once(regress_(
-        [all([(VarType,Vars)|VarList],QuantifiedEffect)|R], Types,
-        Term, TermResAlternative
-      ))
+      simplify_effect(all([(VarType,Vars)|VarList],QuantifiedEffect),
+        SimplifiedEffect),
+      regress([SimplifiedEffect|R], Types, Term, TermResAlternative)
     ), TermResAlternatives),
-    ( TermResAlternatives = [] -> TermRes = false
+    ( TermResAlternatives = [] -> TermRes = Term
     ;
       TermRes =.. [or|TermResAlternatives]
     ).
@@ -381,7 +380,7 @@ test(regress_forall_with_var_lists) :-
     [(t1,[a,b]),(t2,[c,d])],
     p(a,b,c,d),
     R3),
-  assertion(R3=p(a,b,c,d)),
+  assertion(R3=or(p(a,b,c,d),and(a=b,d=c),c=d,and(b=a,d=c))),
   regress(
     [all([(t1,[o1,o2]),(t2,[o3,o4])], p(o1,o2,o3,o4))],
     [(t1,[a,b]),(t2,[c,d])],
@@ -413,6 +412,15 @@ test(regress_forall_with_var_lists_in_term) :-
     not(all([(t1,[a,b]),(t2,[c,d])],p(a,b,c,d))),
     R4),
   assertion(R4=false).
+test(regress_unrelated_forall) :-
+  regress(
+    [all([(t1,[o])],p(o))], [(t2,a)], p(a), R1
+  ),
+  assertion(R1=p(a)),
+  regress(
+    [all([(t1,[o])],p(o))], [(t2,a)], not(p(a)), R2
+  ),
+  assertion(R2=not(p(a))).
 test(negated_exists) :-
   regress(
     [not(aligned(p1))], [(loc,[p1, p2])],
