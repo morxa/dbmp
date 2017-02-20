@@ -91,7 +91,7 @@ simplify_or_fail(not(true), false).
 % not(false) -> true
 simplify_or_fail(not(false), true).
 % a=a -> true
-simplify_or_fail(a=a, true).
+simplify_or_fail(Term=Term, true).
 % not(not(Term)) -> Term
 simplify_or_fail(not(not(Term)), Term).
 % simplify 'not' recursively
