@@ -22,6 +22,7 @@
 :- module(simplify, [simplify/2, simplify_effect/2]).
 
 :- use_module(library(lambda)).
+:- use_module(utils).
 
 
 %% simplify(*Term, -SimplifiedTerm)
@@ -59,6 +60,7 @@
 %  - not(or(T1,...,Tn)) -> and(not(T1),...,not(Tn))
 %  - all([], T) -> T
 %  - exists([], T) -> T
+%  - exists(Vars, T) -> exists(VarsOccurringInT, T)
 %
 %  simplify/2 never fails; if the term cannot be simplified, it stays the same.
 
@@ -267,12 +269,24 @@ simplify_or_fail(not(Term), SimplifiedTerm) :-
   simplify(IntermediateTerm, SimplifiedTerm).
 % all([],T) -> T
 % exists([],T) -> T
-simplify_or_fail(all([], Term), Term).
-simplify_or_fail(exists([], Term), Term).
+simplify_or_fail(all([], Term), SimplifiedTerm) :-
+  simplify(Term, SimplifiedTerm).
+simplify_or_fail(exists([], Term), SimplifiedTerm) :-
+  simplify(Term, SimplifiedTerm).
 simplify_or_fail(all(Vars, Term), all(Vars, SimplifiedTerm)) :-
   simplify_or_fail(Term, SimplifiedTerm).
-simplify_or_fail(exists(Vars, Term), exists(Vars, SimplifiedTerm)) :-
-  simplify_or_fail(Term, SimplifiedTerm).
+simplify_or_fail(exists(Vars, ETerm), SimplifiedTerm) :-
+  simplify_or_fail(ETerm, SimplifiedETerm),
+  simplify(exists(Vars, SimplifiedETerm), SimplifiedTerm).
+% exists(Vars, T) -> exists(VarsOccurringInT, T)
+simplify_or_fail(exists(Vars, ETerm), SimplifiedTerm) :-
+  get_free_vars(ETerm, FreeVars),
+  get_types_of_list(FreeVars, Vars, FreeTypedVars),
+  is_in_typed_list(EliminatedVar, Vars),
+  \+ is_in_typed_list(EliminatedVar, FreeTypedVars),
+  % No backtracking over variables that do not occur in FreeTypedVars.
+  !,
+  simplify(exists(FreeTypedVars, ETerm), SimplifiedTerm).
 
 % flatten_on_op(+Op, +Terms, -FlattenedTerms)
 %
@@ -401,6 +415,9 @@ test(simplify_when) :-
 test(simplify_same_parameter_twice) :-
   simplify(p(a,a),R),
   assertion(R=p(a,a)).
+test(simplify_exists_with_extra_var) :-
+  simplify(exists([(t,[a,b]),(t2,[c])],p(a,c)), R),
+  assertion(R=exists([(t,[a]),(t2,[c])],p(a,c))).
 
 :- end_tests(simplify).
 
