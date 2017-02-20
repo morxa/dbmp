@@ -46,6 +46,10 @@ regress(Effects, Types, Cond, SimplifiedRegressedCond) :-
 %  without simplification of the resulting term.
 
 regress_([], _, Cond, Cond) :- !.
+regress_([Effect|Effects], Type, Term, TermRes) :-
+  Effect =.. [and|SubEffects],
+  append(SubEffects, Effects, AllEffects),
+  regress_(AllEffects, Type, Term, TermRes).
 regress_(_, _, true, true).
 regress_(_, _, false, false).
 regress_(Effects, Types, not(Term), true) :-
