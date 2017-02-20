@@ -46,6 +46,8 @@ regress(Effects, Types, Cond, SimplifiedRegressedCond) :-
 %  without simplification of the resulting term.
 
 regress_([], _, Cond, Cond) :- !.
+regress_(_, _, true, true).
+regress_(_, _, false, false).
 regress_(Effects, Types, not(Term), true) :-
   regress_(Effects, Types, Term, false).
 regress_(Effects, Types, not(Term), false) :-
@@ -316,6 +318,18 @@ test(
 test(regress_unrelated_term) :-
   regress([holding(x)], [[]], at(l), R),
   assertion(R=at(l)).
+
+test(true_false) :-
+  regress([e], [], false, R1),
+  assertion(R1=false),
+  regress([e], [], true, R2),
+  assertion(R2=true),
+  regress([e], [], not(false), R3),
+  assertion(R3=true).
+
+test(negation) :-
+  regress([p(x)], [(obj, [x])], not(p(x)), R),
+  assertion(R=false).
 
 test(regress_forall_with_multiple_parameters) :-
   regress([all([(object,[o])],p(o))], [(object,[a,b])], p(b), R),
