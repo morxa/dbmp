@@ -24,6 +24,7 @@
 :- use_module(library(lambda)).
 :- use_module(simplify).
 :- use_module(substitute).
+:- use_module(utils).
 
 :- dynamic domain:subtype_of_type/2.
 
@@ -90,17 +91,21 @@ regress_(
   Effects, Types, exists([(Type,TypedVars)|Vars],Cond), SimplifiedCondRes
 ) :-
   findall(C,
+  % TODO Do we really need to check all parameters here?
   ( member((ParamType, TypedParams), Types),
     ( Type = ParamType ; domain:subtype_of_type(ParamType, Type) ),
     member(Param, TypedParams),
     member(Var, TypedVars),
     substitute(Var, [Cond], Param, [QuantifiedCond]),
     exclude(=(Var), TypedVars, RestTypedVars),
-    regress_(Effects, Types, exists([(Type,RestTypedVars)|Vars],QuantifiedCond),
-      C)
+    simplify(
+      exists([(Type,RestTypedVars)|Vars], QuantifiedCond),
+      SimplifiedQuantifiedCond
+    ),
+    regress(Effects, Types, SimplifiedQuantifiedCond, C)
   ), CondBag),
-  append(Types, TypedVars, NewTypes),
-  regress_(Effects, NewTypes, Cond, RegressedUnquantifiedCond),
+  merge_typed_lists(Types, [(Type,TypedVars)], NewTypes),
+  regress(Effects, NewTypes, Cond, RegressedUnquantifiedCond),
   CondRes =.. [or,
     exists([(Type,TypedVars)|Vars],RegressedUnquantifiedCond)
     |CondBag],
@@ -284,14 +289,15 @@ test(
 
 test(
   regress_existential_quantifier,
-  [ nondet,
+  [ fixme(assumes_parameters_are_not_equal),
+    nondet,
     setup(init_goto_action),
     cleanup(cleanup_actions_and_types)]
 ) :-
   regress_on_actions(
     [goto(a,b)], [(location, [b])],
     exists([(location,[l])],at(l)), R),
-  assertion(R=true).
+  R=true.
 
 test(
   regress_universal_quantifier_with_types,
@@ -393,5 +399,22 @@ test(regress_forall_with_var_lists_in_term) :-
     not(all([(t1,[a,b]),(t2,[c,d])],p(a,b,c,d))),
     R4),
   assertion(R4=false).
+test(negated_exists) :-
+  regress(
+    [not(aligned(p1))], [(loc,[p1, p2])],
+    not(exists([(loc,[l])], aligned(l))),
+    R1),
+    assertion(R1=
+      and(not(exists([(loc,[l])], and(aligned(l),not(p1=l)))),
+        not(and(aligned(p2),not(p1=p2))))
+    ),
+  regress(
+    [not(aligned(p1))], [(loc,[p1, p2])],
+    not(exists([(loc,[l])], or(aligned(l), looking_at(l)))),
+    R2),
+    assertion(R2=
+    and(not(exists([ (loc,[l])],or(and(aligned(l),not(p1=l)),looking_at(l)))),
+      not(looking_at(p1)),not(and(aligned(p2),not(p1=p2))),not(looking_at(p2)))
+    ).
 
 :- end_tests(regression).
