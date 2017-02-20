@@ -180,7 +180,7 @@ generate_new_vars([(Type,[])|Vars], [(Type, [])|NewVars]) :-
 generate_new_vars(
   [(Type,[_|TypedVars])|Vars], [(Type,[NewVar|NewTypedVars])|NewVars]
 ) :-
-  once(with_output_to(atom(NewVar), ( write('?var'), var(X), write(X) ))),
+  once(with_output_to(atom(NewVar), ( write('?dbmp_var'), var(X), write(X) ))),
   once(
     generate_new_vars([(Type,TypedVars)|Vars], [(Type,NewTypedVars)|NewVars])
   ).
