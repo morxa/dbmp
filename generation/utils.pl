@@ -144,6 +144,8 @@ get_free_vars(Formula, Vars) :-
 %  Helper predicate for get_free_vars/2. This computes the list of free
 %  variables without removing duplicates.
 get_free_vars_list(and(), []).
+get_free_vars_list(true, []).
+get_free_vars_list(false, []).
 get_free_vars_list(Formula, Vars) :-
   Formula =.. [Op|SubFormulas],
   member(Op, [and,or]),
