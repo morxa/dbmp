@@ -58,6 +58,8 @@
 %  - or(and(T1,...,Ti,T,Ti+1,...,Tn),and(T1,...,Ti,Ti+1,...,Tn))
 %    -> or(and(T1,...,Ti,T,Ti+1,...,Tn))
 %  - or(...,T,and(...,T,...),...) -> or(...,T,...)
+%  - or(and(T1...Ti,T,Ti+1...Tn),and(T1...Ti,not(T),Ti+1...Tn))
+%    -> and(T1...Ti,Ti+1...Tn)
 %  - not(or(T1,...,Tn)) -> and(not(T1),...,not(Tn))
 %  - all([], T) -> T
 %  - exists([], T) -> T
@@ -241,6 +243,26 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   subset(SubSubTerms1,SubSubTerms2),
   exclude(=(SubTerm2), SubTerms, NewSubTerms),
   NewTerm =.. [or|NewSubTerms],
+  simplify(NewTerm, SimplifiedTerm).
+% or(...,and(T1...Ti,T,Ti+1...Tn),and(T1...Ti,not(T),Ti+1...Tn),...)
+% -> or(...,and(T1...Ti,Ti+1...Tn),...)
+simplify_or_fail(Term, SimplifiedTerm) :-
+  Term =.. [or|SubTerms],
+  member(SubTerm1, SubTerms),
+  SubTerm1 =.. [and|SubSubTerms1],
+  member(SubTerm2, SubTerms),
+  SubTerm2 =.. [and|SubSubTerms2],
+  member(SubSubTerm1, SubSubTerms1),
+  SubSubTerm1 = not(SubSubTerm2),
+  member(SubSubTerm2, SubSubTerms2),
+  exclude(=(SubSubTerm1), SubSubTerms1, FilteredSubSubTerms1),
+  exclude(=(SubSubTerm2), SubSubTerms2, FilteredSubSubTerms2),
+  subset(FilteredSubSubTerms1, FilteredSubSubTerms2),
+  subset(FilteredSubSubTerms2, FilteredSubSubTerms1),
+  exclude(=(SubTerm1), SubTerms, SubTermsWithoutFirstSubTerm),
+  exclude(=(SubTerm2), SubTermsWithoutFirstSubTerm, FilteredSubTerms),
+  NewSubTerm =.. [and|FilteredSubSubTerms1],
+  NewTerm =.. [or,NewSubTerm|FilteredSubTerms],
   simplify(NewTerm, SimplifiedTerm).
 % or(...,T,and(...,T,...),...) -> or(...,T,...)
 simplify_or_fail(Term, SimplifiedTerm) :-
@@ -446,7 +468,9 @@ test(simplify_same_parameter_twice) :-
 test(simplify_exists_with_extra_var) :-
   simplify(exists([(t,[a,b]),(t2,[c])],p(a,c)), R),
   assertion(R=exists([(t,[a]),(t2,[c])],p(a,c))).
-
+test(disjunction_of_conjuncts_with_negated_subterm) :-
+  simplify(or(and(a,b,c),and(a,not(b),c)), R),
+  assertion(R=and(a,c)).
 :- end_tests(simplify).
 
 :- begin_tests(simplify_effect).
