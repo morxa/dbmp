@@ -23,6 +23,7 @@
 
 :- use_module(library(lambda)).
 :- use_module(utils).
+:- use_module(substitute).
 
 
 %% simplify(*Term, -SimplifiedTerm)
@@ -64,6 +65,10 @@
 %  - all([], T) -> T
 %  - exists([], T) -> T
 %  - exists(Vars, T) -> exists(VarsOccurringInT, T)
+%  - exists(Vars, V1=V2) -> true if V1 or V2 is in Vars
+%  - exists(Vars, and(T1...Ti,V1=V2,Ti+1...Tn))
+%    -> exists(VarsWithoutV1, and(T1'...Ti',Ti+1'...Tn'))
+%    if V1 occurs in Vars and where Ti' is Ti with V1 substituted by V2
 %
 %  simplify/2 never fails; if the term cannot be simplified, it stays the same.
 
@@ -310,12 +315,30 @@ simplify_or_fail(exists(Vars, ETerm), SimplifiedTerm) :-
 % exists(Vars, T) -> exists(VarsOccurringInT, T)
 simplify_or_fail(exists(Vars, ETerm), SimplifiedTerm) :-
   get_free_vars(ETerm, FreeVars),
-  get_types_of_list(FreeVars, Vars, FreeTypedVars),
-  is_in_typed_list(EliminatedVar, Vars),
-  \+ is_in_typed_list(EliminatedVar, FreeTypedVars),
+  get_untyped_list(Vars, UntypedVars),
+  intersection(FreeVars, UntypedVars, OccurringVars),
+  \+ subset(UntypedVars, OccurringVars),
+  get_types_of_list(OccurringVars, Vars, TypedOccurringVars),
   % No backtracking over variables that do not occur in FreeTypedVars.
   !,
-  simplify(exists(FreeTypedVars, ETerm), SimplifiedTerm).
+  simplify(exists(TypedOccurringVars, ETerm), SimplifiedTerm).
+simplify_or_fail(exists(Vars, V1=V2), true) :-
+  ( is_in_typed_list(V1, Vars)
+  ;
+    is_in_typed_list(V2, Vars)
+  ).
+simplify_or_fail(exists(Vars, Term), true) :-
+  Term =.. [or|SubTerms],
+  is_in_typed_list(V, Vars),
+  ( member(V=_, SubTerms) ; member(_=V, SubTerms) ).
+simplify_or_fail(exists(Vars, Term), SimplifiedTerm) :-
+  Term =.. [and|SubTerms],
+  is_in_typed_list(Var, Vars),
+  ( member(Var=Substitute, SubTerms) ; member(Substitute=Var, SubTerms)),
+  substitute(Var, SubTerms, Substitute, NewSubTerms),
+  %exclude(=(Substitute=Substitute), NewSubTerms, FilteredNewSubTerms),
+  NewTerm =.. [and|NewSubTerms],
+  simplify(exists(Vars, NewTerm), SimplifiedTerm).
 
 %% simplify_typed_list_or_fail(+TypedVars, -SimplifiedTypedVars)
 %
@@ -471,6 +494,13 @@ test(simplify_exists_with_extra_var) :-
 test(disjunction_of_conjuncts_with_negated_subterm) :-
   simplify(or(and(a,b,c),and(a,not(b),c)), R),
   assertion(R=and(a,c)).
+test(exists_with_equality) :-
+  simplify(exists([(obj,[o])], and(o=b,p(o))), R1),
+  assertion(R1=p(b)),
+  simplify(exists([(obj,[o])], and(a=o,o=b)), R2),
+  assertion(R2=(a=b)),
+  simplify(exists([(obj, [o])], and(a=o,not(a=b),o=b)), R3),
+  assertion(R3=false).
 :- end_tests(simplify).
 
 :- begin_tests(simplify_effect).
