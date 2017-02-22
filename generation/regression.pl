@@ -60,7 +60,7 @@ regress_([Term|_], _, Term, true).
 regress_(Effects, Types, not(Term), not(TermRes)) :-
   regress_(Effects, Types, Term, TermRes).
 regress_([not(Term)|_], _, Term, false).
-regress_([Effect|_], _, Term, TermRes) :-
+regress_([Effect|Effects], Types, Term, TermRes) :-
   Effect =.. [Predicate|EffectArgs],
   Term =.. [Predicate|TermArgs],
   \+ member(Predicate, [and,or,all,imply,when]),
@@ -69,7 +69,8 @@ regress_([Effect|_], _, Term, TermRes) :-
     ( length(Equations, 1) -> [Constraint] = Equations ;
       Constraint =.. [and|Equations]
     ),
-  TermRes = or(Constraint,and(not(Constraint),Term)).
+  IntermediateTerm = or(Constraint,and(not(Constraint),Term)),
+  regress_(Effects, Types, IntermediateTerm, TermRes).
 
 regress_(Effects, Types, Cond, SimplifiedCondRes) :-
   Cond =.. [Op|Conjuncts],
