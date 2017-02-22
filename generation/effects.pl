@@ -285,7 +285,7 @@ resolve_conflicting_effect(
     ),
     ResSubParameterizedEffects
   ),
-  ( ResSubParameterizedEffects = [] -> ResEffect = nil, ResParams = []
+  ( ResSubParameterizedEffects = [] -> ResEffect = Effect, ResParams = Params
   ;
     maplist(
       \ParameterizedEffect^SubEffect^SubParams^(
@@ -1061,5 +1061,11 @@ test(conditional_with_partial_conflict) :-
   assertion(R1 =
     (when(q(b),all([(obj,[o])],when(not(a=o),not(p(o))))),
       [(obj,[a])])).
+test(forall_and_unrelated_effect) :-
+  resolve_conflicting_effects(
+    [(all([(type1,[o1])],p(o1)), [])],
+    (p(o2), [(type2, [o2])]),
+    R),
+  assertion(R=(p(o2), [(type2, [o2])])).
 
 :- end_tests(effect_conflicts).
