@@ -97,25 +97,9 @@ regress_(Effects, Types, exists([(_,[])|Vars], Cond), CondRes) :-
 regress_(
   Effects, Types, exists([(Type,TypedVars)|Vars],Cond), SimplifiedCondRes
 ) :-
-  findall(C,
-  % TODO Do we really need to check all parameters here?
-  ( member((ParamType, TypedParams), Types),
-    ( Type = ParamType ; domain:subtype_of_type(ParamType, Type) ),
-    member(Param, TypedParams),
-    member(Var, TypedVars),
-    substitute(Var, [Cond], Param, [QuantifiedCond]),
-    exclude(=(Var), TypedVars, RestTypedVars),
-    simplify(
-      exists([(Type,RestTypedVars)|Vars], QuantifiedCond),
-      SimplifiedQuantifiedCond
-    ),
-    regress(Effects, Types, SimplifiedQuantifiedCond, C)
-  ), CondBag),
   merge_typed_lists(Types, [(Type,TypedVars)], NewTypes),
   regress(Effects, NewTypes, Cond, RegressedUnquantifiedCond),
-  CondRes =.. [or,
-    exists([(Type,TypedVars)|Vars],RegressedUnquantifiedCond)
-    |CondBag],
+  CondRes = exists([(Type,TypedVars)|Vars], RegressedUnquantifiedCond),
   simplify(CondRes, SimplifiedCondRes).
 
 regress_([not(Term)|_], _, Term, false).
@@ -434,16 +418,14 @@ test(negated_exists) :-
     not(exists([(loc,[l])], aligned(l))),
     R1),
     assertion(R1=
-      and(not(exists([(loc,[l])], and(aligned(l),not(l=p1)))),
-        not(and(aligned(p2),not(p1=p2))))
+      not(exists([(loc,[l])], and(aligned(l),not(l=p1))))
     ),
   regress(
     [not(aligned(p1))], [(loc,[p1, p2])],
     not(exists([(loc,[l])], or(aligned(l), looking_at(l)))),
     R2),
     assertion(R2=
-    and(not(exists([ (loc,[l])],or(and(aligned(l),not(l=p1)),looking_at(l)))),
-      not(looking_at(p1)),not(and(aligned(p2),not(p1=p2))),not(looking_at(p2)))
+    not(exists([ (loc,[l])],or(and(aligned(l),not(l=p1)),looking_at(l))))
     ).
 test(forall_with_nested_conditional) :-
   regress([all([(loc,[from])],when(not(from=to), not(robot_at(from))))],
