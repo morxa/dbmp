@@ -138,9 +138,11 @@ regress_([all([],Effect)|R], Types, Term, TermRes) :-
 regress_([all([(_,[])|VarList],Effect)|R], Types, Term, TermRes) :-
   regress_([all(VarList,Effect)|R], Types, Term, TermRes).
 regress_([all([(VarType,[Var|Vars])|VarList],Effect)|R], Types, Term, TermRes) :-
+  get_free_vars(Term, FreeTermVars),
+  get_types_of_list(FreeTermVars, Types, TypedFreeTermVars),
   findall(TermResAlternative,
     (
-      member((ParamType, TypedParams), Types),
+      member((ParamType, TypedParams), TypedFreeTermVars),
       ( ParamType = VarType ; domain:subtype_of_type(ParamType, VarType) ),
       member(Param, TypedParams),
       substitute(Var, [Effect], Param, [QuantifiedEffect]),
@@ -443,5 +445,8 @@ test(negated_exists) :-
     and(not(exists([ (loc,[l])],or(and(aligned(l),not(l=p1)),looking_at(l)))),
       not(looking_at(p1)),not(and(aligned(p2),not(p1=p2))),not(looking_at(p2)))
     ).
-
+test(forall_with_nested_conditional) :-
+  regress([all([(loc,[from])],when(not(from=to), not(robot_at(from))))],
+  [(loc,[to,align_loc])], robot_at(align_loc), R),
+  assertion(R=and(align_loc=to,robot_at(align_loc))).
 :- end_tests(regression).
