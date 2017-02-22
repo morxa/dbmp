@@ -134,6 +134,7 @@ simplify_or_fail(Term, SimplifiedTerm) :-
   Term =.. [Op|SubTerms],
   member(Op, [and,or]),
   member(Term1=Term2, SubTerms),
+  Term1 \= Term2,
   member(Term2=Term1, SubTerms),
   exclude(=(Term2=Term1), SubTerms, FilteredSubTerms),
   FilteredTerm =.. [Op|FilteredSubTerms],
@@ -446,8 +447,12 @@ test(simplify_disjunction) :-
   assertion(simplify(or(false,true),true)).
 
 test(simplify_equalities) :-
-  assertion(simplify(and(a=b,b=a,c), and(a=b,c))),
-  assertion(simplify(or(a=b,b=a,c), or(a=b,c))).
+  simplify(and(a=b,b=a,c), R1),
+  assertion(R1=and(a=b,c)),
+  simplify(or(a=b,b=a,c), R2),
+  assertion(R2=or(a=b,c)),
+  simplify(or(x=x,false), R3),
+  assertion(R3=true).
 
 test(simplify_nested_disjunction) :-
   assertion(simplify(or(or(true,a),b),true)),
