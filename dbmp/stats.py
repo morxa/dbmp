@@ -82,13 +82,16 @@ def plot_evaluation_vs_num_completions(db, domain_name):
             {'domain': domain['_id'], 'error': { '$exists': False }}).count()
         failed = db.solutions.find(
             {'domain': domain['_id'], 'error': { '$exists': True }}).count()
-        print('Found {} successful, {} failed'.format(successful, failed))
         if successful or failed:
             data.append([eval_score, float(successful)/(successful + failed)])
     print('data: {}'.format(data))
     plot.plot(data)
     plot.hardcopy(domain_name.replace(' ', '_') + '_completions.pdf',
                   enhanced=1, color=1)
+    scores = [ datapoint[0] for datapoint in data ]
+    completions = [ datapoint[1] for datapoint in data ]
+    correlation = scipy.stats.pearsonr(scores, completions)
+    print('correlation: {}'.format(correlation[0]))
 
 
 def main():
