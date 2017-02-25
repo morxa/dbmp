@@ -25,6 +25,7 @@ import argparse
 import ConfigParser
 import Gnuplot
 import pymongo
+import scipy.stats
 
 evaluator = 'complementarity_weighted_fp_evaluator_50_50'
 
@@ -63,6 +64,10 @@ def plot_evaluation_vs_planning_time(db, domain_name):
     plot.plot(data, data_avgs)
     plot.hardcopy(domain_name.replace(' ', '_') + '_times.pdf', enhanced=1,
                   color=1)
+    scores = [ datapoint[0] for datapoint in data ]
+    times = [ datapoint[1] for datapoint in data ]
+    correlation = scipy.stats.pearsonr(scores, times)
+    print('correlation: {}'.format(correlation[0]))
 
 def plot_evaluation_vs_num_completions(db, domain_name):
     plot = Gnuplot.Gnuplot()
