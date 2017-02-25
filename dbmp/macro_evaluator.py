@@ -169,3 +169,46 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
     def name(self):
         return 'complementarity_weighted_fp_evaluator_{}_{}'.format(
             self.frequency_weight, self.reduction_weight)
+
+class PRSquaredEvaluator(Evaluator):
+    """ An evaluator that squares the parameter reduction so a high parameter
+    reduction gets a very high value.
+    """
+    def evaluate(self, macro):
+        """ Evaluate the given macro and square the parameter reduction.
+
+        Args:
+            macro: The macro as dictionary.
+        Returns:
+            The macro's score.
+        """
+        return (macro.parameter_reduction + 1)** 2 * macro.count
+    def name(self):
+        return "pr2"
+
+class ComplementarityPRSquaredEvaluator(PRSquaredEvaluator):
+    """
+    Consider the macros' complementarity with a squared parameter reduction.
+    """
+    def evaluate_list(self, macros):
+        """ Evaluate the complementarity of the given macros.
+
+        Args:
+            macros: A list of dictionaries representing macros.
+
+        Returns:
+            A score for the macros.
+        """
+        # The sum over distinct actions in each macro.
+        num_actions = sum([ len(set(macro.actions)) for macro in macros ])
+        distinct_actions = set()
+        for macro in macros:
+            distinct_actions.update(macro.actions)
+        # The number of distinct actions in all macros
+        num_distinct_actions = len(distinct_actions)
+        complementarity = num_distinct_actions / num_actions
+        list_evaluation = super(PRSquaredEvaluator, self).evaluate_list(macros)
+        return complementarity * list_evaluation
+    def name(self):
+        return "compl_pr2"
+

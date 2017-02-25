@@ -298,6 +298,7 @@ def main():
         for weight in range(0,101,10):
             evaluators.append(
                 macro_evaluator.WeightedFPEvaluator(weight, 100 - weight))
+        evaluators.append(macro_evaluator.PRSquaredEvaluator())
         for macro in macros:
             evaluation = {}
             for evaluator in evaluators:
@@ -317,6 +318,7 @@ def main():
         evaluators.append(
             macro_evaluator.MacroComplementarityWeightedFPEvaluator(
                 weight, 100 - weight))
+        evaluators.append(macro_evaluator.ComplementarityPRSquaredEvaluator())
     if args.augment_domain:
         num_domains = 0
         for num_macros in range(1, args.max_num_macros+1):
