@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: planner-$PLANNER-$LOWERDOMAIN-$LOWERPROBLEM
+  name: $PLANNER-$LOWERDOMAIN-$LOWERPROBLEM
   labels:
     jobgroup: planning-tasks
     planner: $PLANNER
