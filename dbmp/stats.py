@@ -93,6 +93,40 @@ def plot_evaluation_vs_num_completions(db, domain_name):
     correlation = scipy.stats.pearsonr(scores, completions)
     print('correlation: {}'.format(correlation[0]))
 
+def plot_orig_time_vs_time(db, domain_name):
+    plot = Gnuplot.Gnuplot()
+    plot.title(domain_name.replace('_', '-'))
+    plot.xlabel('Planning Time')
+    plot.ylabel('Original Planning Time')
+    orig_data = []
+    best_data = []
+    orig_domain = db.domains.find_one(
+        {'name': domain_name, 'augmented': { '$ne': True }})
+    best_domain = db.domains.find(
+        {'name': domain_name, 'augmented': True}).sort(
+            [('evaluation.' + evaluator, -1)])[0]
+    for problem in db.problems.find({'domain': domain_name}):
+        orig_solution = db.solutions.find_one(
+            {'domain': orig_domain['_id'],
+             'problem': problem['_id'] })
+        if not orig_solution or 'error' in orig_solution:
+            continue
+        orig_time = orig_solution['resources'][0]
+        orig_data.append([orig_time, orig_time])
+        best_solution = db.solutions.find_one(
+            {'domain': best_domain['_id'],
+             'problem': problem['_id']})
+        if 'error' in best_solution:
+            best_time = 1800
+        else:
+            best_time = best_solution['resources'][0]
+        best_data.append([orig_time, best_time])
+    print('data: {}'.format(best_data))
+    plot.plot(orig_data, best_data)
+    plot('set output ' + domain_name.replace(' ', '_') +
+         '_times_comparison.pdf')
+    plot.hardcopy(domain_name.replace(' ', '_') + '_times_comparison.pdf',
+                  enhanced=1, color=1)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -140,6 +174,7 @@ def main():
     for domain in domains:
         plot_evaluation_vs_planning_time(database, domain)
         plot_evaluation_vs_num_completions(database, domain)
+        plot_orig_time_vs_time(database, domain)
 
 if __name__ == '__main__':
     main()
