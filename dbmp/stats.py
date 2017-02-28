@@ -115,7 +115,8 @@ def plot_orig_time_vs_time(db, domain_name):
     for problem in db.problems.find({'domain': domain_name}):
         orig_solution = db.solutions.find_one(
             {'domain': orig_domain['_id'],
-             'problem': problem['_id'] })
+             'problem': problem['_id'],
+             'use_for_macros': { '$ne': True }})
         if not orig_solution or 'error' in orig_solution:
             continue
         orig_time = orig_solution['resources'][0]
