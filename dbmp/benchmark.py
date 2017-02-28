@@ -155,7 +155,7 @@ def main():
         domains.add(original_domain['_id'])
     for domain in domains:
         for problem in problem_coll.find({ 'domain': args.domain }):
-            if not args.all and None != solutions_coll.find_one(
+            if not args.all and solutions_coll.find_one(
                 { 'domain': bson.objectid.ObjectId(domain),
                   'problem': bson.objectid.ObjectId(problem['_id']),
                   'planner': args.planner,
