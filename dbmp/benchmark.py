@@ -71,6 +71,8 @@ def main():
                         help='run all macros that fit the given criteria')
     parser.add_argument('--missing', action='store_true',
                         help='run all problems without a solution')
+    parser.add_argument('-o', '--original-domain', action='store_true',
+                        help='also run the original domain')
     parser.add_argument('--macro-evaluator',
                         help='the name of the evaluation function '
                              'to use for filtering macros')
@@ -123,8 +125,6 @@ def main():
                  'generate the augmented domain?'.format(macro),
                  file=sys.stderr)
     if args.all or args.missing:
-        assert(args.macro_evaluator or args.domain_evaluator), \
-                'Please provide a macro or domain evaluator'
         if args.macro_evaluator:
             query = { 'domain': args.domain,
                       'evaluation.' + args.macro_evaluator:
@@ -147,12 +147,19 @@ def main():
             sorter = [ ('evaluation.' + args.domain_evaluator, -1) ]
             for domain in domain_coll.find(query).sort(sorter).limit(args.best):
                 domains.add(domain['_id'])
+    if args.original_domain:
+        original_domain = domain_coll.find_one(
+            { 'name': args.domain, 'augmented': { '$ne': True } })
+        assert(original_domain), \
+                'Could not find unaugmented domain {}.'.format(args.domain)
+        domains.add(original_domain['_id'])
     for domain in domains:
         for problem in problem_coll.find({ 'domain': args.domain }):
             if not args.all and None != solutions_coll.find_one(
                 { 'domain': bson.objectid.ObjectId(domain),
                   'problem': bson.objectid.ObjectId(problem['_id']),
-                  'planner': args.planner }):
+                  'planner': args.planner,
+                  'use_for_macros': { '$ne': True }}):
                 # solution already exists, skip this problem
                 continue
             start_job(args.planner, args.kubernetes_template, domain,
