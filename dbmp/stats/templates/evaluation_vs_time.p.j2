@@ -1,6 +1,7 @@
+{% extends "common.p.j2" %}
+{% block data %}
 set xlabel "Evaluation Score"
 set ylabel "Planning Time"
 set title "{{ domain }}"
-set terminal pngcairo
-set output "{{ output }}"
 plot "{{ data_file }}"
+{% endblock %}

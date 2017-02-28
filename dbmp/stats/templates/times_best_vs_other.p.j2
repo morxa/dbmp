@@ -1,10 +1,11 @@
+{% extends "common.p.j2" %}
+{% block data %}
 set xlabel "{{ other_planner }} Planning Time"
 set ylabel "Best Domain Planning Time"
 set title "Comparison between DBMP and {{ other_planner }}: {{ domain }}"
-set terminal pngcairo
-set output "{{ output }}"
 set key top left
 set logscale
 plot \
   "{{ other_data_file }}" title "Original Domain w/ {{ other_planner }}", \
   "{{ best_data_file }}" title "Best Augmented Domain"
+{% endblock %}
