@@ -26,6 +26,7 @@ import configparser
 import jinja2
 import pymongo
 import scipy.stats
+import subprocess
 
 evaluator = 'complementarity_weighted_fp_evaluator_50_50'
 
@@ -69,8 +70,10 @@ def plot_evaluation_vs_planning_time(db, domain_name):
     plot_template = env.get_template('evaluation_vs_time.p.j2')
     plot = plot_template.render(
         domain=domain_name, data_file=data_file_path, output=base_path + '.png')
-    with open(base_path + '.p', 'w') as plot_file:
+    plot_file_path = base_path + '.p'
+    with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
+    subprocess.call(['gnuplot', plot_file_path])
 
 def plot_evaluation_vs_num_completions(db, domain_name):
     data = []
@@ -96,8 +99,10 @@ def plot_evaluation_vs_num_completions(db, domain_name):
     plot_template = env.get_template('evaluation_vs_completions.p.j2')
     plot = plot_template.render(
         domain=domain_name, data_file=data_file_path, output=base_path + '.png')
-    with open(base_path + '.p', 'w') as plot_file:
+    plot_file_path = base_path + '.p'
+    with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
+    subprocess.call(['gnuplot', plot_file_path])
 
 def plot_orig_time_vs_time(db, domain_name):
     orig_data = []
@@ -139,8 +144,10 @@ def plot_orig_time_vs_time(db, domain_name):
         orig_data_file=orig_data_file_path,
         best_data_file=best_data_file_path,
         output=base_path + '.png')
-    with open(base_path + '.p', 'w') as plot_file:
+    plot_file_path = base_path + '.p'
+    with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
+    subprocess.call(['gnuplot', plot_file_path])
 
 def main():
     parser = argparse.ArgumentParser(
