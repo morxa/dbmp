@@ -132,10 +132,9 @@ def plot_best_vs_other_planner(db, domain_name, other_planner):
         best_solution = db.solutions.find_one(
             {'domain': best_domain['_id'],
              'problem': problem['_id']})
-        if 'error' in best_solution:
-            best_time = 1800
-        else:
-            best_time = best_solution['resources'][0]
+        if not best_solution or 'error' in best_solution:
+            continue
+        best_time = best_solution['resources'][0]
         best_data.append([other_time, best_time])
     base_path = 'stats/' + domain_name.replace(' ', '_') \
             + '_times_best_vs_' + other_planner
