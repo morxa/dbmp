@@ -159,7 +159,8 @@ def main():
     parser.add_argument('-p', '--db-passwd', help='the database password')
     parser.add_argument('-c', '--config-file',
                         help='config file to read database info from')
-    parser.add_argument('-a', '--all', help='evaluate all domains')
+    parser.add_argument('-a', '--all', action='store_true',
+                        help='evaluate all domains')
     parser.add_argument('domains', metavar='domain', nargs='*',
                         help='the name of the domain to evaluate')
     args = parser.parse_args()
@@ -190,7 +191,7 @@ def main():
     assert(not (args.all and args.domains)), \
             'You cannot specify domain with --all'
     if args.all:
-        domains = db.domains.distinct('name')
+        domains = database.domains.distinct('name')
     else:
         domains = args.domains
     for domain in domains:
