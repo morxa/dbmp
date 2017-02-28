@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim:fenc=utf-8
 #
@@ -22,7 +22,7 @@ Compute statistics for the different augmented domains and generate plots.
 """
 
 import argparse
-import ConfigParser
+import configparser
 import jinja2
 import pymongo
 import scipy.stats
@@ -159,15 +159,15 @@ def main():
     db_user = 'planner'
     db_passwd = ''
     if args.config_file:
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(args.config_file)
-        if config.has_section('plan_database'):
-            if config.has_option('plan_database', 'host'):
-                db_host = config.get('plan_database', 'host')
-            if config.has_option('plan_database', 'user'):
-                db_user = config.get('plan_database', 'user')
-            if config.has_option('plan_database', 'passwd'):
-                db_passwd = config.get('plan_database', 'passwd')
+        if 'plan_database' in config:
+            if 'host' in config['plan_database']:
+                db_host = config['plan_database']['host']
+            if 'user' in config['plan_database']:
+                db_user = config['plan_database']['user']
+            if 'passwd' in config['plan_database']:
+                db_passwd = config['plan_database']['passwd']
     if args.db_host:
         db_host = args.db_host
     if args.db_user:
