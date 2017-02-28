@@ -22,8 +22,10 @@ Compute statistics for the different augmented domains and generate plots.
 """
 
 import argparse
+import bson.objectid
 import configparser
 import jinja2
+import numpy
 import pymongo
 import scipy.stats
 import subprocess
@@ -159,6 +161,55 @@ def plot_best_vs_other_planner(db, domain_name, other_planner):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
+def get_descriptives(db, domain_name, planner):
+    """ Get some basic descriptives such as mean time, # solved, quantiles.
+
+    This computes descriptives for the given domain name and planner. It checks
+    the database for the best augmented and the unaugmented domain. If any
+    solutions exists, descriptives are computed.
+
+    All stats are printed to stdout.
+
+    Args:
+        domain_name: The name of the domain.
+        planner: The name of the planner.
+    """
+    best_domain = db.domains.find(
+        {'name': domain_name, 'augmented': True}).sort(
+            [('evaluation.' + evaluator, -1)])[0]
+    orig_domain = db.domains.find_one(
+        {'name': domain_name, 'augmented': { '$ne': True}})
+    for domain in [ orig_domain, best_domain ]:
+        if not domain:
+            print('Could not find domain with ID "{}"!'.format(domain_id))
+            return
+        is_augmented = 'augmented' in domain and domain['augmented'] == True
+        failed_count = db.solutions.find(
+                {'domain': domain['_id'],
+                 'planner': planner,
+                 'use_for_macros': { '$ne': True },
+                 'error': { '$exists': True } }
+            ).count()
+        solutions = db.solutions.find(
+                {'domain': domain['_id'],
+                 'planner': planner,
+                 'use_for_macros': { '$ne': True },
+                 'error': { '$exists': False } }
+            )
+        successful_count = solutions.count()
+        if not (failed_count or successful_count):
+            print('No solutions for domain ID {} and planner {} '
+                  'found, skipping!'.format(domain['_id'], planner))
+            continue
+        print('Planner {}, domain {}, augmented: {}'.format(
+            planner, domain_name, is_augmented))
+        print('successful: {}, failed: {}'.format(
+            successful_count, failed_count))
+        times = [ solution['resources'][0] for solution in solutions ]
+        print('Mean: {}.'.format(numpy.mean(times)))
+        print('Quantiles: {}.'.format(scipy.stats.mstats.mquantiles(times)))
+        print('\n')
+
 def main():
     parser = argparse.ArgumentParser(
         description='Compute statistics and generate plots to analyze planner'
@@ -208,6 +259,8 @@ def main():
         plot_evaluation_vs_num_completions(database, domain)
         plot_best_vs_other_planner(database, domain, 'marvin')
         plot_best_vs_other_planner(database, domain, 'ff')
+        get_descriptives(database, domain, 'ff')
+        get_descriptives(database, domain, 'marvin')
 
 if __name__ == '__main__':
     main()
