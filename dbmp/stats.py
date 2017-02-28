@@ -104,23 +104,31 @@ def plot_evaluation_vs_num_completions(db, domain_name):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def plot_orig_time_vs_time(db, domain_name):
-    orig_data = []
+def plot_best_vs_other_planner(db, domain_name, other_planner):
+    """ Plot the best augmented domain against another planner.
+    Args:
+        db: The mongodb db object to use to fetch data.
+        domain_name: The name of the domain to create the plot for.
+        other_planner: The other planner to compare to.
+    """
+    other_data = []
     best_data = []
-    orig_domain = db.domains.find_one(
+    other_domain = db.domains.find_one(
         {'name': domain_name, 'augmented': { '$ne': True }})
     best_domain = db.domains.find(
         {'name': domain_name, 'augmented': True}).sort(
             [('evaluation.' + evaluator, -1)])[0]
+    assert(best_domain), 'Could not find an augmented domain'
     for problem in db.problems.find({'domain': domain_name}):
-        orig_solution = db.solutions.find_one(
-            {'domain': orig_domain['_id'],
+        other_solution = db.solutions.find_one(
+            {'domain': other_domain['_id'],
              'problem': problem['_id'],
+             'planner': other_planner,
              'use_for_macros': { '$ne': True }})
-        if not orig_solution or 'error' in orig_solution:
+        if not other_solution or 'error' in other_solution:
             continue
-        orig_time = orig_solution['resources'][0]
-        orig_data.append([orig_time, orig_time])
+        other_time = other_solution['resources'][0]
+        other_data.append([other_time, other_time])
         best_solution = db.solutions.find_one(
             {'domain': best_domain['_id'],
              'problem': problem['_id']})
@@ -128,22 +136,24 @@ def plot_orig_time_vs_time(db, domain_name):
             best_time = 1800
         else:
             best_time = best_solution['resources'][0]
-        best_data.append([orig_time, best_time])
-    base_path = 'stats/' + domain_name.replace(' ', '_') + '_times_orig_vs_best'
-    orig_data_file_path = base_path + '_orig.dat'
-    with open(orig_data_file_path, 'w') as data_file:
-        for datum in orig_data:
+        best_data.append([other_time, best_time])
+    base_path = 'stats/' + domain_name.replace(' ', '_') \
+            + '_times_best_vs_' + other_planner
+    other_data_file_path = base_path + '_other.dat'
+    with open(other_data_file_path, 'w') as data_file:
+        for datum in other_data:
             data_file.write(' '.join(map(str, datum)) + '\n')
     best_data_file_path = base_path + '_best.dat'
     with open(best_data_file_path, 'w') as data_file:
         for datum in best_data:
             data_file.write(' '.join(map(str, datum)) + '\n')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
-    plot_template = env.get_template('times_orig_vs_best.p.j2')
+    plot_template = env.get_template('times_best_vs_other.p.j2')
     plot = plot_template.render(
-        domain=domain_name,
-        orig_data_file=orig_data_file_path,
+        domain=domain_name.replace('_', '\\\\_'),
+        other_data_file=other_data_file_path,
         best_data_file=best_data_file_path,
+        other_planner=other_planner.title(),
         output=base_path + '.png')
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
@@ -197,7 +207,8 @@ def main():
     for domain in domains:
         plot_evaluation_vs_planning_time(database, domain)
         plot_evaluation_vs_num_completions(database, domain)
-        plot_orig_time_vs_time(database, domain)
+        plot_best_vs_other_planner(database, domain, 'marvin')
+        plot_best_vs_other_planner(database, domain, 'ff')
 
 if __name__ == '__main__':
     main()
