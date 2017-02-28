@@ -1,0 +1,10 @@
+set xlabel "Original Planning Time"
+set ylabel "Planning Time"
+set title "{{ domain }}"
+set terminal pngcairo
+set output "{{ output }}"
+set key top left
+set logscale
+plot \
+  "{{ orig_data_file }}" title "Original Domain", \
+  "{{ best_data_file }}" title "Best Augmented Domain"

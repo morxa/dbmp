@@ -23,7 +23,7 @@ Compute statistics for the different augmented domains and generate plots.
 
 import argparse
 import ConfigParser
-import Gnuplot
+import jinja2
 import pymongo
 import scipy.stats
 
@@ -38,11 +38,6 @@ def plot_evaluation_vs_planning_time(db, domain_name):
         db: The mongodb db object to use to fetch data.
         domain_name: The name of the domain to create the plot for.
     """
-    print('Plotting domain {}.'.format(domain_name))
-    plot = Gnuplot.Gnuplot()
-    plot.title(domain_name.replace('_', '-'))
-    plot.xlabel('Evaluation Score')
-    plot.ylabel('Planning Time')
     data = []
     data_avgs = []
     for domain in db.domains.find( { 'name': domain_name, 'augmented': True
@@ -61,19 +56,23 @@ def plot_evaluation_vs_planning_time(db, domain_name):
             data.append([eval_score, planning_time])
         if solution_count:
             data_avgs.append([eval_score, time_sum / solution_count])
-    plot.plot(data, data_avgs)
-    plot.hardcopy(domain_name.replace(' ', '_') + '_times.pdf', enhanced=1,
-                  color=1)
+    base_path = 'stats/' + domain_name.replace(' ', '_') + '_times'
+    data_file_path = base_path + '.dat'
+    with open(data_file_path, 'w') as data_file:
+        for datum in data_avgs:
+            data_file.write(' '.join(map(str, datum)) + '\n')
     scores = [ datapoint[0] for datapoint in data ]
     times = [ datapoint[1] for datapoint in data ]
     correlation = scipy.stats.pearsonr(scores, times)
     print('correlation: {}'.format(correlation[0]))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
+    plot_template = env.get_template('evaluation_vs_time.p.j2')
+    plot = plot_template.render(
+        domain=domain_name, data_file=data_file_path, output=base_path + '.png')
+    with open(base_path + '.p', 'w') as plot_file:
+        plot_file.write(plot)
 
 def plot_evaluation_vs_num_completions(db, domain_name):
-    plot = Gnuplot.Gnuplot()
-    plot.title(domain_name.replace('_', '-'))
-    plot.xlabel('Evaluation Score')
-    plot.ylabel('Completions %')
     data = []
     for domain in db.domains.find( { 'name': domain_name, 'augmented': True
                                    }).sort([('evaluation.'+evaluator, 1)]):
@@ -84,20 +83,23 @@ def plot_evaluation_vs_num_completions(db, domain_name):
             {'domain': domain['_id'], 'error': { '$exists': True }}).count()
         if successful or failed:
             data.append([eval_score, float(successful)/(successful + failed)])
-    print('data: {}'.format(data))
-    plot.plot(data)
-    plot.hardcopy(domain_name.replace(' ', '_') + '_completions.pdf',
-                  enhanced=1, color=1)
     scores = [ datapoint[0] for datapoint in data ]
     completions = [ datapoint[1] for datapoint in data ]
     correlation = scipy.stats.pearsonr(scores, completions)
     print('correlation: {}'.format(correlation[0]))
+    base_path = 'stats/' + domain_name.replace(' ', '_') + '_completions'
+    data_file_path = base_path + '.dat'
+    with open(data_file_path, 'w') as data_file:
+        for datum in data:
+            data_file.write(' '.join(map(str, datum)) + '\n')
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
+    plot_template = env.get_template('evaluation_vs_completions.p.j2')
+    plot = plot_template.render(
+        domain=domain_name, data_file=data_file_path, output=base_path + '.png')
+    with open(base_path + '.p', 'w') as plot_file:
+        plot_file.write(plot)
 
 def plot_orig_time_vs_time(db, domain_name):
-    plot = Gnuplot.Gnuplot()
-    plot.title(domain_name.replace('_', '-'))
-    plot.xlabel('Planning Time')
-    plot.ylabel('Original Planning Time')
     orig_data = []
     best_data = []
     orig_domain = db.domains.find_one(
@@ -121,12 +123,24 @@ def plot_orig_time_vs_time(db, domain_name):
         else:
             best_time = best_solution['resources'][0]
         best_data.append([orig_time, best_time])
-    print('data: {}'.format(best_data))
-    plot.plot(orig_data, best_data)
-    plot('set output ' + domain_name.replace(' ', '_') +
-         '_times_comparison.pdf')
-    plot.hardcopy(domain_name.replace(' ', '_') + '_times_comparison.pdf',
-                  enhanced=1, color=1)
+    base_path = 'stats/' + domain_name.replace(' ', '_') + '_times_orig_vs_best'
+    orig_data_file_path = base_path + '_orig.dat'
+    with open(orig_data_file_path, 'w') as data_file:
+        for datum in orig_data:
+            data_file.write(' '.join(map(str, datum)) + '\n')
+    best_data_file_path = base_path + '_best.dat'
+    with open(best_data_file_path, 'w') as data_file:
+        for datum in best_data:
+            data_file.write(' '.join(map(str, datum)) + '\n')
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
+    plot_template = env.get_template('times_orig_vs_best.p.j2')
+    plot = plot_template.render(
+        domain=domain_name,
+        orig_data_file=orig_data_file_path,
+        best_data_file=best_data_file_path,
+        output=base_path + '.png')
+    with open(base_path + '.p', 'w') as plot_file:
+        plot_file.write(plot)
 
 def main():
     parser = argparse.ArgumentParser(
