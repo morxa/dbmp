@@ -181,14 +181,15 @@ def get_descriptives(db, domain_name, planner):
     orig_domain = db.domains.find_one(
         {'name': domain_name, 'augmented': { '$ne': True}})
     for domain in [ orig_domain, best_domain ]:
-        get_domain_descriptives(domain['_id'], planner)
+        get_domain_descriptives(db, domain['_id'], planner)
 
-def get_domain_descriptives(domain_id, planner):
-    domain = db.domains.find({'_id': bson.objectid.ObjectId(domain_id))
+def get_domain_descriptives(db, domain_id, planner):
+    domain = db.domains.find_one({'_id': bson.objectid.ObjectId(domain_id)})
     if not domain:
         print('Could not find domain with ID "{}"!'.format(domain_id))
         return
     is_augmented = 'augmented' in domain and domain['augmented'] == True
+    domain_name = domain['name']
     failed_count = db.solutions.find(
             {'domain': domain['_id'],
              'planner': planner,
@@ -205,7 +206,7 @@ def get_domain_descriptives(domain_id, planner):
     if not (failed_count or successful_count):
         print('No solutions for domain ID {} and planner {} '
               'found, skipping!'.format(domain['_id'], planner))
-        continue
+        return
     print('Planner {}, domain {}, augmented: {}'.format(
         planner, domain_name, is_augmented))
     print('successful: {}, failed: {}'.format(
