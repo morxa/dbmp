@@ -180,35 +180,39 @@ def get_descriptives(db, domain_name, planner):
     orig_domain = db.domains.find_one(
         {'name': domain_name, 'augmented': { '$ne': True}})
     for domain in [ orig_domain, best_domain ]:
-        if not domain:
-            print('Could not find domain with ID "{}"!'.format(domain_id))
-            return
-        is_augmented = 'augmented' in domain and domain['augmented'] == True
-        failed_count = db.solutions.find(
-                {'domain': domain['_id'],
-                 'planner': planner,
-                 'use_for_macros': { '$ne': True },
-                 'error': { '$exists': True } }
-            ).count()
-        solutions = db.solutions.find(
-                {'domain': domain['_id'],
-                 'planner': planner,
-                 'use_for_macros': { '$ne': True },
-                 'error': { '$exists': False } }
-            )
-        successful_count = solutions.count()
-        if not (failed_count or successful_count):
-            print('No solutions for domain ID {} and planner {} '
-                  'found, skipping!'.format(domain['_id'], planner))
-            continue
-        print('Planner {}, domain {}, augmented: {}'.format(
-            planner, domain_name, is_augmented))
-        print('successful: {}, failed: {}'.format(
-            successful_count, failed_count))
-        times = [ solution['resources'][0] for solution in solutions ]
-        print('Mean: {}.'.format(numpy.mean(times)))
-        print('Quantiles: {}.'.format(scipy.stats.mstats.mquantiles(times)))
-        print('\n')
+        get_domain_descriptives(domain['_id'], planner)
+
+def get_domain_descriptives(domain_id, planner):
+    domain = db.domains.find({'_id': bson.objectid.ObjectId(domain_id))
+    if not domain:
+        print('Could not find domain with ID "{}"!'.format(domain_id))
+        return
+    is_augmented = 'augmented' in domain and domain['augmented'] == True
+    failed_count = db.solutions.find(
+            {'domain': domain['_id'],
+             'planner': planner,
+             'use_for_macros': { '$ne': True },
+             'error': { '$exists': True } }
+        ).count()
+    solutions = db.solutions.find(
+            {'domain': domain['_id'],
+             'planner': planner,
+             'use_for_macros': { '$ne': True },
+             'error': { '$exists': False } }
+        )
+    successful_count = solutions.count()
+    if not (failed_count or successful_count):
+        print('No solutions for domain ID {} and planner {} '
+              'found, skipping!'.format(domain['_id'], planner))
+        continue
+    print('Planner {}, domain {}, augmented: {}'.format(
+        planner, domain_name, is_augmented))
+    print('successful: {}, failed: {}'.format(
+        successful_count, failed_count))
+    times = [ solution['resources'][0] for solution in solutions ]
+    print('Mean: {}.'.format(numpy.mean(times)))
+    print('Quantiles: {}.'.format(scipy.stats.mstats.mquantiles(times)))
+    print('\n')
 
 def main():
     parser = argparse.ArgumentParser(
