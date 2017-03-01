@@ -85,8 +85,9 @@ require_def((requirements,Reqs)) -->
 types_def((types, [])) --> [].
 types_def((types, Types)) -->
   ["(", ":types"], types_list(Types), [")"].
-% TODO add constants definitions.
 constants_def((constants, [])) --> [].
+constants_def((constants, Constants)) -->
+  ["(", ":constants"], types_list(Constants), [")"].
 predicates_def((predicates, [])) --> [].
 predicates_def((predicates, Predicates)) -->
   ["(", ":predicates"],
@@ -615,6 +616,18 @@ test(action_with_forall_effect) :-
             all([(t1,['?y'])],cond3('?y'))]]),
         ParserResult)
     ).
+test(domain_with_constants) :-
+  parse_pddl_domain(
+    "(define (domain d) \c
+      (:constants \c
+        const1 - type1 \c
+        const2 const3 - type2 \c
+      ) \c
+    )",
+    ParserResult),
+  assertion(
+    member((constants, [(type1, [const1]), (type2, [const2, const3])]),
+      ParserResult)).
 
 test(load_domain_file) :-
   parse_pddl_domain_file("test_data/domain.pddl", ParserResult),
