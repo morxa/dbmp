@@ -71,7 +71,7 @@ def plot_evaluation_vs_planning_time(db, domain_name):
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('evaluation_vs_time.p.j2')
     plot = plot_template.render(
-        domain=domain_name, data_file=data_file_path, output=base_path + '.png')
+        domain=domain_name, data_file=data_file_path, output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
@@ -100,7 +100,7 @@ def plot_evaluation_vs_num_completions(db, domain_name):
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('evaluation_vs_completions.p.j2')
     plot = plot_template.render(
-        domain=domain_name, data_file=data_file_path, output=base_path + '.png')
+        domain=domain_name, data_file=data_file_path, output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
@@ -155,7 +155,7 @@ def plot_best_vs_other_planner(db, domain_name, other_planner):
         other_data_file=other_data_file_path,
         best_data_file=best_data_file_path,
         other_planner=other_planner.title(),
-        output=base_path + '.png')
+        output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
