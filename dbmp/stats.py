@@ -22,6 +22,7 @@ Compute statistics for the different augmented domains and generate plots.
 """
 
 import argparse
+import copy
 import bson.objectid
 import configparser
 import jinja2
@@ -210,8 +211,11 @@ def get_domain_descriptives(domain_id, planner):
     print('successful: {}, failed: {}'.format(
         successful_count, failed_count))
     times = [ solution['resources'][0] for solution in solutions ]
+    all_times = copy.copy(times)
+    for _ in range(failed_count):
+        all_times.append(1800)
     print('Mean: {}.'.format(numpy.mean(times)))
-    print('Quantiles: {}.'.format(scipy.stats.mstats.mquantiles(times)))
+    print('Quantiles: {}.'.format(scipy.stats.mstats.mquantiles(all_times)))
     print('\n')
 
 def main():
