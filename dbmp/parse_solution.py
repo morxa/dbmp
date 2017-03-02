@@ -150,7 +150,13 @@ def main():
             extractor = dbmp.MacroExtractor()
             domain_string = domain['raw']
             extractor.extract_macros_from_string(domain_string)
-            translated_solution = extractor.translate_solution(raw_solution)
+            try:
+                translated_solution = extractor.translate_solution(raw_solution)
+            except Exception as e:
+                print('ERROR translating the solution of {}: "{}". '
+                      'Skipping!'.format(
+                    solution['_id'], str(e)))
+                continue
             parsed_solution = parse_solution(translated_solution)
         else:
             parsed_solution = parse_solution(raw_solution)
