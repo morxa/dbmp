@@ -25,6 +25,7 @@ the database.
 import argparse
 import bson.objectid
 import configparser
+import dbmp
 import pprint
 import pymongo
 import re
@@ -134,11 +135,25 @@ def main():
                   'skipping!'.format(solution['_id']))
             continue
         try:
-            parsed_solution = parse_solution(solution['raw'])
+            raw_solution = solution['raw']
         except KeyError:
             print('ERROR: Solution for problem "{}" with ID {} has no "raw" '
                   'entry!'.format(solution['problem'], solution['_id']))
             continue
+        domain = database.domains.find_one({'_id': solution['domain']})
+        assert domain, \
+                'No domain for solution {} found!'.format(solution['_id'])
+        is_augmented = False
+        if 'augmented' in domain and domain['augmented'] == True:
+            is_augmented = True
+        if is_augmented:
+            extractor = dbmp.MacroExtractor()
+            domain_string = domain['raw']
+            extractor.extract_macros_from_string(domain_string)
+            translated_solution = extractor.translate_solution(raw_solution)
+            parsed_solution = parse_solution(translated_solution)
+        else:
+            parsed_solution = parse_solution(raw_solution)
         if args.verbose:
             pp = pprint.PrettyPrinter()
             print('Result for ID {} (problem "{}"):'\
