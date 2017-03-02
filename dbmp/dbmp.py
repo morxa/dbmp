@@ -48,7 +48,7 @@ class MacroExtractor(object):
                 param_assignment_regex),
             line
         )
-    def extract_macros(self, domain_file):
+    def extract_macros_from_file(self, domain_file):
         """ Extract macro definitions from the given domain file.
     
         Args:
@@ -57,7 +57,18 @@ class MacroExtractor(object):
         Returns:
             A list of macro actions with their parameter assignments.
         """
-        domain = open(domain_file, 'r').read().splitlines()
+        return extract_macros_from_string(open(domain_file, 'r').read())
+    def extract_macros_from_string(self, domain_string):
+        """ Extract macro definition from the given string.
+
+        Args:
+            domain: A string representation of the domain, lines separated by
+            newline characters '\n'
+
+        Returns:
+            A list of macro actions with their parameter assignments.
+        """
+        domain = domain_string.splitlines()
         for line in domain:
             match = self.extract_macro_def_from_line(line)
             if match:
@@ -129,7 +140,7 @@ def main():
     args = parser.parse_args()
 
     macro_extractor = MacroExtractor()
-    macros = macro_extractor.extract_macros(args.domain)
+    macros = macro_extractor.extract_macros_from_file(args.domain)
     planner = worker.planner.Planner.factory(
         args.planner, args.domain, args.problem, args.time_limit,
         args.memory_limit)
