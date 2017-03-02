@@ -76,7 +76,7 @@ class MacroExtractor(object):
                 actions = match.group(2)
                 parameters = match.group(3)
                 sub_list = ast.literal_eval(parameters)
-                quoted_actions = re.sub('(?<!["\'])(?P<action>\w+)(?!\w)',
+                quoted_actions = re.sub('(?<!["\'])(?P<action>[\w-]+)(?![\w-])',
                                         '"\g<action>"', actions)
                 action_list = [ a.upper() for a in
                                ast.literal_eval(quoted_actions) ]
