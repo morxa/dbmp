@@ -99,6 +99,8 @@ class MacroExtractor(object):
             if re.fullmatch('Time.*', line):
                 translated_solution.append(line)
                 continue
+            if re.fullmatch('', line):
+                continue
             match = re.fullmatch(
                 '\(({0})((?:\s+[-\w]+)*)\)'.format(self.action_regex), line)
             assert(match), 'Unexpected solution line "{}"'.format(line)
