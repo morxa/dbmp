@@ -200,6 +200,72 @@ def plot_best_vs_other_planner(db, domain_name, other_planner, evaluator):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
+def plot_three(db, domain_name, evaluator, planner1, planner2):
+    """ Create a plot for DBMP against two other planners. """
+    best_data = []
+    planner1_data = []
+    planner2_data = []
+    if domain_name == 'cleanup_fd':
+        other_domain_name = 'cleanup_with_kif'
+    else:
+        other_domain_name = domain_name
+    other_domain = db.domains.find_one(
+        {'name': other_domain_name, 'augmented': { '$ne': True }})
+    best_domain = db.domains.find(
+        {'name': domain_name, 'augmented': True}).sort(
+            [('evaluation.' + evaluator, -1)])[0]
+    problem_index = 1
+    for problem in db.problems.find({'domain': domain_name}):
+        solution1 = db.solutions.find_one(
+            {'domain': other_domain['_id'],
+             'planner': planner1,
+             'problem': problem['_id']})
+        planner1_data.append([problem_index,
+                              solution1.get('resources', [1800])[0]])
+        solution2 = db.solutions.find_one(
+            {'domain': other_domain['_id'],
+             'planner': planner2,
+             'problem': problem['_id']})
+        planner2_data.append([problem_index,
+                              solution2.get('resources', [1800])[0]])
+        solution_best = db.solutions.find_one(
+            {'domain': best_domain['_id'],
+             'planner': 'ff',
+             'problem': problem['_id']})
+        best_data.append([problem_index,
+                          solution_best.get('resources', [1800])[0]])
+        problem_index += 1
+    base_path = 'stats/' + domain_name.replace(' ', '_') \
+            + '_times_three_domains'
+    p1_data_file_path = base_path + '_' + planner1 + '.dat'
+    with open(p1_data_file_path, 'w') as data_file:
+        for datum in planner1_data:
+            data_file.write(' '.join(map(str, datum)) + '\n')
+    p2_data_file_path = base_path + '_' + planner2 + '.dat'
+    with open(p2_data_file_path, 'w') as data_file:
+        for datum in planner2_data:
+            data_file.write(' '.join(map(str, datum)) + '\n')
+    best_data_file_path = base_path + '_' + 'dbmp' + '.dat'
+    with open(best_data_file_path, 'w') as data_file:
+        for datum in best_data:
+            data_file.write(' '.join(map(str, datum)) + '\n')
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
+    plot_template = env.get_template('times_three.p.j2')
+    plot = plot_template.render(
+        domain=get_pretty_name(domain_name),
+        p1_data_file=p1_data_file_path,
+        p2_data_file=p2_data_file_path,
+        best_data_file=best_data_file_path,
+        planner1=get_pretty_name(planner1),
+        planner2=get_pretty_name(planner2),
+        evaluator=get_pretty_name(evaluator),
+        output=base_path)
+    plot_file_path = base_path + '.p'
+    with open(plot_file_path, 'w') as plot_file:
+        plot_file.write(plot)
+    subprocess.call(['gnuplot', plot_file_path])
+
+
 def get_descriptives(db, domain_name, planner, evaluator):
     """ Get some basic descriptives such as mean time, # solved, quantiles.
 
@@ -287,6 +353,8 @@ def main():
                         help='create a comparison plot between the best '
                              'DBMP domain and the original domains with the '
                              'given planners')
+    parser.add_argument('-3', '--plot-three', action='store_true',
+                        help='compare DBMP to two other planners')
     parser.add_argument('--planner', action='append',
                         help='the planner to evaluate')
     parser.add_argument('-e', '--evaluator', action='append',
@@ -341,6 +409,11 @@ def main():
                 for evaluator in args.evaluator:
                     plot_best_vs_other_planner(database, domain, planner,
                                                evaluator)
+        if args.plot_three:
+            assert(len(args.planner) == 2), 'Need two other planners.'
+            for evaluator in args.evaluator:
+                plot_three(database, domain, evaluator, args.planner[0],
+                           args.planner[1])
 
 if __name__ == '__main__':
     main()
