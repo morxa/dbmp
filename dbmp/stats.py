@@ -144,16 +144,25 @@ def plot_best_vs_other_planner(db, domain_name, other_planner, evaluator):
     """
     other_data = []
     best_data = []
+    if domain_name == 'cleanup_fd':
+        other_domain_name = 'cleanup_with_kif'
+    else:
+        other_domain_name = domain_name
     other_domain = db.domains.find_one(
-        {'name': domain_name, 'augmented': { '$ne': True }})
+        {'name': other_domain_name, 'augmented': { '$ne': True }})
     best_domain = db.domains.find(
         {'name': domain_name, 'augmented': True}).sort(
             [('evaluation.' + evaluator, -1)])[0]
     assert(best_domain), 'Could not find an augmented domain'
     for problem in db.problems.find({'domain': domain_name}):
+        other_problem = db.problems.find_one(
+            {'domain': other_domain_name, 'name':
+             problem['name'].replace('prob_cleanup_fd', 'prob_cleanup_with_kif')})
+        if not other_problem:
+            continue
         other_solution = db.solutions.find_one(
             {'domain': other_domain['_id'],
-             'problem': problem['_id'],
+             'problem': other_problem['_id'],
              'planner': other_planner,
              'use_for_macros': { '$ne': True }})
         if not other_solution or 'error' in other_solution:
