@@ -31,6 +31,29 @@ import pymongo
 import scipy.stats
 import subprocess
 
+pretty_names = {
+    'complementarity_weighted_fp_evaluator_50_50': 'CFP',
+    'complementarity_weighted_fp_evaluator_100_0': 'CF',
+    'complementarity_weighted_fp_evaluator_0_100': 'CP',
+    'ff': 'FF',
+    'fast-downward': 'FastDownward',
+    'fd': 'FastDownward',
+    'marvin': 'Marvin',
+    'macro-ff': 'MacroFF',
+    'macroff': 'MacroFF',
+    'macroff-solep': 'MacroFF',
+    'blocksworld': 'Blocksworld',
+    'cleanup_with_kif': 'Cleanup',
+    'cleanup_fd': 'Cleanup',
+    'maintenance-scheduling-domain': 'Maintenance',
+    'cave-diving-adl-no-costs': 'Cave Diving',
+    'barman': 'Barman',
+    'rcll-production': 'RCLL',
+}
+
+def get_pretty_name(name):
+    """ Get a pretty name for the given name. """
+    return pretty_names.get(name, name)
 
 def plot_evaluation_vs_planning_time(db, domain_name, evaluator):
     """ Create a plot to analyze evaluation functions.
@@ -73,7 +96,8 @@ def plot_evaluation_vs_planning_time(db, domain_name, evaluator):
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('evaluation_vs_time.p.j2')
     plot = plot_template.render(
-        domain=domain_name, data_file=data_file_path, output=base_path)
+        domain=get_pretty_name(domain_name), data_file=data_file_path,
+        output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
@@ -104,7 +128,8 @@ def plot_evaluation_vs_num_completions(db, domain_name, evaluator):
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('evaluation_vs_completions.p.j2')
     plot = plot_template.render(
-        domain=domain_name, data_file=data_file_path, output=base_path)
+        domain=get_pretty_name(domain_name), data_file=data_file_path,
+        output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
@@ -155,10 +180,11 @@ def plot_best_vs_other_planner(db, domain_name, other_planner, evaluator):
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('times_best_vs_other.p.j2')
     plot = plot_template.render(
-        domain=domain_name.replace('_', '\\\\_'),
+        domain=get_pretty_name(domain_name),
         other_data_file=other_data_file_path,
         best_data_file=best_data_file_path,
-        other_planner=other_planner.title(),
+        other_planner=get_pretty_name(other_planner),
+        evaluator=get_pretty_name(evaluator),
         output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
