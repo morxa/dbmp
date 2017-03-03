@@ -214,13 +214,22 @@ def get_domain_descriptives(db, domain_id, planner, evaluator):
         planner, domain_name, is_augmented, evaluator))
     print('successful: {}, failed: {}'.format(
         successful_count, failed_count))
-    times = [ solution['resources'][0] for solution in solutions ]
+    times = []
+    solution_lengths = []
+    for solution in solutions:
+        times.append(solution['resources'][0])
+        solution_lengths.append(len(solution['actions']))
     all_times = copy.copy(times)
+    all_lengths = copy.copy(solution_lengths)
     for _ in range(failed_count):
         all_times.append(1800)
+        all_lengths.append(10000)
     print('Time Mean: {}.'.format(numpy.mean(times)))
     print('Time Quantiles: {}.'.format(
         scipy.stats.mstats.mquantiles(all_times)))
+    print('Mean solution length: {}.'.format(numpy.mean(solution_lengths)))
+    print('Length Quantiles: {}.'.format(
+            scipy.stats.mstats.mquantiles(all_lengths)))
     print('\n')
 
 def main():
