@@ -1,4 +1,8 @@
-set terminal pngcairo
-set output "{{ output }}.png"
+set terminal pdf
+set output "{{ output }}.pdf"
+set key box top left
+set xtic nomirror
+set ytic nomirror
+set border 3
 {% block data %}
 {% endblock %}
