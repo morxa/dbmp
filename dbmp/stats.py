@@ -31,9 +31,8 @@ import pymongo
 import scipy.stats
 import subprocess
 
-evaluator = 'complementarity_weighted_fp_evaluator_50_50'
 
-def plot_evaluation_vs_planning_time(db, domain_name):
+def plot_evaluation_vs_planning_time(db, domain_name, evaluator):
     """ Create a plot to analyze evaluation functions.
 
     Plot the domain evaluation score on the x axis and the planning times on
@@ -68,7 +67,9 @@ def plot_evaluation_vs_planning_time(db, domain_name):
     scores = [ datapoint[0] for datapoint in data ]
     times = [ datapoint[1] for datapoint in data ]
     correlation = scipy.stats.pearsonr(scores, times)
-    print('correlation: {}'.format(correlation[0]))
+    print('evaluator: {}\ndomain: {}'.format(evaluator, domain_name))
+    print('times correlation: {}'.format(correlation[0]))
+    print('\n')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('evaluation_vs_time.p.j2')
     plot = plot_template.render(
@@ -78,7 +79,7 @@ def plot_evaluation_vs_planning_time(db, domain_name):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def plot_evaluation_vs_num_completions(db, domain_name):
+def plot_evaluation_vs_num_completions(db, domain_name, evaluator):
     data = []
     for domain in db.domains.find( { 'name': domain_name, 'augmented': True
                                    }).sort([('evaluation.'+evaluator, 1)]):
@@ -92,7 +93,9 @@ def plot_evaluation_vs_num_completions(db, domain_name):
     scores = [ datapoint[0] for datapoint in data ]
     completions = [ datapoint[1] for datapoint in data ]
     correlation = scipy.stats.pearsonr(scores, completions)
-    print('correlation: {}'.format(correlation[0]))
+    print('evaluator: {}\ndomain: {}'.format(evaluator, domain_name))
+    print('plan length correlation: {}'.format(correlation[0]))
+    print('\n')
     base_path = 'stats/' + domain_name.replace(' ', '_') + '_completions'
     data_file_path = base_path + '.dat'
     with open(data_file_path, 'w') as data_file:
@@ -107,7 +110,7 @@ def plot_evaluation_vs_num_completions(db, domain_name):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def plot_best_vs_other_planner(db, domain_name, other_planner):
+def plot_best_vs_other_planner(db, domain_name, other_planner, evaluator):
     """ Plot the best augmented domain against another planner.
     Args:
         db: The mongodb db object to use to fetch data.
@@ -162,7 +165,7 @@ def plot_best_vs_other_planner(db, domain_name, other_planner):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def get_descriptives(db, domain_name, planner):
+def get_descriptives(db, domain_name, planner, evaluator):
     """ Get some basic descriptives such as mean time, # solved, quantiles.
 
     This computes descriptives for the given domain name and planner. It checks
@@ -181,9 +184,9 @@ def get_descriptives(db, domain_name, planner):
     orig_domain = db.domains.find_one(
         {'name': domain_name, 'augmented': { '$ne': True}})
     for domain in [ orig_domain, best_domain ]:
-        get_domain_descriptives(db, domain['_id'], planner)
+        get_domain_descriptives(db, domain['_id'], planner, evaluator)
 
-def get_domain_descriptives(db, domain_id, planner):
+def get_domain_descriptives(db, domain_id, planner, evaluator):
     domain = db.domains.find_one({'_id': bson.objectid.ObjectId(domain_id)})
     if not domain:
         print('Could not find domain with ID "{}"!'.format(domain_id))
@@ -207,16 +210,17 @@ def get_domain_descriptives(db, domain_id, planner):
         print('No solutions for domain ID {} and planner {} '
               'found, skipping!'.format(domain['_id'], planner))
         return
-    print('Planner {}, domain {}, augmented: {}'.format(
-        planner, domain_name, is_augmented))
+    print('Planner: {}\ndomain: {}\naugmented: {}\nevaluator: {}'.format(
+        planner, domain_name, is_augmented, evaluator))
     print('successful: {}, failed: {}'.format(
         successful_count, failed_count))
     times = [ solution['resources'][0] for solution in solutions ]
     all_times = copy.copy(times)
     for _ in range(failed_count):
         all_times.append(1800)
-    print('Mean: {}.'.format(numpy.mean(times)))
-    print('Quantiles: {}.'.format(scipy.stats.mstats.mquantiles(all_times)))
+    print('Time Mean: {}.'.format(numpy.mean(times)))
+    print('Time Quantiles: {}.'.format(
+        scipy.stats.mstats.mquantiles(all_times)))
     print('\n')
 
 def main():
@@ -230,6 +234,20 @@ def main():
                         help='config file to read database info from')
     parser.add_argument('-a', '--all', action='store_true',
                         help='evaluate all domains')
+    parser.add_argument('-d', '--descriptives', action='store_true',
+                        help='get descriptives for the given domain and'
+                             'planners')
+    parser.add_argument('--plot-evaluators', action='store_true',
+                        help='create plots to analyze evaluators')
+    parser.add_argument('--plot-against-planner', action='store_true',
+                        help='create a comparison plot between the best '
+                             'DBMP domain and the original domains with the '
+                             'given planners')
+    parser.add_argument('--planner', action='append',
+                        help='the planner to evaluate')
+    parser.add_argument('-e', '--evaluator', action='append',
+                        default=[],
+                        help='the evaluator to use')
     parser.add_argument('domains', metavar='domain', nargs='*',
                         help='the name of the domain to evaluate')
     args = parser.parse_args()
@@ -264,12 +282,21 @@ def main():
     else:
         domains = args.domains
     for domain in domains:
-        plot_evaluation_vs_planning_time(database, domain)
-        plot_evaluation_vs_num_completions(database, domain)
-        plot_best_vs_other_planner(database, domain, 'marvin')
-        plot_best_vs_other_planner(database, domain, 'ff')
-        get_descriptives(database, domain, 'ff')
-        get_descriptives(database, domain, 'marvin')
+        if args.descriptives:
+            for planner in args.planner:
+                for evaluator in args.evaluator:
+                    get_descriptives(database, domain, planner, evaluator)
+                    get_descriptives(database, domain, planner, evaluator)
+                    get_descriptives(database, domain, planner, evaluator)
+        if args.plot_evaluators:
+            for evaluator in args.evaluator:
+                plot_evaluation_vs_planning_time(database, domain, evaluator)
+                plot_evaluation_vs_num_completions(database, domain, evaluator)
+        if args.plot_against_planner:
+            for planner in args.planner:
+                for evaluator in args.evaluator:
+                    plot_best_vs_other_planner(database, domain, planner,
+                                               evaluator)
 
 if __name__ == '__main__':
     main()
