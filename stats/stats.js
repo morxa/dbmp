@@ -97,6 +97,34 @@ function get_avgs_solved() {
         { $out: "planning_time_avgs_solved" }
       ])
 }
+function get_avg_plan_length() {
+  db.solutions.aggregate(
+      [
+        { $match: { planner: { $exists: 1}, domain: {
+    $exists: 1}, problem: { $exists: 1}, error: { $exists: 0}, actions: { $exists: 1}}},
+        { $project: {
+            planner: 1,
+            problem: 1,
+            domain: 1,
+            num_actions: { $size: "$actions"}
+          }
+        },
+        { $group: {
+            "_id": {
+              planner: "$planner", domain: "$domain"},
+            avg_plan_length: { $avg: "$num_actions"}}
+        },
+        { $project: {
+            "planner": "$_id.planner",
+            "domain": "$_id.domain",
+            "_id": 0,
+            avg_plan_length: "$avg_plan_length"
+          }
+        },
+        { $out: "planning_plan_lengths" }
+      ])
+}
+
 
 function get_num_completed() {
   db.solutions.aggregate(
@@ -161,3 +189,36 @@ function aggregate_runtimes() {
   );
 }
 
+function get_best_domain(planner, domain_name) {
+  get_avgs();
+  cursor = db.planning_time_avgs.find().sort({'avg_time': 1});
+  while (cursor.hasNext()) {
+    var stats = cursor.next();
+    if (stats['planner'] != 'ff') {
+      continue;
+    }
+    if (db.domains.findOne(
+          {'name': domain_name, '_id': stats['domain'], 'augmented': true}))
+    {
+      printjson(stats);
+      break;
+    }
+  }
+}
+
+function get_shortest_plans_domain(planner, domain_name) {
+  get_avg_plan_length();
+  cursor = db.planning_plan_lengths.find().sort({'avg_plan_length': 1});
+  while (cursor.hasNext()) {
+    var stats = cursor.next();
+    if (stats['planner'] != 'ff') {
+      continue;
+    }
+    if (db.domains.findOne(
+          {'name': domain_name, '_id': stats['domain'], 'augmented': true}))
+    {
+      printjson(stats);
+      break;
+    }
+  }
+}
