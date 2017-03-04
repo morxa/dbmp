@@ -357,7 +357,7 @@ def main():
                 if args.verbose:
                     print('Updated domain {}.'.format(updated_domain_id))
     if args.re_evaluate:
-        for db_macro in macros_coll.find():
+        for db_macro in macros_coll.find({'type': 'dbmp'}):
             macro = MacroAction()
             macro.from_db(db_macro)
             evaluation = {}
