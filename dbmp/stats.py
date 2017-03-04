@@ -43,11 +43,12 @@ pretty_names = {
     'macroff': 'MacroFF',
     'macroff-solep': 'MacroFF',
     'blocksworld': 'Blocksworld',
-    'cleanup_with_kif': 'Cleanup',
-    'cleanup_fd': 'Cleanup',
+    'cleanup_with_kif': 'Cleanup (FF Seeding)',
+    'cleanup_fd': 'Cleanup (FD Seeding)',
     'maintenance-scheduling-domain': 'Maintenance',
     'cave-diving-adl-no-costs': 'Cave Diving',
     'barman': 'Barman',
+    'hiking': 'Hiking',
     'rcll-production': 'RCLL',
 }
 
