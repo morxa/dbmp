@@ -57,12 +57,19 @@ class Evaluator(object):
 class FrequencyEvaluator(Evaluator):
     """ An Evaluator based on the frequency of the macro.
 
-    We use the total count of the macro as its frequency, because we assume that
-    every macro was evaluated on the same dataset, and thus the number of plans
-    and thus the number of all possible action sequences is the same. The idea
+    Use the total count divided by the normalizer as evaluation score. The idea
     of this evaluation is that action sequences that occur very often are also
     very useful during search.
     """
+    def __init__(self, normalizer):
+        """ Initialize the evaluator with the given normalizer.
+
+        Args:
+            normalizer: The normalizer to use.
+        """
+        assert(normalizer > 0), 'Normalizer must be > 0'
+        self.normalizer = normalizer
+
     def evaluate(self, macro):
         """ Evaluate the given macro based on its frequency.
 
@@ -72,7 +79,7 @@ class FrequencyEvaluator(Evaluator):
         Returns:
             A score for the macro; the higher the score the better the macro.
         """
-        return macro.count
+        return len(macro.actions) * macro.count / self.normalizer
     def name(self):
         return 'frequency_evaluator'
 
@@ -104,7 +111,7 @@ class WeightedFPEvaluator(Evaluator):
     This evaluator combines the FrequencyEvaluator and the ReductionEvaluator
     according to the given weights.
     """
-    def __init__(self, frequency_weight, reduction_weight):
+    def __init__(self, frequency_weight, normalizer):
         """ Initialization.
 
         Initialize the evaluator with the given weights. Note that the weights
@@ -113,11 +120,13 @@ class WeightedFPEvaluator(Evaluator):
 
         Args:
             frequency_weight: The weight to assign to the FrequencyEvaluator.
-            reduction_weight: The weight to assign to the ReductionEvaluator.
+            normalizer: The factor to normalize with.
         """
+        assert(0 <= frequency_weight <= 100), \
+                'Invalid weight {}, must be in [0,100]'.format(frequency_weight)
         self.frequency_weight = frequency_weight
-        self.reduction_weight = reduction_weight
-        self.frequency_evaluator = FrequencyEvaluator()
+        self.reduction_weight = 100 - frequency_weight
+        self.frequency_evaluator = FrequencyEvaluator(normalizer)
         self.reduction_evaluator = ReductionEvaluator()
     def evaluate(self, macro):
         """ Evaluate the macro by combining frequency and parameter reduction.
@@ -132,9 +141,9 @@ class WeightedFPEvaluator(Evaluator):
             A score for the macro; the higher the score the better the macro.
         """
         return self.frequency_weight * \
-                (self.frequency_evaluator.evaluate(macro) + 1) + \
+                (self.frequency_evaluator.evaluate(macro)) + \
                 self.reduction_weight * \
-                (self.reduction_evaluator.evaluate(macro) + 1)
+                (self.reduction_evaluator.evaluate(macro))
     def name(self):
         return 'weighted_fp_evaluator_{}_{}'.format(self.frequency_weight,
                                                     self.reduction_weight)

@@ -256,6 +256,7 @@ def main():
         domain_string = dfile.read()
         args.domain = get_domainname(domain_string)
     macros = set()
+    total_num_actions = 1
     if args.from_db:
         assert(db_host and db_user), \
                 'Please specify database host and user'
@@ -279,7 +280,7 @@ def main():
             args.domainfile = tmpfile.name
         if not args.domain:
             args.domain = get_domainname(args.domainfile)
-        if args.all:
+        if args.all or args.re_evaluate:
             domain_id = domain_coll.find_one(
                 {'name': args.domain, 'augmented': { '$ne': True }})['_id']
             query = { 'value.domain': domain_id }
@@ -289,6 +290,11 @@ def main():
             if args.max_actions:
                 query['value.actions.'+str(args.max_actions)] = \
                         { '$exists': False }
+            total_num_actions = 0
+            for sol in database.solutions.find({'domain': domain_id,
+                                          'use_for_macros': True}):
+                if 'actions' in sol:
+                    total_num_actions += len(sol['actions'])
             for sequence in action_seqs_coll.find(query).sort(
                         [('value.totalCount', -1)]).limit(args.best):
                 for parameters in sequence['value']['parameters']:
@@ -322,7 +328,7 @@ def main():
         evaluators = []
         for weight in range(0,101,10):
             evaluators.append(
-                macro_evaluator.WeightedFPEvaluator(weight, 100 - weight))
+                macro_evaluator.WeightedFPEvaluator(weight, total_num_actions))
         evaluators.append(macro_evaluator.PRSquaredEvaluator())
         for macro in macros:
             evaluation = {}
@@ -342,7 +348,7 @@ def main():
     for weight in range(0,101,10):
         evaluators.append(
             macro_evaluator.MacroComplementarityWeightedFPEvaluator(
-                weight, 100 - weight))
+                weight, total_num_actions))
         evaluators.append(macro_evaluator.ComplementarityPRSquaredEvaluator())
     if args.augment_domain:
         num_domains = 0
