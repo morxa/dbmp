@@ -266,6 +266,74 @@ def plot_three(db, domain_name, evaluator, planner1, planner2):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
+def plot_meta(db, domains, evaluator, print_domains=False):
+    """ Create a plot for all problems of the given domains.
+
+    Args:
+        domains: A list of domains to show.
+        evaluator: The evaluator to use for DBMP.
+        print_domains: If set to true, write the domain names into the plot.
+    """
+    times = { 'ff': [], 'fast-downward': [], 'marvin': [],
+                  'macroff-solep': [], 'dbmp': [] }
+    for domain in db.domains.find({'augmented': { '$ne': True},
+                                   'name': { '$in': domains},
+                                   }):
+        try:
+            best_domain = db.domains.find(
+                {'base_domain': domain['_id'], 'augmented': True}).sort(
+                    [('evaluation.' + evaluator, -1)])[0]
+        except IndexError:
+            print('Could not find a domain for {}!'.format(domain['name']))
+            continue
+        for problem in db.problems.find({'domain': domain['name']}):
+            for planner in ['ff', 'fast-downward', 'marvin', 'macroff-solep']:
+                solution = db.solutions.find_one(
+                    {'planner': planner, 'use_for_macros': False,
+                     'domain': domain['_id'], 'problem': problem['_id']})
+                if solution and 'resources' in solution:
+                    times[planner].append(solution['resources'][0])
+                else:
+                    times[planner].append(1800)
+            best_solution = db.solutions.find_one(
+                {'planner': 'ff', 'use_for_macros': { '$ne': True },
+                 'problem': problem['_id'], 'domain': best_domain['_id']})
+            if best_solution and 'resources' in best_solution:
+                times['dbmp'].append(best_solution['resources'][0])
+            else:
+                times['dbmp'].append(1800)
+    data = { 'ff': [], 'fast-downward': [], 'marvin': [],
+                  'macroff-solep': [], 'dbmp': [] }
+    for time in range(1800):
+        for planner, planner_times in times.items():
+            num_solutions = len(planner_times)
+            if not num_solutions: continue
+            count = sum([ ptime <= time for ptime in planner_times])
+            quotient = count / num_solutions
+            data[planner].append([time, quotient])
+    base_path = 'stats/meta'
+    data_files = dict()
+    for planner in data.keys():
+        data_files[planner] = base_path + '_' + planner + '.dat'
+        with open(data_files[planner], 'w') as data_file:
+            for datum in data[planner]:
+                data_file.write(' '.join(map(str, datum)) + '\n')
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
+    plot_template = env.get_template('meta.p.j2')
+    plot = plot_template.render(
+        ff_data_file=data_files['ff'],
+        fd_data_file=data_files['fast-downward'],
+        marvin_data_file=data_files['marvin'],
+        macroff_data_file=data_files['macroff-solep'],
+        dbmp_data_file=data_files['dbmp'],
+        output=base_path,
+        domains=', '.join([get_pretty_name(domain) for domain in domains]),
+        print_domains=print_domains,
+    )
+    plot_file_path = base_path + '.p'
+    with open(plot_file_path, 'w') as plot_file:
+        plot_file.write(plot)
+    subprocess.call(['gnuplot', plot_file_path])
 
 def get_descriptives(db, domain_name, planner, evaluator):
     """ Get some basic descriptives such as mean time, # solved, quantiles.
@@ -356,6 +424,9 @@ def main():
                              'given planners')
     parser.add_argument('-3', '--plot-three', action='store_true',
                         help='compare DBMP to two other planners')
+    parser.add_argument('--meta', action='store_true',
+                        help='create a plot completion vs planning time '
+                             'with all given domains in one plot')
     parser.add_argument('--planner', action='append',
                         help='the planner to evaluate')
     parser.add_argument('-e', '--evaluator', action='append',
@@ -415,6 +486,9 @@ def main():
             for evaluator in args.evaluator:
                 plot_three(database, domain, evaluator, args.planner[0],
                            args.planner[1])
+    if args.meta:
+        assert(len(args.evaluator) == 1), 'Expected exactly one evaluator'
+        plot_meta(database, args.domains, args.evaluator[0], True)
 
 if __name__ == '__main__':
     main()
