@@ -1,7 +1,14 @@
 {% extends "common.p.j2" %}
 {% block data %}
-set xlabel "Evaluation Score"
-set ylabel "Planning Time"
-set title "{{ domain }}"
-plot "{{ data_file }}"
+set xlabel "{{ evaluator }} Evaluation Score"
+set ylabel "Mean Planning Time"
+set title "Comparison of {{ evaluator }} Evaluation Score to Mean Planning Time: {{ domain }}"
+{%if fit %}
+f(x) = m*x + b
+fit f(x) "{{ data_file }}" via m,b
+{% endif %}
+plot "{{ data_file }}" title "DBMP Domain"
+{%- if fit -%}
+, f(x) title "Linear Fit"
+{% endif %}
 {% endblock %}

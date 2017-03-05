@@ -56,7 +56,7 @@ def get_pretty_name(name):
     """ Get a pretty name for the given name. """
     return pretty_names.get(name, name)
 
-def plot_evaluation_vs_planning_time(db, domain_name, evaluator):
+def plot_evaluation_vs_planning_time(db, domain_name, evaluator, fit):
     """ Create a plot to analyze evaluation functions.
 
     Plot the domain evaluation score on the x axis and the planning times on
@@ -64,6 +64,7 @@ def plot_evaluation_vs_planning_time(db, domain_name, evaluator):
     Args:
         db: The mongodb db object to use to fetch data.
         domain_name: The name of the domain to create the plot for.
+        fit: If true, a linear fit is added to the plot.
     """
     data = []
     data_avgs = []
@@ -83,7 +84,8 @@ def plot_evaluation_vs_planning_time(db, domain_name, evaluator):
             data.append([eval_score, planning_time])
         if solution_count:
             data_avgs.append([eval_score, time_sum / solution_count])
-    base_path = 'stats/' + domain_name.replace(' ', '_') + '_times'
+    base_path = 'stats/' + domain_name.replace(' ', '_') + '_eval_times_' \
+            + evaluator
     data_file_path = base_path + '.dat'
     with open(data_file_path, 'w') as data_file:
         for datum in data_avgs:
@@ -98,13 +100,15 @@ def plot_evaluation_vs_planning_time(db, domain_name, evaluator):
     plot_template = env.get_template('evaluation_vs_time.p.j2')
     plot = plot_template.render(
         domain=get_pretty_name(domain_name), data_file=data_file_path,
+        evaluator=get_pretty_name(evaluator),
+        fit=fit,
         output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def plot_evaluation_vs_num_completions(db, domain_name, evaluator):
+def plot_evaluation_vs_num_completions(db, domain_name, evaluator, fit):
     data = []
     for domain in db.domains.find( { 'name': domain_name, 'augmented': True
                                    }).sort([('evaluation.'+evaluator, 1)]):
@@ -119,9 +123,11 @@ def plot_evaluation_vs_num_completions(db, domain_name, evaluator):
     completions = [ datapoint[1] for datapoint in data ]
     correlation = scipy.stats.pearsonr(scores, completions)
     print('evaluator: {}\ndomain: {}'.format(evaluator, domain_name))
-    print('plan length correlation: {}'.format(correlation[0]))
+    print('completions correlation: {}'.format(correlation[0]))
     print('\n')
     base_path = 'stats/' + domain_name.replace(' ', '_') + '_completions'
+    base_path = 'stats/' + domain_name.replace(' ', '_') + \
+            '_eval_completions_' + evaluator
     data_file_path = base_path + '.dat'
     with open(data_file_path, 'w') as data_file:
         for datum in data:
@@ -130,6 +136,8 @@ def plot_evaluation_vs_num_completions(db, domain_name, evaluator):
     plot_template = env.get_template('evaluation_vs_completions.p.j2')
     plot = plot_template.render(
         domain=get_pretty_name(domain_name), data_file=data_file_path,
+        evaluator=get_pretty_name(evaluator),
+        fit=fit,
         output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
@@ -416,6 +424,8 @@ def main():
     parser.add_argument('-d', '--descriptives', action='store_true',
                         help='get descriptives for the given domain and'
                              'planners')
+    parser.add_argument('--fit', action='store_true',
+                        help='add a linear fit to evaluator plots')
     parser.add_argument('--plot-evaluators', action='store_true',
                         help='create plots to analyze evaluators')
     parser.add_argument('--plot-against-planner', action='store_true',
@@ -474,8 +484,10 @@ def main():
                     get_descriptives(database, domain, planner, evaluator)
         if args.plot_evaluators:
             for evaluator in args.evaluator:
-                plot_evaluation_vs_planning_time(database, domain, evaluator)
-                plot_evaluation_vs_num_completions(database, domain, evaluator)
+                plot_evaluation_vs_planning_time(database, domain, evaluator,
+                                                 args.fit)
+                plot_evaluation_vs_num_completions(database, domain, evaluator,
+                                                  args.fit)
         if args.plot_against_planner:
             for planner in args.planner:
                 for evaluator in args.evaluator:
