@@ -7,5 +7,5 @@ set key top left
 set logscale
 plot \
   "{{ other_data_file }}" title "Original Domain w/ {{ other_planner }}", \
-  "{{ best_data_file }}" title "Best {{ evaluator }} Domain"
+  "{{ best_data_file }}" title "Best DBMP {{ evaluator }} Domain"
 {% endblock %}
