@@ -287,6 +287,13 @@ parse_pddl_domain_file(Filename, ParsedDomain) :-
   exclude(=(""), PreprocessedDomain, FilteredDomain),
   once(pddl_domain(ParsedDomain, FilteredDomain, [])).
 
+subtype_of_type(SubType, Type, Types) :-
+  member((Type, SubTypes), Types),
+  member(SubType, SubTypes).
+subtype_of_type(SubSubType, Type, Types) :-
+  member((Type, SubTypes), Types),
+  member(SubType, SubTypes),
+  subtype_of_type(SubSubType, SubType, Types).
 %% assert_domain_facts(*Domain)
 %
 %   assertz/1 all facts from the given domain. This asserts the following facts:
@@ -315,6 +322,9 @@ assert_domain_facts(Domain) :-
   forall(
     member(Type, Types),
     assertz(domain:type(Type))),
+  forall(
+    subtype_of_type(SubType, Type, Types),
+    assertz(domain:subtype_of_type(SubType, Type))),
   member((constants,Constants), Domain),
   assertz(domain:constants(Constants)),
   member((predicates,Predicates), Domain),
