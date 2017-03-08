@@ -109,7 +109,8 @@ regress_([not(Effect)|R], Types, Term, ResTerm) :-
   \+ member(Predicate, [and,or,all,imply,when]),
   maplist(\EffectArg^TermArg^(=(not(EffectArg = TermArg))),
     EffectArgs, TermArgs, Equations),
-  ResStepTerm =.. [and,Term|Equations],
+  DisjunctionOfEquations =.. [or|Equations],
+  ResStepTerm = and(Term,DisjunctionOfEquations),
   regress_(R, Types, ResStepTerm, ResTerm).
 regress_([Effect|R], Types, Term, TermRes) :-
   Effect =.. [and|Conjuncts],
@@ -320,6 +321,14 @@ test(true_false) :-
 test(negation) :-
   regress([p(x)], [(obj, [x])], not(p(x)), R),
   assertion(R=false).
+
+test(prev_negation_with_multiple_parameters) :-
+  regress([p(a,b)], [(obj, [a,b,c])], not(p(a,c)), R),
+  assertion(R=and(not(b=c),not(p(a,c)))).
+
+test(regress_negation_with_multiple_parameters) :-
+  regress([not(p(a,b))], [(obj, [a,b,c])], p(a,c), R),
+  assertion(R=and(p(a,c),not(b=c))).
 
 test(regress_forall_with_multiple_parameters) :-
   regress([all([(object,[o])],p(o))], [(object,[a,b])], p(b), R),
