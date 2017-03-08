@@ -108,14 +108,15 @@ get_parameter_assignment(Action, ParamEnumeration, ParamAssignment) :-
 %  contain any duplicates.
 compute_parameters([], [], []).
 compute_parameters(
-  [Action|Actions], [Assignment|Assignments], UniqueParameters
+  [Action|Actions], [Assignment|Assignments], UniqueParametersWithoutEmptyLists
 ) :-
   domain:action_parameters(Action, ActionParameters),
   get_reassigned_parameters(ActionParameters, Assignment,
     ReassignedActionParameters),
   compute_parameters(Actions, Assignments, RemainingParameters),
   append(ReassignedActionParameters, RemainingParameters, Parameters),
-  remove_duplicate_parameters(Parameters, UniqueParameters).
+  remove_duplicate_parameters(Parameters, UniqueParameters),
+  exclude(=((_,[])),UniqueParameters,UniqueParametersWithoutEmptyLists).
 
 %% get_unique_reassigned_parameters(+Parameters, +Assignment, -UniqueParameters)
 %
