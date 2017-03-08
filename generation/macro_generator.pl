@@ -205,9 +205,8 @@ remove_duplicate_parameters(
   CurrentParameters,
   ResultingParameters
 ) :-
-  forall(member((_,TypedParameters),CurrentParameters),
-    \+ member(Parameter,TypedParameters)
-  ),
+  \+ is_in_typed_list(Parameter, CurrentParameters),
+  member((Type,TypedParameters), CurrentParameters),
   exclude(=((Type,TypedParameters)), CurrentParameters, FilteredParameters),
   append(TypedParameters,[Parameter],NewTypedParameters),
   append(FilteredParameters, [(Type,NewTypedParameters)], NewCurrentParameters),
