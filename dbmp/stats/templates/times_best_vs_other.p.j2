@@ -6,6 +6,6 @@ set title "Comparison between DBMP {{ evaluator }} and {{ other_planner }}: {{ d
 set key top left
 set logscale
 plot \
-  "{{ other_data_file }}" title "Original Domain w/ {{ other_planner }}", \
-  "{{ best_data_file }}" title "Best DBMP {{ evaluator }} Domain"
+  "{{ other_data_file }}" title "{{ other_planner }}" ls 1, \
+  "{{ best_data_file }}" title "DBMP ({{ evaluator }})" ls 2
 {% endblock %}

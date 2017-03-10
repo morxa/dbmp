@@ -8,7 +8,7 @@ set title "Comparison of {{ evaluator }} Evaluation Score to # Solved Problems: 
 f(x) = m*x + b
 fit f(x) "{{ data_file }}" via m,b
 {% endif %}
-plot "{{ data_file }}" title "&{aa}DBMP Domain"
+plot "{{ data_file }}" title "&{aa}DBMP Domain" ls 2
 {%- if fit -%}
   , f(x) title "Linear Fit"
 {% endif %}

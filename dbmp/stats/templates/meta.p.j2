@@ -9,8 +9,8 @@ set xrange [1:1800]
 set title "Planning Time vs. Completions {%- if print_domains %}: {{ domains }}{% endif %}
 plot \
   "{{ ff_data_file }}" title "FF" with lines ls 1, \
-  "{{ fd_data_file }}" title "FastDownward" with lines ls 2, \
+  "{{ fd_data_file }}" title "FastDownward" with lines ls 5, \
   "{{ marvin_data_file }}" title "Marvin" with lines ls 3, \
   "{{ macroff_data_file }}" title "MacroFF" with lines ls 4, \
-  "{{ dbmp_data_file }}" title "DBMP" with lines ls 5
+  "{{ dbmp_data_file }}" title "DBMP ({{ evaluator }})" with lines ls 2
 {% endblock %}
