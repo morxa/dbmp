@@ -27,7 +27,8 @@ if [ "$KUBE_MASTER" = "" ] ; then
   exit 1
 fi
 
-if [ "$( ping -W 1 -c 1 $KUBE_MASTER || echo failed)" = "failed" ] ; then
+if [ "$( ping -W 1 -c 1 $KUBE_MASTER &>/dev/null || echo failed)" = "failed" ]
+then
   echo "Cannot reach Kubernetes master $KUBE_MASTER. Stop."
   exit 0
 fi
