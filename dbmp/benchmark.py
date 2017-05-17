@@ -67,6 +67,8 @@ def main():
     parser.add_argument('-t', '--kubernetes-template',
                         help='the job template for the Kubernetes job')
     parser.add_argument('--domain', help='the name of the domain to run')
+    parser.add_argument('--augmented-domain', action='append',
+                        help='an ID of an augmented domain to run')
     parser.add_argument('-a', '--all', action='store_true',
                         help='run all macros that fit the given criteria')
     parser.add_argument('--missing', action='store_true',
@@ -114,7 +116,10 @@ def main():
     macro_coll = client.macro_planning.macros
     problem_coll = client.macro_planning.problems
     solutions_coll = client.macro_planning.solutions
-    domains = set()
+    if args.augmented_domain:
+        domains = set(args.augmented_domain)
+    else:
+        domains = set()
     for macro in args.macros:
         domain = domain_coll.find_one(
             {'macros': bson.objectid.ObjectId(macro)})
