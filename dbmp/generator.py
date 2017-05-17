@@ -33,6 +33,7 @@ import tempfile
 """
 
 import itertools
+import resource
 
 class MacroAction(object):
     """A macro with all its properties."""
@@ -199,6 +200,8 @@ def main():
     parser.add_argument('-e', '--evaluate', action='store_true',
                         help='evaluate the resulting macros for their '
                              'usefulness')
+    parser.add_argument('--resource-file',
+                        help='write resource usage to this file')
     parser.add_argument('--re-evaluate', action='store_true',
                         help='re-evaluate the macros in the database')
     parser.add_argument('action', nargs='*',
@@ -404,6 +407,12 @@ def main():
         print('Total number of macros: {}'.format(len(macros)))
         if args.augment_domain:
             print('Total number of augmented domains: {}.'.format(num_domains))
+    if len(macros) > 0 and args.resource_file:
+        with open(args.resource_file, 'a') as rfile:
+            assert(args.num_actions)
+            rfile.write('{} {}\n'.format(
+                args.num_actions,
+                resource.getrusage(resource.RUSAGE_CHILDREN)[0]/len(macros)))
 
 
 if __name__ == "__main__":
