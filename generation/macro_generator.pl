@@ -48,6 +48,8 @@ generate_macro(
     Actions, ParameterEnumeration, ParameterAssignment),
   compute_parameters(Actions, ParameterAssignment, Parameters),
   compute_precondition(Actions, ParameterAssignment, Parameters, Precondition),
+  !,
+  assertion(Precondition \= false),
   % Cut here, we don't want to backtrace if effect computation fails.
   !,
   compute_effect(Actions, ParameterAssignment, Effect),
