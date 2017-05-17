@@ -190,6 +190,12 @@ def main():
                              'resulting domain macro')
     parser.add_argument('-m', '--max-num-macros', type=int, default=1,
                         help='the maximum number of macros to add to a domain')
+    parser.add_argument('--min-actions', type=int,
+                        help='the minimum number of actions in the macro')
+    parser.add_argument('--max-actions', type=int,
+                        help='the maximum number of actions in the macro')
+    parser.add_argument('--num-actions', type=int,
+                        help='the exact number of actions in the macro')
     parser.add_argument('-e', '--evaluate', action='store_true',
                         help='evaluate the resulting macros for their '
                              'usefulness')
@@ -206,6 +212,16 @@ def main():
             'Please specify a domain name or a domain file'
     assert(args.max_num_macros > 0), \
             'Max number of macros needs to be higher than 0'
+    if args.max_actions and args.min_actions:
+        assert(args.max_actions >= args.min_actions), \
+                'Maximum number of actions must be at least the minimum'
+    if args.num_actions:
+        assert(not args.min_actions), \
+                'Conflicting arguments --num-actions and --min-actions'
+        assert(not args.max_actions), \
+                'Conflicting arguments --num-actions and --max-actions'
+        args.min_actions = args.num_actions
+        args.max_actions = args.num_actions
     if args.re_evaluate:
         args.from_db = True
         args.evaluate = True
@@ -263,8 +279,14 @@ def main():
         if args.all:
             domain_id = domain_coll.find_one(
                 {'name': args.domain, 'augmented': { '$ne': True }})['_id']
-            for sequence in action_seqs_coll.find(
-                    { 'value.domain': domain_id }).sort(
+            query = { 'value.domain': domain_id }
+            if args.min_actions:
+                query['value.actions.'+str(args.min_actions-1)] = \
+                        { '$exists': True }
+            if args.max_actions:
+                query['value.actions.'+str(args.max_actions)] = \
+                        { '$exists': False }
+            for sequence in action_seqs_coll.find(query).sort(
                         [('value.totalCount', -1)]).limit(args.best):
                 for parameters in sequence['value']['parameters']:
                     if parameters['count'] < args.occurrence_threshold:
