@@ -101,6 +101,8 @@ class MacroExtractor(object):
                 continue
             if re.fullmatch('', line):
                 continue
+            if re.match('^;', line):
+                continue
             match = re.fullmatch(
                 '\(({0})((?:\s+[-\w]+)*)\)'.format(self.action_regex), line)
             assert(match), 'Unexpected solution line "{}"'.format(line)
