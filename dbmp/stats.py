@@ -274,16 +274,18 @@ def plot_three(db, domain_name, evaluator, planner1, planner2):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def plot_meta(db, domains, evaluator, print_domains=False):
+def plot_meta(db, domains, planners, evaluator, print_domains=False):
     """ Create a plot for all problems of the given domains.
 
     Args:
         domains: A list of domains to show.
+        planners: A list of planners to compare DBMP to.
         evaluator: The evaluator to use for DBMP.
         print_domains: If set to true, write the domain names into the plot.
     """
-    times = { 'ff': [], 'fast-downward': [], 'marvin': [],
-                  'macroff-solep': [], 'dbmp': [] }
+    times = {'dbmp': []}
+    for planner in planners:
+        times[planner] = []
     for domain in db.domains.find({'augmented': { '$ne': True},
                                    'name': { '$in': domains},
                                    }):
@@ -295,7 +297,7 @@ def plot_meta(db, domains, evaluator, print_domains=False):
             print('Could not find a domain for {}!'.format(domain['name']))
             continue
         for problem in db.problems.find({'domain': domain['name']}):
-            for planner in ['ff', 'fast-downward', 'marvin', 'macroff-solep']:
+            for planner in planners:
                 solution = db.solutions.find_one(
                     {'planner': planner, 'use_for_macros': False,
                      'domain': domain['_id'], 'problem': problem['_id']})
@@ -310,8 +312,9 @@ def plot_meta(db, domains, evaluator, print_domains=False):
                 times['dbmp'].append(best_solution['resources'][0])
             else:
                 times['dbmp'].append(1800)
-    data = { 'ff': [], 'fast-downward': [], 'marvin': [],
-                  'macroff-solep': [], 'dbmp': [] }
+    data = {'dbmp': []}
+    for planner in planners:
+        data[planner] = []
     for time in range(1800):
         for planner, planner_times in times.items():
             num_solutions = len(planner_times)
@@ -500,7 +503,7 @@ def main():
                            args.planner[1])
     if args.meta:
         assert(len(args.evaluator) == 1), 'Expected exactly one evaluator'
-        plot_meta(database, args.domains, args.evaluator[0], True)
+        plot_meta(database, args.domains, args.planner, args.evaluator[0], True)
 
 if __name__ == '__main__':
     main()
