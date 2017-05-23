@@ -92,9 +92,9 @@ def plot_evaluation_vs_planning_time(db, domain_name, evaluator, fit):
             data_file.write(' '.join(map(str, datum)) + '\n')
     scores = [ datapoint[0] for datapoint in data ]
     times = [ datapoint[1] for datapoint in data ]
-    correlation = scipy.stats.pearsonr(scores, times)
     print('evaluator: {}\ndomain: {}'.format(evaluator, domain_name))
-    print('times correlation: {}'.format(correlation[0]))
+    spearman_rho, spearman_p = scipy.stats.spearmanr(scores, times)
+    print('times spearman: rho={}, p={}'.format( spearman_rho, spearman_p))
     print('\n')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('evaluation_vs_time.p.j2')
@@ -121,9 +121,9 @@ def plot_evaluation_vs_num_completions(db, domain_name, evaluator, fit):
             data.append([eval_score, float(successful)/(successful + failed)])
     scores = [ datapoint[0] for datapoint in data ]
     completions = [ datapoint[1] for datapoint in data ]
-    correlation = scipy.stats.pearsonr(scores, completions)
     print('evaluator: {}\ndomain: {}'.format(evaluator, domain_name))
-    print('completions correlation: {}'.format(correlation[0]))
+    spearman_rho, spearman_p= scipy.stats.spearmanr(scores, completions)
+    print('completions spearman: rho={}, p={}'.format(spearman_rho,spearman_p))
     print('\n')
     base_path = 'stats/' + domain_name.replace(' ', '_') + '_completions'
     base_path = 'stats/' + domain_name.replace(' ', '_') + \
