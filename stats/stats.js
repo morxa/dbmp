@@ -52,13 +52,15 @@ function get_avgs() {
         { $group: {
             "_id": {
               planner: "$_id.planner", domain: "$_id.domain"},
-            avg_time: { $avg: "$cpu_time"}}
+            avg_time: { $avg: "$cpu_time"},
+            count: { $sum: 1 }}
         },
         { $project: {
             "planner": "$_id.planner",
             "domain": "$_id.domain",
             "_id": 0,
-            avg_time: "$avg_time"
+            avg_time: "$avg_time",
+            count: "$count"
           }
         },
         { $out: "planning_time_avgs" }
@@ -85,13 +87,15 @@ function get_avgs_solved() {
         { $group: {
             "_id": {
               planner: "$_id.planner", domain: "$_id.domain"},
-            avg_time: { $avg: "$cpu_time"}}
+            avg_time: { $avg: "$cpu_time"},
+            count: { $sum: 1 }}
         },
         { $project: {
             "planner": "$_id.planner",
             "domain": "$_id.domain",
             "_id": 0,
-            avg_time: "$avg_time"
+            avg_time: "$avg_time",
+            count: "$count"
           }
         },
         { $out: "planning_time_avgs_solved" }
