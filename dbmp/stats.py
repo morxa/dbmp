@@ -245,7 +245,7 @@ def plot_three(db, domain_name, evaluator, planner1, planner2):
                           solution_best.get('resources', [1800])[0]])
         problem_index += 1
     base_path = 'stats/' + domain_name.replace(' ', '_') \
-            + '_times_three_domains'
+            + '_times_three_planners'
     p1_data_file_path = base_path + '_' + planner1 + '.dat'
     with open(p1_data_file_path, 'w') as data_file:
         for datum in planner1_data:
@@ -315,6 +315,7 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False):
     data = {'dbmp': []}
     for planner in planners:
         data[planner] = []
+    print('dbmp times: {}'.format(times['dbmp']))
     for time in range(1800):
         for planner, planner_times in times.items():
             num_solutions = len(planner_times)
@@ -322,7 +323,7 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False):
             count = sum([ ptime <= time for ptime in planner_times])
             quotient = count / num_solutions
             data[planner].append([time, quotient])
-    base_path = 'stats/meta'
+    base_path = 'stats/meta_' + domain['name']
     data_files = dict()
     for planner in data.keys():
         data_files[planner] = base_path + '_' + planner + '.dat'
@@ -337,6 +338,7 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False):
         marvin_data_file=data_files['marvin'],
         macroff_data_file=data_files['macroff-solep'],
         dbmp_data_file=data_files['dbmp'],
+        evaluator=get_pretty_name(evaluator),
         output=base_path,
         domains=', '.join([get_pretty_name(domain) for domain in domains]),
         print_domains=print_domains,
@@ -364,6 +366,7 @@ def get_descriptives(db, domain_name, planner, evaluator):
             [('evaluation.' + evaluator, -1)])[0]
     orig_domain = db.domains.find_one(
         {'name': domain_name, 'augmented': { '$ne': True}})
+    print('best domain ID: {}'.format(best_domain['_id']))
     for domain in [ orig_domain, best_domain ]:
         get_domain_descriptives(db, domain['_id'], planner, evaluator)
 
@@ -391,8 +394,9 @@ def get_domain_descriptives(db, domain_id, planner, evaluator):
         print('No solutions for domain ID {} and planner {} '
               'found, skipping!'.format(domain['_id'], planner))
         return
-    print('Planner: {}\ndomain: {}\naugmented: {}\nevaluator: {}'.format(
-        planner, domain_name, is_augmented, evaluator))
+    print('Planner: {}\ndomain: {}\ndomain ID: {}\naugmented: {}\n'
+          'evaluator: {}'.format(
+            planner, domain_name, domain['_id'], is_augmented, evaluator))
     print('successful: {}, failed: {}'.format(
         successful_count, failed_count))
     times = []
@@ -482,8 +486,6 @@ def main():
         if args.descriptives:
             for planner in args.planner:
                 for evaluator in args.evaluator:
-                    get_descriptives(database, domain, planner, evaluator)
-                    get_descriptives(database, domain, planner, evaluator)
                     get_descriptives(database, domain, planner, evaluator)
         if args.plot_evaluators:
             for evaluator in args.evaluator:
