@@ -195,10 +195,11 @@ function aggregate_runtimes() {
 
 function get_best_domain(planner, domain_name) {
   get_avgs();
-  cursor = db.planning_time_avgs.find().sort({'avg_time': 1});
+  count = db.problems.find({domain: domain_name}).count()
+  cursor = db.planning_time_avgs.find({count: count}).sort({'avg_time': 1});
   while (cursor.hasNext()) {
     var stats = cursor.next();
-    if (stats['planner'] != 'ff') {
+    if (stats['planner'] != planner) {
       continue;
     }
     if (db.domains.findOne(
