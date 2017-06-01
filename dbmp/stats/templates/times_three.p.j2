@@ -1,0 +1,12 @@
+{% extends "common.p.j2" %}
+{% block data %}
+set xlabel "Problem"
+set ylabel "Planning Time (s)"
+set key above box
+unset xtics
+set logscale y
+plot \
+  "{{ p1_data_file }}" title "{{ planner1 }}" ls 3, \
+  "{{ p2_data_file }}" title "{{ planner2 }}" ls 4, \
+  "{{ best_data_file }}" title "DBMP ({{ evaluator }})" ls 2
+{% endblock %}
