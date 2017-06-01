@@ -1,8 +1,7 @@
 {% extends "common.p.j2" %}
 {% block data %}
-set xlabel "{{ other_planner }} Planning Time"
-set ylabel "Planning Time"
-set title "Comparison between DBMP {{ evaluator }} and {{ other_planner }}: {{ domain }}"
+set xlabel "{{ other_planner }} Planning Time (s)"
+set ylabel "Planning Time (s)"
 set key top left
 set logscale
 plot \
