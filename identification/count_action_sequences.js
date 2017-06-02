@@ -118,11 +118,14 @@ var findSequencesInPlan = function() {
  * assignment and the parameter assignment itself.
  */
 var countSequences = function(key, vals) {
-  parameterAssignments = { totalCount: 0 };
+  parameterAssignments = { totalCount: 0, actions: vals[0].actions };
   for (var i = 0; i < vals.length; i++) {
     parameterAssignments['totalCount'] += vals[i]['totalCount'];
     Object.keys(vals[i]).forEach(
       function(paramKey, index) {
+        if (paramKey == 'actions' || paramKey == 'totalCount') {
+          return;
+        }
         if (parameterAssignments.hasOwnProperty(paramKey)) {
           parameterAssignments[paramKey]['count'] += vals[i][paramKey]['count'];
         } else {
