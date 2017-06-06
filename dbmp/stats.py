@@ -274,7 +274,8 @@ def plot_three(db, domain_name, evaluator, planner1, planner2):
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def plot_meta(db, domains, planners, evaluator, print_domains=False):
+def plot_meta(db, domains, planners, evaluator, print_domains=False,
+              dbmp_domain=''):
     """ Create a plot for all problems of the given domains.
 
     Args:
@@ -290,9 +291,16 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False):
                                    'name': { '$in': domains},
                                    }):
         try:
-            best_domain = db.domains.find(
-                {'base_domain': domain['_id'], 'augmented': True}).sort(
-                    [('evaluation.' + evaluator, -1)])[0]
+            if dbmp_domain:
+                best_domain = db.domains.find_one(
+                    {'_id': bson.objectid.ObjectId(dbmp_domain)})
+                assert(best_domain['name'] == domain['name']), \
+                        'Mismatching domain names "{}" and "{}"'.format(
+                            best_domain['name'], domain['name'])
+            else:
+                best_domain = db.domains.find(
+                    {'base_domain': domain['_id'], 'augmented': True}).sort(
+                        [('evaluation.' + evaluator, -1)])[0]
         except IndexError:
             print('Could not find a domain for {}!'.format(domain['name']))
             continue
@@ -449,6 +457,9 @@ def main():
     parser.add_argument('-e', '--evaluator', action='append',
                         default=[],
                         help='the evaluator to use')
+    parser.add_argument('--dbmp-domain', type=str, default='',
+                        help='Domain ID of the DBMP domain to use instead of '
+                             'the domain with the best evaluation score')
     parser.add_argument('domains', metavar='domain', nargs='*',
                         help='the name of the domain to evaluate')
     args = parser.parse_args()
@@ -504,8 +515,18 @@ def main():
                 plot_three(database, domain, evaluator, args.planner[0],
                            args.planner[1])
     if args.meta:
-        assert(len(args.evaluator) == 1), 'Expected exactly one evaluator'
-        plot_meta(database, args.domains, args.planner, args.evaluator[0], True)
+        if args.dbmp_domain:
+            assert(len(args.evaluator) == 0), \
+                    'Conflicting arguments, cannot use evaluator if domain ' \
+                    'is given!'
+            evaluator = 'custom'
+            assert(len(args.domains) == 1), \
+                    'Can only plot one domain if domain ID is given!'
+        else:
+            assert(len(args.evaluator) == 1), 'Expected exactly one evaluator'
+            evaluator = args.evaluator[0]
+        plot_meta(database, args.domains, args.planner, evaluator, True,
+                 args.dbmp_domain)
 
 if __name__ == '__main__':
     main()
