@@ -61,8 +61,9 @@ def main():
     parser = argparse.ArgumentParser(
         description='Upload a PDDL domain or problem file to the database,'
                     ' and optionally start a Kubernetes job.')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='print the parsed solutions')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='verbose output; '
+                             '-v: print errors; -vv: print solutions')
     parser.add_argument('-c', '--config-file',
                         help='config file to read database info from')
     parser.add_argument('-H', '--db-host', help='the database hostname')
@@ -127,8 +128,10 @@ def main():
                 print('Could not find problem {}, skipping!'.format(solution))
     for solution in solution_entries:
         if 'error' in solution:
-            print('Planner failed on problem {} with error "{}", skipping!'\
-                    .format(solution['problem'], solution['error']))
+            if args.verbose >= 1:
+                print('Planner failed on problem {} with error "{}", '
+                      'skipping!'.format(solution['problem'],
+                                         solution['error']))
             continue
         if 'actions' in solution and not args.force:
             print('Solution {} is already parsed, '
@@ -160,7 +163,7 @@ def main():
             parsed_solution = parse_solution(translated_solution)
         else:
             parsed_solution = parse_solution(raw_solution)
-        if args.verbose:
+        if args.verbose >= 2:
             pp = pprint.PrettyPrinter()
             print('Result for ID {} (problem "{}"):'\
                     .format(solution['_id'], solution['problem']))
