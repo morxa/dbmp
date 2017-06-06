@@ -320,7 +320,13 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
                 times['dbmp'].append(best_solution['resources'][0])
             else:
                 times['dbmp'].append(1800)
-    data = {'dbmp': []}
+    data = {
+        'ff': [],
+        'fast-downward': [],
+        'marvin': [],
+        'macroff-solep': [],
+        'dbmp': []
+    }
     for planner in planners:
         data[planner] = []
     print('dbmp times: {}'.format(times['dbmp']))
