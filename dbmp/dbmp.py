@@ -106,10 +106,10 @@ class MacroExtractor(object):
             match = re.fullmatch(
                 '(\d+:)?\s*\(({0})((?:\s+[-\w]+)*)\)\s*(\[.*\])?'.format(self.action_regex), line)
             assert(match), 'Unexpected solution line "{}"'.format(line)
-            action = match.group(1).upper()
+            action = match.group(2).upper()
             if action in self.macros.keys():
                 macro = self.macros[action]
-                params = match.group(2).split()
+                params = match.group(3).split()
                 for i in range(0, len(macro['actions'])):
                     sub_action = '(' + macro['actions'][i]
                     for param in macro['parameters'][i]:
