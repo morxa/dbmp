@@ -57,7 +57,7 @@ class MacroExtractor(object):
         Returns:
             A list of macro actions with their parameter assignments.
         """
-        return extract_macros_from_string(open(domain_file, 'r').read())
+        return self.extract_macros_from_string(open(domain_file, 'r').read())
     def extract_macros_from_string(self, domain_string):
         """ Extract macro definition from the given string.
 
