@@ -204,6 +204,11 @@ def main():
                         help='write resource usage to this file')
     parser.add_argument('--re-evaluate', action='store_true',
                         help='re-evaluate the macros in the database')
+    parser.add_argument('--best-evaluated', type=int, default=0,
+                        help='only use the best n macros according to '
+                             'the given evaluator')
+    parser.add_argument('--evaluator', type=str,
+                        help='the evaluator to use for filtering')
     parser.add_argument('action', nargs='*',
                         help='an action and its parameters to include into the '
                              'macro, e.g. "unstack 1,2"')
@@ -232,6 +237,11 @@ def main():
         assert(not args.save), 'Cannot save macros when re-evaluating'
         assert((not args.all) and (not args.augment_domain)), \
                 'Cannot generate macro or augment domain when re-evaluating'
+    if args.best_evaluated:
+        args.evaluate = True
+        assert(args.evaluator), 'Need evaluator to filter by score'
+        assert(args.best_evaluated <= args.best or not args.best), \
+                '--best must be >= --best-evaluated'
     db_host = 'localhost'
     db_user = 'planner'
     db_passwd = ''
@@ -330,11 +340,21 @@ def main():
             evaluators.append(
                 macro_evaluator.WeightedFPEvaluator(weight, total_num_actions))
         evaluators.append(macro_evaluator.PRSquaredEvaluator())
+        evaluation_scores = []
         for macro in macros:
             evaluation = {}
             for evaluator in evaluators:
                 evaluation[evaluator.name()] = evaluator.evaluate(macro)
             macro.evaluation = evaluation
+            if args.best_evaluated:
+                evaluation_scores.append(evaluation[args.evaluator])
+        evaluation_scores.sort(reverse=True)
+        best_macros = set()
+        for macro in macros:
+            if macro.evaluation[args.evaluator] >= \
+               evaluation_scores[args.best_evaluated - 1]:
+                best_macros.add(macro)
+        macros = best_macros
     for macro in macros:
         if args.save:
             macro._id = macros_coll.find_one_and_replace(
