@@ -290,7 +290,7 @@ def main():
             args.domainfile = tmpfile.name
         if not args.domain:
             args.domain = get_domainname(args.domainfile)
-        if args.all or args.re_evaluate:
+        if args.all:
             domain_id = domain_coll.find_one(
                 {'name': args.domain, 'augmented': { '$ne': True }})['_id']
             query = { 'value.domain': domain_id }
