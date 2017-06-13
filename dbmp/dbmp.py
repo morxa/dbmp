@@ -25,6 +25,7 @@ replaces with the respective action sequence.
 import argparse
 import ast
 import re
+import sys
 
 import worker.planner
 
@@ -148,7 +149,12 @@ def main():
     planner = worker.planner.Planner.factory(
         args.planner, args.domain, args.problem, args.time_limit,
         args.memory_limit)
-    planner.run()
+    res = planner.run()
+    if res.returncode not in planner.get_success_return_codes():
+        print('Planner failed with return code {}! Output:\n{}\n'.format(
+                res.returncode, res.stdout),
+              file=sys.stderr)
+        sys.exit(res.returncode)
     solution = planner.get_solution()
     translated_solution = macro_extractor.translate_solution(solution)
     print(translated_solution)
