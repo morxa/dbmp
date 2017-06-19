@@ -47,6 +47,7 @@ class Planner(object):
             'stderr': subprocess.STDOUT,
             'universal_newlines': True,
         }
+        self.result = None
     def run(self):
         """Run the planner."""
         raise NotImplementedError
@@ -59,6 +60,13 @@ class Planner(object):
     def get_success_return_codes(self):
         """Get a list of return codes that indicate success."""
         raise NotImplementedError
+    def was_successful(self):
+        """ Return true if a result was found. """
+        if not self.result:
+            return False
+        if not self.result.returncode:
+            return False
+        return self.result.returncode in self.get_success_return_codes()
     def obeys_limits(self):
         """Whether this planner has its own resource manager to obey limits."""
         return False
@@ -85,47 +93,55 @@ class FFPlanner(Planner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     def run(self):
-        result = subprocess.run(
+        try:
+            os.remove(self.problem + '.soln')
+        except FileNotFoundError:
+            pass
+        self.result = subprocess.run(
             ['ff', '-o', self.domain, '-f', self.problem],
             **self.common_kwargs
         )
-        return result
+        if not self.was_successful():
+            print('Error: {}'.format(self.result.stdout))
+        return self.result
     def get_success_return_codes(self):
         """Get a list of return codes that indicate success."""
         return [0]
     def get_solution(self):
         try:
             solution_file = open(self.problem + '.soln', 'r')
-            return solution_file.read()
+            return solution_file.read().upper()
         except IOError:
             raise NoSolutionFoundError
+    def was_successful(self):
+        return os.path.isfile(self.problem + '.soln')
 
 class MacroFFPlanner(FFPlanner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     def run(self):
-        result = subprocess.run(
+        self.result = subprocess.run(
             ['macroff', '-m', 'C', '-o', self.domain, '-f', self.problem],
             **self.common_kwargs
         )
-        return result
+        return self.result
 
 class MacroFFSolEPlanner(FFPlanner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     def run(self):
-        result = subprocess.run(
+        self.result = subprocess.run(
             ['macroff', '-q', 'macros.pddl',
              '-o', self.domain, '-f', self.problem],
             **self.common_kwargs
         )
-        return result
+        return self.result
 
 class FDPlanner(Planner):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     def run(self):
-        result = subprocess.run(
+        self.result = subprocess.run(
             ['fast-downward',
              '--overall-memory-limit', str(self.memory_limit),
              '--overall-time-limit', str(self.time_limit),
@@ -133,7 +149,7 @@ class FDPlanner(Planner):
              self.domain, self.problem],
             **self.common_kwargs
         )
-        return result
+        return self.result
     def get_success_return_codes(self):
         """Get a list of return codes that indicate success."""
         return [0, 6, 7, 8]
@@ -143,12 +159,14 @@ class FDPlanner(Planner):
         solutions.sort()
         if solutions:
             solution_file = open(solutions[-1], 'r')
-            return solution_file.read()
+            return solution_file.read().upper()
         else:
             raise NoSolutionFoundError
     def obeys_limits(self):
         """Whether this planner has its own resource manager to obey limits."""
         return True
+    def was_successful(self):
+        return glob.glob('sas_plan*') != []
 
 class MarvinPlanner(Planner):
     def __init__(self, *args, **kwargs):
@@ -162,7 +180,7 @@ class MarvinPlanner(Planner):
         stdout_lines = self.result.stdout.splitlines()
         for i, line in enumerate(stdout_lines):
             if re.match(';+\s*Solution Found.*', line):
-                return '\n'.join(stdout_lines[i:])
+                return '\n'.join(stdout_lines[i:]).upper()
         raise NoSolutionFoundError
 
 class FDSatPlanner(FDPlanner):
@@ -191,6 +209,7 @@ class FDSatPlanner(FDPlanner):
                 break
         if os.path.isfile('sas_plan.1'):
             proc.returncode = 0
+        self.result = proc
         return proc
 
 class EnsemblePlanner(Planner):
@@ -213,8 +232,7 @@ class EnsemblePlanner(Planner):
         while ff_process.is_alive() and fd_process.is_alive():
             time.sleep(0.1)
         while True:
-            if fd_process.exitcode in \
-               self.fd_planner.get_success_return_codes():
+            if self.fd_planner.was_successful():
                 print('FD was successful!')
                 self.successful_planner = self.fd_planner
                 res.returncode = fd_process.exitcode
@@ -222,9 +240,9 @@ class EnsemblePlanner(Planner):
                 res.stdout = 'FD was successful!'
                 ff_process.terminate()
                 return res
-            if ff_process.exitcode in \
-               self.ff_planner.get_success_return_codes():
-               print('FF was successful!')
+            if self.ff_planner.was_successful():
+               print('FF was successful with return code {}!'.format(
+                   ff_process.exitcode))
                self.successful_planner = self.ff_planner
                res.returncode = ff_process.exitcode
                res.stdout = 'FF was successful!'
@@ -234,9 +252,7 @@ class EnsemblePlanner(Planner):
                break
             time.sleep(0.5)
         res.returncode = 1
-        res.stdout = \
-                'FF failed (exit code {}), ' 'FD failed (exit code {}).'.format(
-                    ff_process.exitcode, fd_process.exitcode)
+        res.stdout = 'Both planners failed!'
         return res
 
     def get_solution(self):
