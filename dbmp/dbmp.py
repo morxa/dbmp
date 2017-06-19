@@ -97,7 +97,7 @@ class MacroExtractor(object):
         """
         translated_solution = []
         for line in solution.splitlines():
-            if re.fullmatch('Time.*', line):
+            if re.fullmatch('Time.*', line, re.IGNORECASE):
                 translated_solution.append(line)
                 continue
             if re.fullmatch('', line):
