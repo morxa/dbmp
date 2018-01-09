@@ -36,6 +36,7 @@
   ).
 
 :- use_module(substitute).
+:- use_module(library(lambda)).
 
 %% is_in_typed_list(+Var, +TypedVars)
 %
