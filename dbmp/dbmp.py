@@ -25,7 +25,9 @@ replaces with the respective action sequence.
 import argparse
 import ast
 import re
+import subprocess
 import sys
+import tempfile
 
 import worker.planner
 
@@ -137,6 +139,8 @@ def main():
                         help='the time limit in seconds')
     parser.add_argument('-m', '--memory-limit', type=str, default='4G',
                         help='the memory limit, e.g. 4K, 2G')
+    parser.add_argument('-c', '--check', action='store_true',
+                        help='Check the validity of the resulting plan')
     parser.add_argument('domain', type=str,
                         help='the input domain')
     parser.add_argument('problem', type=str,
@@ -159,7 +163,17 @@ def main():
     print(translated_solution)
     if args.output:
         args.output.write(translated_solution)
-
+        args.output.close()
+    if args.check:
+        if args.output:
+            solution_file = args.output
+        else:
+            solution_file = tempfile.NamedTemporaryFile(mode='w', delete=False)
+            solution_file.write(translated_solution)
+            solution_file.close()
+        val_result = subprocess.run(['pddl-validate', args.domain, args.problem,
+                                     solution_file.name])
+        sys.exit(val_result.returncode)
 
 if __name__ == '__main__':
     main()
