@@ -47,6 +47,8 @@ class MacroAction(object):
         self.type = 'dbmp'
         self.evaluation = {}
         self.domain = ''
+    def __str__(self):
+        return "{}, {}".format(self.actions, self.parameters)
     def from_db(self, db_macro):
         """ Initialize the macro from the existing database entry. """
         self.initialized = True
@@ -156,7 +158,12 @@ def augment_domain(domain, macro):
     last_parenthesis = domain.rindex(')')
     return domain[:last_parenthesis] + '\n' + macro + '\n)'
 
-
+def unique_actions(macros):
+    """ Check if the given list of macros have pairwise different actions."""
+    for macro_pair in itertools.combinations(macros, 2):
+        if macro_pair[0].actions == macro_pair[1].actions:
+            return False
+    return True
 
 def main():
     """ Test MacroAction with a macro from the test domain. """
@@ -374,6 +381,11 @@ def main():
         num_domains = 0
         for num_macros in range(1, args.max_num_macros+1):
             for macro_combination in itertools.combinations(macros, num_macros):
+                if not unique_actions(macro_combination):
+                    print('Skipping macro set due to non-unique action sets: '
+                          '{}'.format(
+                            [ m.__str__() for m in macro_combination ]))
+                    continue
                 assert(args.save), \
                     'You must provide --save if you want to augment the domain'
                 domain_entry = domain_coll.find_one(
