@@ -81,12 +81,17 @@ def main():
                  solution_file.name],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 universal_newlines=True)
+            plan_valid = False
+            for line in val_res.stdout.splitlines():
+                if line == 'Plan valid':
+                    plan_valid = True
+                    break
             solution_coll.update({'_id': solution['_id']},
                                  {'$set':
                                   {'validated': True,
-                                   'validation_result': val_res.returncode,
+                                   'validation_success': plan_valid,
                                    'validation_log': val_res.stdout}})
-            if val_res.returncode != 0:
+            if not plan_valid:
                 print('Error validating solution {}! VAL output:\n{}'.format(
                         solution['_id'], val_res.stdout))
         except Exception as e:
