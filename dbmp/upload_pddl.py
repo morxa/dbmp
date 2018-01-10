@@ -251,9 +251,10 @@ def main():
                     { 'domain_id': domain, 'problem': problem['_id'],
                       'raw': { '$exists': False }}):
                 problems.add(problem['_id'])
-    for problem in problems:
-        start_job(args.planner, args.kubernetes_template, domain, problem)
-        print('---')
+    if args.start_job:
+        for problem in problems:
+            start_job(args.planner, args.kubernetes_template, domain, problem)
+            print('---')
 
 if __name__ == '__main__':
     main()
