@@ -36,6 +36,9 @@ def main():
                     ' validated.')
     parser.add_argument('-c', '--config-file',
                         help='config file to read database info from')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='also validate solutions which have already been'
+                             ' validated')
     args = parser.parse_args()
     db_host = 'localhost'
     db_user = 'planner'
@@ -57,8 +60,10 @@ def main():
     macro_coll = client.macro_planning.macros
     problem_coll = client.macro_planning.problems
     solution_coll = client.macro_planning.solutions
-    for solution in solution_coll.find({'validated': { '$ne': True },
-                                        'error': { '$exists': False }}):
+    query = { 'error': { '$exists': False } }
+    if not args.force:
+        query['validated'] = { '$ne': True }
+    for solution in solution_coll.find(query):
         try:
             domain = domain_coll.find_one({'_id': solution['domain']})['raw']
             domain_file = tempfile.NamedTemporaryFile(mode='w')
