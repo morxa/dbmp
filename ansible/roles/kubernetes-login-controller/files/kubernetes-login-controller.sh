@@ -37,7 +37,7 @@ fi
 enable_node () {
   if [ "$( get_status )" -eq 0 ] ; then
     echo "enabling node $KUBELET_NAME"
-    kubectl $KUBECTL_PARAMS uncordon $KUBELET_NAME
+    kubectl $KUBECTL_PARAMS taint nodes $KUBELET_NAME exclusive:NoSchedule-
     # turn off swap because otherwise the containers will use it all the time,
     # cf. http://stackoverflow.com/questions/40553541/disable-swap-on-a-kubelet
     /usr/sbin/swapoff -a
@@ -47,22 +47,18 @@ enable_node () {
 disable_node () {
   if [ "$( get_status )" -eq 1 ] ; then
     echo "disabling node $KUBELET_NAME"
-    kubectl $KUBECTL_PARAMS drain \
-      ${KUBE_NAMESPACE:+"--namespace ${KUBE_NAMESPACE}" \
-      $KUBELET_NAME
+    kube_evict_node --host $KUBELET_NAME
+    kubectl $KUBECTL_PARAMS taint nodes $KUBELET_NAME \
+      exclusive=rcll-sim:NoSchedule
     /usr/sbin/swapon -a
   fi
 }
 
 # 0 if disabled, 1 if enabled
 get_status () {
-  status=$(kubectl $KUBECTL_PARAMS get node -o=json $KUBELET_NAME \
-           | jq '.spec.unschedulable')
-  if [ "$status" = "true" ] ; then
-    echo 0
-  else
-    echo 1
-  fi
+  kubectl $KUBECTL_PARAMS describe node $KUBELET_NAME | \
+    grep -q -P "exclusive.*rcll-sim.*NoSchedule"
+  echo $?
 }
 
 count_users () {

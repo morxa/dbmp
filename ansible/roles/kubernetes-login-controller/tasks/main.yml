@@ -1,7 +1,24 @@
+- name: enable COPR for python3-kubernetes
+  command: dnf -y copr enable timn/python-kubernetes
+- name: add COPR key
+  rpm_key:
+    key: https://copr-be.cloud.fedoraproject.org/results/timn/python-kubernetes/pubkey.gpg
+    state: present
+- name: install python3-kubernetes
+  dnf:
+    name: python3-kubernetes
+    state: latest
 - name: add script to automatically stop kubelet on user login
   copy:
     src: kubernetes-login-controller.sh
     dest: /usr/local/bin/
+    owner: root
+    group: root
+    mode: 0755
+- name: add script to evict a node
+  copy:
+    src: kube_evict_node.py
+    dest: /usr/local/bin/kube_evict_node
     owner: root
     group: root
     mode: 0755
