@@ -1,5 +1,5 @@
 #  Created:  Mon 07 Nov 2016 15:44:01 CET
-#  Copyright  2016  Till Hofmann <hofmann@kbsg.rwth-aachen.de>
+#  Copyright  2016-2018  Till Hofmann <hofmann@kbsg.rwth-aachen.de>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
 
-FROM fedora:24
+FROM fedora:27
 MAINTAINER Till Hofmann <hofmann@kbsg.rwth-aachen.de>
 
 RUN dnf -y --refresh install 'dnf-command(copr)' && \
