@@ -8,3 +8,4 @@
 - hosts: kubelet
   roles:
     - kubelet
+    - kubernetes-login-controller

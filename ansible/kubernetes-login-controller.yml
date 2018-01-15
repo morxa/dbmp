@@ -1,0 +1,4 @@
+---
+- hosts: kubelet
+  roles:
+    - kubernetes-login-controller

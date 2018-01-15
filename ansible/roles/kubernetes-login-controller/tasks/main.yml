@@ -1,0 +1,27 @@
+- name: add script to automatically stop kubelet on user login
+  copy:
+    src: kubernetes-login-controller.sh
+    dest: /usr/local/bin/
+    owner: root
+    group: root
+    mode: 0755
+- name: add PAM config to call login controller on login/logout
+  lineinfile:
+    dest: /etc/pam.d/postlogin
+    regexp: ".*kubernetes-login-controller.*"
+    line: >
+      session     optional      pam_exec.so
+      /usr/bin/systemd-cat -t kubernetes-login-controller
+      /usr/local/bin/kubernetes-login-controller.sh
+- name: add config file for login controller
+  template:
+    src: login-controller.conf.j2
+    dest: /etc/kubernetes/login-controller.conf
+- name: add service file for login controller
+  copy:
+    src: kubernetes-login-controller.service
+    dest: /etc/systemd/system/
+- name: enable login controller service
+  service:
+    name: kubernetes-login-controller
+    enabled: true
