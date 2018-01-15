@@ -1,7 +1,7 @@
 #! /bin/bash
 #
 # login-controller.sh
-# Copyright (C) 2016 Till Hofmann <hofmann@kbsg.rwth-aachen.de>
+# Copyright (C) 2016-2018 Till Hofmann <hofmann@kbsg.rwth-aachen.de>
 #
 # Distributed under terms of the MIT license.
 #
@@ -11,6 +11,7 @@ set -euo pipefail
 KUBECTL_PARAMS=${KUBECTL_PARAMS:-""}
 KUBELET_NAME=${KUBELET_NAME:-$(hostname -s)}
 ENABLE_LOGIN_CONTROLLER=1
+KUBE_NAMESPACE=
 # override $HOME which is set by PAM and points to the user's home
 HOME=/
 
@@ -46,7 +47,9 @@ enable_node () {
 disable_node () {
   if [ "$( get_status )" -eq 1 ] ; then
     echo "disabling node $KUBELET_NAME"
-    kubectl $KUBECTL_PARAMS drain $KUBELET_NAME --force
+    kubectl $KUBECTL_PARAMS drain \
+      ${KUBE_NAMESPACE:+"--namespace ${KUBE_NAMESPACE}" \
+      $KUBELET_NAME
     /usr/sbin/swapon -a
   fi
 }
