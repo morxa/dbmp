@@ -29,6 +29,8 @@ import tempfile
 import traceback
 import pymongo
 
+import dbmp
+
 def main():
     """ Connect to the database and check all plans that are not validated. """
     parser = argparse.ArgumentParser(
@@ -74,7 +76,9 @@ def main():
             problem_file.write(problem)
             problem_file.flush()
             solution_file = tempfile.NamedTemporaryFile(mode='w')
-            solution_file.write(solution['raw'])
+            macro_extractor = dbmp.MacroExtractor()
+            solution_file.write(
+                macro_extractor.translate_solution(solution['raw']))
             solution_file.flush()
             val_res = subprocess.run(
                 ['pddl-validate', domain_file.name, problem_file.name,
