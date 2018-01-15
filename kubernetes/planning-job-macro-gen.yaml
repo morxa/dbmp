@@ -12,6 +12,8 @@ spec:
   template:
     metadata:
       name: planner-worker
+      labels:
+        evictable: "true"
     spec:
       containers:
       - name: planner-worker
