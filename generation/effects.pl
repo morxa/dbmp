@@ -120,7 +120,7 @@ resolve_conflicting_effects(
   ( once(resolve_conflicting_effect(PreviousEffect, Effect, [],
     (IntermediateEffect,Params))) -> true
     ;
-    format('Failed to resolve effects ~w and ~w!', [PreviousEffect, Effect]),
+    format('Failed to resolve effects ~w and ~w!\n', [PreviousEffect, Effect]),
     fail
   ),
   simplify_effect(IntermediateEffect, SimplifiedIntermediateEffect),
