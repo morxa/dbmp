@@ -27,6 +27,7 @@ import bson.objectid
 import configparser
 import jinja2
 import numpy
+import pprint
 import pymongo
 import scipy.stats
 import subprocess
@@ -378,24 +379,40 @@ def get_descriptives(db, domain_name, planner, evaluator):
         domain_name: The name of the domain.
         planner: The name of the planner.
     """
-    best_domain = db.domains.find(
-        {'name': domain_name, 'augmented': True}).sort(
-            [('evaluation.' + evaluator, -1)])[0]
+    if planner == 'ptt':
+        actual_planner = 'ff'
+        actual_domain = domain_name + '_ptt'
+    else:
+        actual_planner = planner
+        actual_domain = domain_name
+    try:
+        best_domain = db.domains.find(
+            {'name': actual_domain, 'augmented': True}).sort(
+                [('evaluation.' + evaluator, -1)])[0]
+        print('best domain ID: {}'.format(best_domain['_id']))
+    except IndexError:
+        print('Could not find best domain')
+        best_domain = None
     orig_domain = db.domains.find_one(
-        {'name': domain_name, 'augmented': { '$ne': True}})
-    print('best domain ID: {}'.format(best_domain['_id']))
+        {'name': actual_domain, 'augmented': { '$ne': True}})
     print('')
-    for domain in [ orig_domain, best_domain ]:
-        get_domain_descriptives(db, domain['_id'], planner, evaluator)
+    descriptives = {}
+    if best_domain:
+        descriptives['dbmp_{}_{}'.format(planner, evaluator)] = \
+                get_domain_descriptives(db, best_domain['_id'], actual_planner,
+                                        evaluator)
+    descriptives[planner] = get_domain_descriptives(db, orig_domain['_id'],
+                                                    actual_planner)
+    return descriptives
 
-def get_domain_descriptives(db, domain_id, planner, evaluator):
+def get_domain_descriptives(db, domain_id, planner, evaluator=None):
     domain = db.domains.find_one({'_id': bson.objectid.ObjectId(domain_id)})
     if not domain:
         print('Could not find domain with ID "{}"!'.format(domain_id))
         return
     is_augmented = 'augmented' in domain and domain['augmented'] == True
     if not is_augmented:
-        evaluator = 'none'
+        evaluator = None
     domain_name = domain['name']
     failed_count = db.solutions.find(
             {'domain': domain['_id'],
@@ -429,13 +446,23 @@ def get_domain_descriptives(db, domain_id, planner, evaluator):
     for _ in range(failed_count):
         all_times.append(1800)
         all_lengths.append(10000)
-    print('Time Mean: {}.'.format(numpy.mean(times)))
-    print('Time Quantiles: {}.'.format(
-        scipy.stats.mstats.mquantiles(all_times)))
-    print('Mean solution length: {}.'.format(numpy.mean(solution_lengths)))
-    print('Length Quantiles: {}.'.format(
-            scipy.stats.mstats.mquantiles(all_lengths)))
+    mean_time = numpy.mean(times)
+    quantiles_time = scipy.stats.mstats.mquantiles(all_times)
+    mean_length = numpy.mean(solution_lengths)
+    quantiles_length = scipy.stats.mstats.mquantiles(all_lengths)
+    print('Time Mean: {}.'.format(mean_time))
+    print('Time Quantiles: {}.'.format(quantiles_time))
+    print('Mean solution length: {}.'.format(mean_length))
+    print('Length Quantiles: {}.'.format(quantiles_length))
     print('\n')
+    return {
+        'solved': successful_count,
+        'failed': failed_count,
+        'mean_time': mean_time,
+        'quantiles_time': quantiles_time,
+        'mean_length': mean_length,
+        'quantiles_length': quantiles_length,
+    }
 
 def main():
     parser = argparse.ArgumentParser(
@@ -501,15 +528,22 @@ def main():
     database.authenticate(db_user, db_passwd)
     assert(not (args.all and args.domains)), \
             'You cannot specify domain with --all'
+    printer = pprint.PrettyPrinter()
     if args.all:
         domains = database.domains.distinct('name')
     else:
         domains = args.domains
     for domain in domains:
         if args.descriptives:
+            descriptives = {}
             for planner in args.planner:
                 for evaluator in args.evaluator:
-                    get_descriptives(database, domain, planner, evaluator)
+                    descriptives = {
+                        **descriptives,
+                        **get_descriptives(database, domain,
+                                           planner, evaluator)
+                    }
+            printer.pprint(descriptives)
         if args.plot_evaluators:
             for evaluator in args.evaluator:
                 plot_evaluation_vs_planning_time(database, domain, evaluator,
