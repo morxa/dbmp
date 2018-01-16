@@ -35,6 +35,9 @@ pretty_names = {
     'complementarity_weighted_fp_evaluator_50_50': 'CFP',
     'complementarity_weighted_fp_evaluator_100_0': 'CF',
     'complementarity_weighted_fp_evaluator_0_100': 'CP',
+    'cfp_50_50': 'CFP',
+    'cfp_100_0': 'CF',
+    'cfp_0_100': 'CP',
     'ff': 'FF',
     'fast-downward': 'FastDownward',
     'fd': 'FastDownward',
@@ -381,6 +384,7 @@ def get_descriptives(db, domain_name, planner, evaluator):
     orig_domain = db.domains.find_one(
         {'name': domain_name, 'augmented': { '$ne': True}})
     print('best domain ID: {}'.format(best_domain['_id']))
+    print('')
     for domain in [ orig_domain, best_domain ]:
         get_domain_descriptives(db, domain['_id'], planner, evaluator)
 
@@ -390,6 +394,8 @@ def get_domain_descriptives(db, domain_id, planner, evaluator):
         print('Could not find domain with ID "{}"!'.format(domain_id))
         return
     is_augmented = 'augmented' in domain and domain['augmented'] == True
+    if not is_augmented:
+        evaluator = 'none'
     domain_name = domain['name']
     failed_count = db.solutions.find(
             {'domain': domain['_id'],
