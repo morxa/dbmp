@@ -354,6 +354,9 @@ def main():
                 evaluation[evaluator.name()] = evaluator.evaluate(macro)
             macro.evaluation = evaluation
             if args.best_evaluated:
+                assert args.evaluator in evaluation, \
+                        '{} not a valid evaluator. Evaluators: {}'.format(\
+                            args.evaluator, list(evaluation.keys()))
                 evaluation_scores.append(evaluation[args.evaluator])
         evaluation_scores.sort(reverse=True)
         best_macros = set()
