@@ -81,7 +81,7 @@ class FrequencyEvaluator(Evaluator):
         """
         return len(macro.actions) * macro.count / self.normalizer
     def name(self):
-        return 'frequency_evaluator'
+        return 'frequency'
 
 class ReductionEvaluator(Evaluator):
     """ An Evaluator based on the macro's parameter reduction.
@@ -103,7 +103,7 @@ class ReductionEvaluator(Evaluator):
         """
         return macro.parameter_reduction
     def name(self):
-        return 'reduction_evaluator'
+        return 'param_reduction'
 
 class WeightedFPEvaluator(Evaluator):
     """ An evaluator that combines frequency and parameter reduction.
@@ -145,7 +145,7 @@ class WeightedFPEvaluator(Evaluator):
                 self.reduction_weight * \
                 (self.reduction_evaluator.evaluate(macro))
     def name(self):
-        return 'weighted_fp_evaluator_{}_{}'.format(self.frequency_weight,
+        return 'fp_{}_{}'.format(self.frequency_weight,
                                                     self.reduction_weight)
 
 class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
@@ -176,7 +176,7 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
         list_evaluation = super(WeightedFPEvaluator, self).evaluate_list(macros)
         return complementarity * list_evaluation
     def name(self):
-        return 'complementarity_weighted_fp_evaluator_{}_{}'.format(
+        return 'cfp_{}_{}'.format(
             self.frequency_weight, self.reduction_weight)
 
 class PRSquaredEvaluator(Evaluator):
