@@ -46,7 +46,7 @@ class Evaluator(object):
             A score for the macro list.
         """
         macro_evaluations = [ self.evaluate(macro) for macro in macros ]
-        return sum(macro_evaluations) / math.sqrt(len(macros))
+        return sum(macro_evaluations)
     def name(self):
         """ The name of the evaluator.
 
