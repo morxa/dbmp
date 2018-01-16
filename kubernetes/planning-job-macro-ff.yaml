@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: $PLANNER-$LOWERDOMAIN-$LOWERPROBLEM
+  labels:
+    jobgroup: planning-tasks
+    planner: $PLANNER
+    domain: $LOWERDOMAIN
+    problem: $LOWERPROBLEM
+    phase: evaluation
+spec:
+  template:
+    metadata:
+      name: planner-worker
+    spec:
+      containers:
+      - name: planner-worker
+        image: morxa/planner
+        command: ["worker.py"]
+        args: ["--planner", "$PLANNER",
+               "--macros", "macroff-$LOWERDOMAIN",
+               "--memory-limit", "4G", "--time-limit", "1800",
+               "$DOMAIN", "$PROBLEM"]
+        volumeMounts:
+          - name: mongo-certs
+            mountPath: /secrets/mongo-certs
+            readOnly: true
+        env:
+          - name: PLANDB_USER
+            valueFrom:
+              secretKeyRef:
+                name: plan-db
+                key: dbuser.txt
+          - name: PLANDB_PWD
+            valueFrom:
+              secretKeyRef:
+                name: plan-db
+                key: pwd.txt
+          - name: PLANDB_HOST
+            value: enterprise
+        resources:
+          requests:
+            cpu: "1"
+            memory: "4G"
+          limits:
+            cpu: "1"
+            memory: "5G"
+      volumes:
+        - name: mongo-certs
+          secret:
+            secretName: mongo-certs
+      restartPolicy: OnFailure
