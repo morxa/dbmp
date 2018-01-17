@@ -161,9 +161,48 @@ var cleanupResult = function(key, actionSequence) {
             }
         )
       })
-  return cleanedResult;
+  filteredResult = Object.assign({}, cleanedResult);
+  filteredResult['parameters'] = [];
+  best_count = {};
+  best_params = {};
+  var skipped = 0;
+  for (var i = 0; i < cleanedResult['parameters'].length; i++) {
+    count = cleanedResult['parameters'][i]['count']
+    assignment = cleanedResult['parameters'][i]['assignment']
+    var num_params = 0;
+    for (var j = 0; j < assignment.length; j++) {
+      for (var k = 0; k < assignment[j].length; k++) {
+        param = assignment[j][k];
+        if (param > num_params) {
+          num_params = param;
+        }
+      }
+    }
+    if (num_params in best_count) {
+      if (count < best_count[num_params]) {
+        //print(cleanedResult['actions'] + ": Skipping assignment " + assignment)
+        //print("    Assignment with same parameters and higher count exists.")
+        //print("    num_params: " + num_params + ", count: " + count + ", best: " + best_count[num_params])
+        skipped++;
+        continue;
+      }
+    }
+    if (count in best_params) {
+      if (num_params > best_params[count]) {
+        //print(cleanedResult['actions'] + ": Skipping assignment " + assignment)
+        //print("    Assignment with same count and fewer parameters exist.")
+        //print("    num_params: " + num_params + ", count: " + count + ", best: " + best_params[count])
+        skipped++;
+        continue;
+      }
+    }
+    best_count[num_params] = count;
+    best_params[count] = num_params;
+    filteredResult['parameters'].push(cleanedResult['parameters'][i]);
+  }
+  //print("Skipped " + skipped + " assignments in total.")
+  return filteredResult;
 }
-
 
 function get_macros(domain_name, max_length) {
   var out = 'action_sequences_' + domain_name;
