@@ -30,6 +30,8 @@ problems=${@:2}
 
 macro_file="macros.pddl"
 
+ulimit -Sv 8000000
+
 for problem in $problems ; do
   sed -i '/^TIME/d' $problem
   if [ -e macros.pddl ] ; then
@@ -38,4 +40,3 @@ for problem in $problems ; do
     timeout $TIMEOUT macroff -m P -r $macro_file -o $domain -f $problem
   fi
 done
-
