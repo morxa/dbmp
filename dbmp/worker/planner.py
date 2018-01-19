@@ -192,6 +192,8 @@ class FDSatPlanner(FDPlanner):
         super().__init__(*args, **kwargs)
         self.output = ''
     def run(self):
+        for plan_file in glob.glob('sas_plan*'):
+            os.remove(plan_file)
         proc = subprocess.Popen(
             ['fast-downward',
              '--overall-memory-limit', str(self.memory_limit),
@@ -200,8 +202,6 @@ class FDSatPlanner(FDPlanner):
              self.domain, self.problem],
             **self.common_kwargs
         )
-        for plan_file in glob.glob('sas_plan*'):
-            os.remove(plan_file)
         while True:
             try:
                 proc.wait(timeout=1)
