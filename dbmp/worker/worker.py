@@ -204,13 +204,13 @@ def main():
             raw=planner.get_solution(), resources=planner.get_resources(),
             start_time=start_time, use_for_macros=args.use_for_macros)
     except NoSolutionFoundError:
-        print('Planner output:\n' + result.stdout)
+        print('Planner output:\n{}'.format(planner.get_output()))
         print('Could not find a solution. Planner failed, '
               'return code: {}'.format(result.returncode))
         db_connector.upload_result(
             planner=args.planner, domain=bson.objectid.ObjectId(args.domain),
             problem=bson.objectid.ObjectId(args.problem),
-            error='no solution found', output=result.stdout,
+            error='no solution found', output=planner.get_output(),
             start_time=start_time)
 
 if __name__ == '__main__':

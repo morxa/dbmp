@@ -70,6 +70,9 @@ class Planner(object):
     def obeys_limits(self):
         """Whether this planner has its own resource manager to obey limits."""
         return False
+    def get_output(self):
+        """Return the output of the subprocess."""
+        return self.result.stdout
     def factory(planner, *args, **kwargs):
         if planner in ['ff', 'fastforward', 'fast-forward']:
             return FFPlanner(*args, **kwargs)
@@ -187,6 +190,7 @@ class FDSatPlanner(FDPlanner):
     """ Fast Downward which stops at the first solution. """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.output = ''
     def run(self):
         proc = subprocess.Popen(
             ['fast-downward',
@@ -210,7 +214,11 @@ class FDSatPlanner(FDPlanner):
         if os.path.isfile('sas_plan.1'):
             proc.returncode = 0
         self.result = proc
+        self.output = self.result.stdout.read()
         return proc
+    def get_output(self):
+        """Get the output of the subprocess."""
+        return self.output
 
 class EnsemblePlanner(Planner):
     """ Ensemble planning of Fast-Forward and Fast Downward. """
