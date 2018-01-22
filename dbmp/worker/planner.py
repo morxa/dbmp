@@ -210,11 +210,11 @@ class FDSatPlanner(FDPlanner):
                 pass
             if os.path.isfile('sas_plan.1'):
                 proc.terminate()
+                self.output = proc.communicate()
                 break
         if os.path.isfile('sas_plan.1'):
             proc.returncode = 0
         self.result = proc
-        self.output = self.result.stdout.read()
         return proc
     def get_output(self):
         """Get the output of the subprocess."""
