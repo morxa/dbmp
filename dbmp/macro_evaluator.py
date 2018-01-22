@@ -179,6 +179,20 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
         return 'cfp_{}_{}'.format(
             self.frequency_weight, self.reduction_weight)
 
+class MCWithLengthWeightedFPEvaluator(MacroComplementarityWeightedFPEvaluator):
+    """ The MacroComplementarityWeightedFPEvaluator with penalty for many macros
+
+    Having a lot of macros in a domain may be a disadvantage, this evaluator
+    tries to minimize the number of macros in a domain.
+    """
+    def evaluate_list(self, macros):
+        return super(MacroComplementarityWeightedFPEvaluator,
+                     self).evaluate_list(macros) / math.sqrt(len(macros))
+    def name(self):
+        return 'clfp_{}_{}'.format(
+            self.frequency_weight, self.reduction_weight)
+
+
 class PRSquaredEvaluator(Evaluator):
     """ An evaluator that squares the parameter reduction so a high parameter
     reduction gets a very high value.

@@ -379,6 +379,9 @@ def main():
         evaluators.append(
             macro_evaluator.MacroComplementarityWeightedFPEvaluator(
                 weight, total_num_actions))
+        evaluators.append(
+            macro_evaluator.MCWithLengthWeightedFPEvaluator(
+                weight, total_num_actions))
         evaluators.append(macro_evaluator.ComplementarityPRSquaredEvaluator())
     if args.augment_domain:
         num_domains = 0
