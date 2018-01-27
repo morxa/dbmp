@@ -101,7 +101,9 @@ class ReductionEvaluator(Evaluator):
         Returns:
             A score for the macro; the higher the score the better the macro.
         """
-        return macro.parameter_reduction
+        if macro.parameter_reduction == 0:
+            return 0
+        return macro.parameter_reduction / len(macro.flat_parameters)
     def name(self):
         return 'param_reduction'
 

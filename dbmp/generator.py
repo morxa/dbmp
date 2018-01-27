@@ -43,6 +43,7 @@ class MacroAction(object):
         self.num_actions = 0
         self.actions = []
         self.parameters = []
+        self.flat_parameters = []
         self.count = 0
         self.type = 'dbmp'
         self.evaluation = {}
@@ -55,6 +56,8 @@ class MacroAction(object):
         self.actions = db_macro['actions']
         self.num_actions = len(self.actions)
         self.parameters = db_macro['parameters']
+        self.flat_parameters = \
+                list(itertools.chain.from_iterable(self.parameters))
         self.parameter_reduction = db_macro['parameter_reduction']
         self.evaluation = db_macro['evaluation']
         self.count = db_macro['count']
@@ -73,8 +76,9 @@ class MacroAction(object):
         self.actions = actions
         self.num_actions = len(actions)
         self.parameters = parameters
-        flat_parameters = list(itertools.chain.from_iterable(parameters))
-        self.parameter_reduction = len(flat_parameters) - max(flat_parameters)
+        self.flat_parameters = list(itertools.chain.from_iterable(parameters))
+        self.parameter_reduction = \
+                len(self.flat_parameters) - max(self.flat_parameters)
         self.generate_with_run(domain_file_path, actions, parameters)
     def generate_with_pyswip(self, domain_file_path, actions, parameters):
         """ Generate a macro using pyswip.
