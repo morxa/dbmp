@@ -227,7 +227,7 @@ class MadagascarMPCPlanner(Planner):
         super().__init__(*args, **kwargs)
     def run(self):
         self.result = subprocess.run(
-            ['madagascar-mpc', '-Q', '-m', str(self.memory_limit), self.domain,
+            ['madagascar-mpc', '-P', '0', '-Q', '-m', str(self.memory_limit), self.domain,
              self.problem, '-o', 'solution.pddl'],
             **self.common_kwargs)
         return self.result
