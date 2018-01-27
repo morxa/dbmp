@@ -106,7 +106,7 @@ class MacroExtractor(object):
             if re.match('^;', line):
                 continue
             match = re.fullmatch(
-                '(\d+:)?\s*\(({0})((?:\s+[-\w]+)*)\)\s*(\[.*\])?'.format(self.action_regex), line)
+                '(\d+\s*:)?\s*\(({0})((?:\s+[-\w]+)*)\)\s*(\[.*\])?'.format(self.action_regex), line)
             assert(match), 'Unexpected solution line "{}"'.format(line)
             action = match.group(2).upper()
             if action in self.macros.keys():

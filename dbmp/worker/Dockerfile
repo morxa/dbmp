@@ -22,6 +22,7 @@ RUN dnf -y --refresh install 'dnf-command(copr)' && \
       fast-downward \
       fast-forward \
       macroff \
+      madagascar-mpc \
       marvin \
       python3-pymongo \
     && \

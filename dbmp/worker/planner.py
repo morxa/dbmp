@@ -88,6 +88,8 @@ class Planner(object):
             return FDSatPlanner(*args, **kwargs)
         elif planner == 'ensemble':
             return EnsemblePlanner(*args, **kwargs)
+        elif planner == 'mpc':
+            return MadagascarMPCPlanner(*args, **kwargs)
         else:
             raise NotImplementedError
     factory = staticmethod(factory)
@@ -219,6 +221,24 @@ class FDSatPlanner(FDPlanner):
     def get_output(self):
         """Get the output of the subprocess."""
         return self.output
+
+class MadagascarMPCPlanner(Planner):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    def run(self):
+        self.result = subprocess.run(
+            ['madagascar-mpc', '-Q', '-m', str(self.memory_limit), self.domain,
+             self.problem, '-o', 'solution.pddl'],
+            **self.common_kwargs)
+        return self.result
+    def get_solution(self):
+        try:
+            solution_file = open('solution.pddl', 'r')
+            return solution_file.read().upper()
+        except IOError:
+            raise NoSolutionFoundError
+    def obeys_limits(self):
+        return True
 
 class EnsemblePlanner(Planner):
     """ Ensemble planning of Fast-Forward and Fast Downward. """
