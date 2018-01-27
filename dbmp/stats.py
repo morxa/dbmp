@@ -398,11 +398,14 @@ def get_descriptives(db, domain_name, planner, evaluator):
     print('')
     descriptives = {}
     if best_domain:
-        descriptives['dbmp_{}_{}'.format(planner, evaluator)] = \
-                get_domain_descriptives(db, best_domain['_id'], actual_planner,
-                                        evaluator)
-    descriptives[planner] = get_domain_descriptives(db, orig_domain['_id'],
-                                                    actual_planner)
+        d = get_domain_descriptives(db, best_domain['_id'], actual_planner,
+                                    evaluator)
+        if d:
+            descriptives['dbmp{}{}'.format(get_pretty_name(evaluator), planner)] = d
+    if orig_domain:
+        d = get_domain_descriptives(db, orig_domain['_id'], actual_planner)
+        if d:
+            descriptives[planner] = d
     return descriptives
 
 def get_domain_descriptives(db, domain_id, planner, evaluator=None):
@@ -478,6 +481,8 @@ def main():
     parser.add_argument('-d', '--descriptives', action='store_true',
                         help='get descriptives for the given domain and'
                              'planners')
+    parser.add_argument('-t', '--table', action='store_true',
+                        help='generate a latex table showing the results')
     parser.add_argument('--fit', action='store_true',
                         help='add a linear fit to evaluator plots')
     parser.add_argument('--plot-evaluators', action='store_true',
@@ -533,17 +538,26 @@ def main():
         domains = database.domains.distinct('name')
     else:
         domains = args.domains
+    descriptives = {}
     for domain in domains:
+        domain_descriptives = {}
         if args.descriptives:
-            descriptives = {}
             for planner in args.planner:
                 for evaluator in args.evaluator:
-                    descriptives = {
-                        **descriptives,
-                        **get_descriptives(database, domain,
-                                           planner, evaluator)
-                    }
-            printer.pprint(descriptives)
+                    d = get_descriptives(database, domain, planner, evaluator)
+                    if d:
+                        domain_descriptives = { **domain_descriptives, **d }
+            for planner in args.planner:
+                if not planner in domain_descriptives:
+                    domain_descriptives[planner] = {
+                            'solved': 0,
+                            'mean_length': 10000,
+                            'mean_time': 1800,
+                            'quantiles_length': [ 10000, 10000, 10000 ],
+                            'quantiles_time': [ 1800, 1800, 1800 ],
+                        }
+            descriptives[domain] = domain_descriptives
+
         if args.plot_evaluators:
             for evaluator in args.evaluator:
                 plot_evaluation_vs_planning_time(database, domain, evaluator,
@@ -560,6 +574,25 @@ def main():
             for evaluator in args.evaluator:
                 plot_three(database, domain, evaluator, args.planner[0],
                            args.planner[1])
+    printer.pprint(descriptives)
+    if args.table:
+        env = jinja2.Environment(
+            block_start_string = '\BLOCK{',
+            block_end_string = '}',
+            variable_start_string = '\VAR{',
+            variable_end_string = '}',
+            comment_start_string = '\#{',
+            comment_end_string = '}',
+            line_statement_prefix = '%%',
+            line_comment_prefix = '%#',
+            loader=jinja2.FileSystemLoader('stats/templates'))
+        template = env.get_template('table.tex.j2')
+        table = template.render(planners=args.planner,domains=domains,
+                                results=descriptives)
+        tex_path = 'table.tex'
+        with open(tex_path, 'w') as tex_file:
+            tex_file.write(table)
+        subprocess.call(['pdflatex', tex_path])
     if args.meta:
         if args.dbmp_domain:
             assert(len(args.evaluator) == 0), \
