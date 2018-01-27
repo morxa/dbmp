@@ -301,9 +301,14 @@ def main():
             args.domainfile = tmpfile.name
         if not args.domain:
             args.domain = get_domainname(args.domainfile)
+        total_num_actions = 0
+        domain_id = domain_coll.find_one(
+            {'name': args.domain, 'augmented': { '$ne': True }})['_id']
+        for sol in database.solutions.find({'domain': domain_id,
+                                      'use_for_macros': True}):
+            if 'actions' in sol:
+                total_num_actions += len(sol['actions'])
         if args.all:
-            domain_id = domain_coll.find_one(
-                {'name': args.domain, 'augmented': { '$ne': True }})['_id']
             query = { 'value.domain': domain_id }
             if args.min_actions:
                 query['value.actions.'+str(args.min_actions-1)] = \
@@ -311,11 +316,6 @@ def main():
             if args.max_actions:
                 query['value.actions.'+str(args.max_actions)] = \
                         { '$exists': False }
-            total_num_actions = 0
-            for sol in database.solutions.find({'domain': domain_id,
-                                          'use_for_macros': True}):
-                if 'actions' in sol:
-                    total_num_actions += len(sol['actions'])
             for sequence in action_seqs_coll.find(query).sort(
                         [('value.totalCount', -1)]).limit(args.best):
                 for parameters in sequence['value']['parameters']:
