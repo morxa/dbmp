@@ -237,8 +237,6 @@ class MadagascarMPCPlanner(Planner):
             return solution_file.read().upper()
         except IOError:
             raise NoSolutionFoundError
-    def obeys_limits(self):
-        return True
 
 class EnsemblePlanner(Planner):
     """ Ensemble planning of Fast-Forward and Fast Downward. """
