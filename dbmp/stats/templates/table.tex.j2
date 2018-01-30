@@ -32,27 +32,18 @@
 
 \centering
 \begin{tabular}{ r \BLOCK{for planner in planners }| r \BLOCK{endfor}}
-\BLOCK{for planner in planners} & \\VAR{planner|replace("-", "")|replace("_", "")} \BLOCK{endfor} \\
+\BLOCK{for planner in planners}& \\VAR{planner|replace("-", "")|replace("_", "")} \BLOCK{endfor } \\
 %% for domain in domains
 \hline
 \multicolumn{\VAR{planners|length + 1}}{c}{\cellcolor{black!5!white}{\raisebox{.1\height}[1.4\height]{\textbf{\\VAR{domain|replace("-","")|replace("_","")}}}}} \\
-%#\BLOCK{ set result = results[domain][planner] }
-%#\BLOCK{ set solved, mean_time, q1, q2, q3 = result["solved"], result["mean_time"], result["quantiles_time"][0], result["quantiles_time"][1], result["quantiles_time"][2] }
 \# solved \BLOCK{for planner in planners} & \VAR{results[domain][planner]["solved"]|default(0)} \BLOCK{endfor} \\
-mean (s)
-\BLOCK{for planner in planners}
-  \BLOCK{ set result = results[domain][planner] }
-  & \BLOCK{ if result["mean_time"] < 1800 }
-    \VAR{ ("%0.2f" % result["mean_time"])|replace('nan', '-')}
-  \BLOCK{ else }-\BLOCK{ endif }
-\BLOCK{endfor} \\
-\BLOCK{for qn in [0, 1, 2]}
+mean (s) \BLOCK{ for planner in planners -}
+  \BLOCK{ set result = results[domain][planner] } & \BLOCK{ if result["mean_time"] < 1800 -} \VAR{ ("%0.2f" % result["mean_time"])|replace('nan', '-')-} \BLOCK{ else }-\BLOCK{ endif }
+\BLOCK{- endfor } \\
+\BLOCK{for qn in [0, 1, 2] -}
 Q\VAR{qn+1} (s)
-\BLOCK{for planner in planners}
-& \BLOCK{if results[domain][planner]["quantiles_time"][qn] < 1800 }\VAR{ "%0.2f" % results[domain][planner]["quantiles_time"][qn]} \BLOCK{else} -\BLOCK{endif}\BLOCK{endfor} \\
-\BLOCK{endfor}
-%#Q2 (s) \BLOCK{for planner in planners} & \BLOCK{if results[domain][planner]["quantiles_time"][1] < 1800 }\VAR{ "%0.2f" % results[domain][planner]["quantiles_time"][1]} \BLOCK{else} -\BLOCK{endif}\BLOCK{endfor} \\
-%#Q3 (s) \BLOCK{for planner in planners} & \BLOCK{if results[domain][planner]["quantiles_time"][2] < 1800 }\VAR{ "%0.2f" % results[domain][planner]["quantiles_time"][2]} \BLOCK{else} -\BLOCK{endif}\BLOCK{endfor} \\
+\BLOCK{- for planner in planners } & \BLOCK{if results[domain][planner]["quantiles_time"][qn] < 1800 }\VAR{ "%0.2f" % results[domain][planner]["quantiles_time"][qn]} \BLOCK{else}-\BLOCK{endif}\BLOCK{endfor} \\
+\BLOCK{endfor -}
 %% endfor
 \end{tabular}
 
