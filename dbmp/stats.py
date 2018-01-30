@@ -27,6 +27,7 @@ import bson.objectid
 import configparser
 import jinja2
 import numpy
+import os
 import pprint
 import pymongo
 import scipy.stats
@@ -589,9 +590,11 @@ def main():
         template = env.get_template('table.tex.j2')
         table = template.render(planners=args.planner,domains=domains,
                                 results=descriptives)
+        os.chdir(os.path.join(os.getcwd(), 'stats'))
+        table_path = 'table_core.tex'
+        with open(table_path, 'w') as table_file:
+            table_file.write(table)
         tex_path = 'table.tex'
-        with open(tex_path, 'w') as tex_file:
-            tex_file.write(table)
         subprocess.call(['pdflatex', tex_path])
     if args.meta:
         if args.dbmp_domain:

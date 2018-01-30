@@ -1,36 +1,3 @@
-% vim: tw=0:colorcolumn=0
-\documentclass{standalone}
-\usepackage[table]{xcolor}
-\usepackage{tabularx}
-
-\newcommand*{\ff}{FF}
-\newcommand*{\marvin}{Marvin}
-\newcommand*{\mpc}{MPC}
-\newcommand*{\dbmp}{DBMP}
-\newcommand*{\dbmpff}{DBMP/FF}
-\newcommand*{\dbmpCFFPff}{\shortstack{DBMP/FF\\$w_f=0.8,w_l=0$}}
-\newcommand*{\dbmpCFPff}{\shortstack{DBMP/FF\\$w_f=0.5,w_l=0$}}
-\newcommand*{\dbmpCLFFPff}{\shortstack{DBMP/FF\\$w_f=0.8,w_l=0.5$}}
-\newcommand*{\dbmpCLFPff}{\shortstack{DBMP/FF\\$w_f=0.5,w_l=0.5$}}
-\newcommand*{\dbmpCFFPfdsat}{\shortstack{DBMP/FD\\$w_f=0.8,w_l=0$}}
-\newcommand*{\dbmpCFPfdsat}{\shortstack{DBMP/FD\\$w_f=0.5,w_l=0$}}
-\newcommand*{\dbmpCFPmpc}{\shortstack{DBMP/MPC\\$w_f=0.5,w_l=0$}}
-\newcommand*{\dbmpCFFPmpc}{\shortstack{DBMP/MPC\\$w_f=0.8,w_l=0$}}
-\newcommand*{\fastdownward}{FD}
-\newcommand*{\fdsat}{FD}
-\newcommand*{\macroffsolep}{MacroFF}
-\newcommand*{\ptt}{MUM}
-\newcommand*{\blocksworld}{Blocksworld}
-\newcommand*{\hiking}{Hiking}
-\newcommand*{\barman}{Barman}
-\newcommand*{\rcllproduction}{Logistics Robots}
-\newcommand*{\cleanupwithkif}{Cleanup}
-\newcommand*{\cavedivingadlnocosts}{Cave Diving}
-
-
-\begin{document}
-
-\centering
 \begin{tabular}{ r \BLOCK{for planner in planners }| r \BLOCK{endfor}}
 \BLOCK{for planner in planners}& \\VAR{planner|replace("-", "")|replace("_", "")} \BLOCK{endfor } \\
 %% for domain in domains
@@ -46,5 +13,3 @@ Q\VAR{qn+1} (s)
 \BLOCK{endfor -}
 %% endfor
 \end{tabular}
-
-\end{document}
