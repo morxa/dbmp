@@ -187,12 +187,17 @@ class MCWithLengthWeightedFPEvaluator(MacroComplementarityWeightedFPEvaluator):
     Having a lot of macros in a domain may be a disadvantage, this evaluator
     tries to minimize the number of macros in a domain.
     """
+    def __init__(self, frequency_weight, frequency_normalizer, length_weight):
+        MacroComplementarityWeightedFPEvaluator.__init__(self,
+            frequency_weight=frequency_weight,
+            normalizer=frequency_normalizer)
+        self.length_weight = length_weight
     def evaluate_list(self, macros):
-        return super(MacroComplementarityWeightedFPEvaluator,
-                     self).evaluate_list(macros) / math.sqrt(len(macros))
+        return math.pow(len(macros), -self.length_weight) * \
+                super(MacroComplementarityWeightedFPEvaluator, self).evaluate_list(macros)
     def name(self):
         return 'clfp_{}_{}'.format(
-            self.frequency_weight, self.reduction_weight)
+            self.frequency_weight, self.length_weight)
 
 
 class PRSquaredEvaluator(Evaluator):
