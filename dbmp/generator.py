@@ -331,9 +331,14 @@ def main():
                         parameter_list.append([int(param) for param in params])
                     m = MacroAction()
                     m.generate(args.domainfile, actions, parameter_list)
-                    m.count = int(parameters['count'])
-                    m.domain = args.domain
-                    macros.add(m)
+                    if m.initialized:
+                        m.count = int(parameters['count'])
+                        m.domain = args.domain
+                        macros.add(m)
+                    else:
+                        print('Failed to initialize macro with actions '
+                              '{} and parameters {}.'.format(actions,
+                                                             parameter_list))
     if args.action:
         actions = args.action[0::2]
         parameters = []
@@ -345,10 +350,14 @@ def main():
         assert(args.domainfile), 'Domain was not specified'
         m = MacroAction()
         m.generate(args.domainfile, actions, parameters)
-        m.domain = args.domain
-        # We don't really know the count, so assume it is 1.
-        m.count = 1
-        macros.add(m)
+        if m.initialized:
+            m.domain = args.domain
+            # We don't really know the count, so assume it is 1.
+            m.count = 1
+            macros.add(m)
+        else:
+            print('Failed to initialize macro with actions '
+                  '{} and parameters {}.'.format(actions, parameters))
     if args.evaluate:
         evaluators = []
         for weight in range(0,101,10):
