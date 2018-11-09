@@ -348,8 +348,12 @@ def main():
     if args.evaluate:
         evaluators = []
         for weight in range(0,101,10):
-            evaluators.append(
-                macro_evaluator.WeightedFPEvaluator(weight, total_num_actions))
+            for lweight in range(0,11):
+                evaluators.append(
+                    macro_evaluator.MCWithLengthWeightedFPEvaluator(
+                        frequency_weight=weight,
+                        frequency_normalizer=total_num_actions,
+                        length_weight=lweight))
         evaluators.append(macro_evaluator.PRSquaredEvaluator())
         evaluation_scores = []
         for macro in macros:
@@ -380,12 +384,12 @@ def main():
             print(macro.__dict__)
     evaluators = []
     for weight in range(0,101,10):
-        evaluators.append(
-            macro_evaluator.MacroComplementarityWeightedFPEvaluator(
-                weight, total_num_actions))
-        evaluators.append(
-            macro_evaluator.MCWithLengthWeightedFPEvaluator(
-                weight, total_num_actions))
+        for lweight in range(0,11):
+            evaluators.append(
+                macro_evaluator.MCWithLengthWeightedFPEvaluator(
+                    frequency_weight=weight,
+                    frequency_normalizer=total_num_actions,
+                    length_weight=lweight))
         evaluators.append(macro_evaluator.ComplementarityPRSquaredEvaluator())
     if args.augment_domain:
         num_domains = 0
