@@ -117,10 +117,14 @@ class MacroAction(object):
         macro_file = tempfile.NamedTemporaryFile(mode='r')
         query = 'generate_macro_to_file("{}", {}, {}, "{}").'.format(
             domain_file_path, actions, parameters, macro_file.name)
-        subprocess.call(["swipl", "-q", "-l",
-                         "../generation/macro_generator.pl", "-t", query])
-        self.macro = macro_file.read()
-        self.initialized = True
+        try:
+            subprocess.call(["swipl", "-q", "-l",
+                             "../generation/macro_generator.pl", "-t", query],
+                           timeout=10)
+            self.macro = macro_file.read()
+            self.initialized = True
+        except subprocess.TimeoutExpired:
+            pass
 
 # TODO: this is copied from scripts and should be separated into a module such
 # that it can be reused.
