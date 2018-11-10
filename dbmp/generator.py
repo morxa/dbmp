@@ -331,7 +331,7 @@ def main():
                         parameter_list.append([int(param) for param in params])
                     m = MacroAction()
                     m.generate(args.domainfile, actions, parameter_list)
-                    if m.initialized:
+                    if m.initialized and m.macro:
                         m.count = int(parameters['count'])
                         m.domain = args.domain
                         macros.add(m)
