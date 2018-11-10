@@ -380,12 +380,15 @@ def main():
                             args.evaluator, list(evaluation.keys()))
                 evaluation_scores.append(evaluation[args.evaluator])
         evaluation_scores.sort(reverse=True)
-        best_macros = set()
-        for macro in macros:
-            if macro.evaluation[args.evaluator] >= \
-               evaluation_scores[args.best_evaluated - 1]:
-                best_macros.add(macro)
-        macros = best_macros
+        if args.best_evaluated:
+            assert args.evaluator, \
+                    'Need an evaluator to check for the best macros'
+            best_macros = set()
+            for macro in macros:
+                if macro.evaluation[args.evaluator] >= \
+                   evaluation_scores[args.best_evaluated - 1]:
+                    best_macros.add(macro)
+            macros = best_macros
     for macro in macros:
         if args.save:
             macro._id = macros_coll.find_one_and_replace(
