@@ -145,13 +145,13 @@ def main():
     parser.add_argument('-t', '--kubernetes-template',
                         help='the job template for the Kubernetes job')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--training', dest='problem_set', default='training',
+    group.add_argument('--training', dest='phase', default='training',
                         action='store_const', const='training',
                         help='mark uploaded problems as training problems')
-    group.add_argument('--validation', dest='problem_set',
+    group.add_argument('--validation', dest='phase',
                         action='store_const', const='validation',
                         help='mark uploaded problems as validation problems')
-    group.add_argument('--test', dest='problem_set',
+    group.add_argument('--test', dest='phase',
                         action='store_const', const='test',
                         help='mark uploaded problems as test problems')
     parser.add_argument('--skip-upload', action='store_true',
@@ -237,7 +237,7 @@ def main():
                 'Problem "{}" already exists in database.'.format(problem_name)
             problem_id = problem_coll.insert(
                 {'name': problem_name, 'domain': domain_name,
-                 'raw': problem_string, 'set': args.problem_set })
+                 'raw': problem_string, 'phase': args.phase })
         else:
             problem_id =  problem_coll.find_one({ 'name': problem_name })['_id']
         problems.add(problem_id)
