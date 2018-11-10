@@ -40,10 +40,15 @@ def main():
     client = pymongo.MongoClient(host=args.host)
     db = client.macro_planning
     db.authenticate(args.user, args.password)
+    domain_entry = db.domains.find_one({'name': args.domain,
+                                        'augmented': { '$ne': True }})
+    assert domain_entry, \
+            'Could not find domain with name {} in db'.format(args.domain)
+    domain_id = domain_entry['_id']
     print('Uploading macro file "{}" for domain "{}"'.format(
-        args.macro_file.name, args.domain))
-    db.macros.insert_one({'name': 'macroff-' + args.domain,
-                          'domain': args.domain,
+        args.macro_file.name, domain_id))
+    db.macros.insert_one({'name': 'macroff-' + str(domain_id),
+                          'domain': domain_id,
                           'planner': 'macroff',
                           'raw': args.macro_file.read() })
 
