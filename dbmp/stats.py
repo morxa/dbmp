@@ -373,7 +373,7 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def get_descriptives(db, domain_name, planner, evaluator):
+def get_descriptives(db, domain_name, planner, phase, evaluator):
     """ Get some basic descriptives such as mean time, # solved, quantiles.
 
     This computes descriptives for the given domain name and planner. It checks
@@ -406,16 +406,17 @@ def get_descriptives(db, domain_name, planner, evaluator):
     descriptives = {}
     if best_domain:
         d = get_domain_descriptives(db, best_domain['_id'], actual_planner,
-                                    evaluator)
+                                    phase, evaluator)
         if d:
             descriptives['dbmp{}{}'.format(get_pretty_name(evaluator), planner)] = d
     if orig_domain:
-        d = get_domain_descriptives(db, orig_domain['_id'], actual_planner)
+        d = get_domain_descriptives(db, orig_domain['_id'], actual_planner,
+                                    phase)
         if d:
             descriptives[planner] = d
     return descriptives
 
-def get_domain_descriptives(db, domain_id, planner, evaluator=None):
+def get_domain_descriptives(db, domain_id, planner, phase, evaluator=None):
     domain = db.domains.find_one({'_id': bson.objectid.ObjectId(domain_id)})
     if not domain:
         print('Could not find domain with ID "{}"!'.format(domain_id))
@@ -424,16 +425,18 @@ def get_domain_descriptives(db, domain_id, planner, evaluator=None):
     if not is_augmented:
         evaluator = None
     domain_name = domain['name']
+    problems = db.problems.find({'domain': domain_name, 'phase': phase})
+    problem_ids = [ problem['_id'] for problem in problems ]
     failed_count = db.solutions.find(
             {'domain': domain['_id'],
              'planner': planner,
-             'use_for_macros': { '$ne': True },
+             'problem': { '$in': problem_ids },
              'error': { '$exists': True } }
         ).count()
     solutions = db.solutions.find(
             {'domain': domain['_id'],
              'planner': planner,
-             'use_for_macros': { '$ne': True },
+             'problem': { '$in': problem_ids },
              'error': { '$exists': False } }
         )
     successful_count = solutions.count()
@@ -493,6 +496,13 @@ def main():
                         help='config file to read database info from')
     parser.add_argument('-a', '--all', action='store_true',
                         help='evaluate all domains')
+    phase_group = parser.add_mutually_exclusive_group(required=True)
+    phase_group.add_argument('--validation', dest='phase',
+                             action='store_const', const='validation',
+                             help='get stats for the validation group')
+    phase_group.add_argument('--test', dest='phase',
+                             action='store_const', const='test',
+                             help='get stats for the test group')
     parser.add_argument('-d', '--descriptives', action='store_true',
                         help='get descriptives for the given domain and'
                              'planners')
@@ -562,7 +572,8 @@ def main():
         if args.descriptives:
             for planner in args.planner:
                 for evaluator in args.evaluator:
-                    d = get_descriptives(database, domain, planner, evaluator)
+                    d = get_descriptives(database, domain, planner, args.phase,
+                                         evaluator)
                     if d:
                         domain_descriptives = { **domain_descriptives, **d }
             for planner in args.planner:
