@@ -156,9 +156,12 @@ def main():
                         help='mark uploaded problems as test problems')
     parser.add_argument('--skip-upload', action='store_true',
                         help='do not upload the problem')
-    parser.add_argument('--domainfile', help='the domain file to add')
-    parser.add_argument('--domain',
-                        help='the ID of the domain the problems belong to')
+    dom_group = parser.add_mutually_exclusive_group(required=True)
+    dom_group.add_argument('--domainfile', help='the domain file to add')
+    dom_group.add_argument('--domain',
+                           help='the name of the domain the problems belong to')
+    dom_group.add_argument('--domain-id',
+                           help='the ID of the domain the problems belong to')
     parser.add_argument('--problem', action='append', dest='problems',
                         help='Additional problem to start a job for')
     parser.add_argument('--planner', default='ff', help='the planner to use')
@@ -200,12 +203,6 @@ def main():
         domainfile = open(args.domainfile, 'r')
         domain_string = domainfile.read()
         domain_name = get_domainname(domain_string)
-        if args.domain:
-            domain_entry = domain_coll.find_one(
-                { '_id': bson.objectid.ObjectId(args.domain) })
-            assert domain_entry['name'] == domain_name, \
-                'Domain "{}" in domain file does not match ' \
-                'given domain "{}".'.format(domain_name, domain_entry['name'])
         if not args.skip_upload:
             assert domain_coll.find({ 'name': domain_name }).count() == 0, \
                 'Domain "{}" already exists in the database.'.format(
@@ -215,15 +212,20 @@ def main():
         if not domain:
             domain = domain_coll.find_one({'name': domain_name,
                                            'augmented': { '$ne': True }})['_id']
-    else:
-        assert args.domain, \
-            'You need to specify a domain file or a domain ID.'
-        domain = args.domain
+    elif args.domain_id:
+        domain = args.domain_id
         domain_entry = domain_coll.find_one(
             { '_id': bson.objectid.ObjectId(domain) })
         assert(domain_entry), \
                 'Could not find domain with ID "{}"'.format(domain)
         domain_name = domain_entry['name']
+    else:
+        domain_name = args.domain
+        domain_entry = domain_coll.find_one(
+            { 'name': domain_name })
+        assert domain_entry, \
+                'Could not find domain with name "{}"'.format(domain_name)
+        domain = domain_entry['_id']
     for problempath in args.problemfiles:
         problemfile = open(problempath, 'r')
         problem_string = problemfile.read()
