@@ -33,6 +33,8 @@ import pymongo
 import scipy.stats
 import subprocess
 
+MAX_TIME = 1800
+
 pretty_names = {
     'complementarity_weighted_fp_evaluator_50_50': 'CFP',
     'complementarity_weighted_fp_evaluator_100_0': 'CF',
@@ -86,7 +88,7 @@ def plot_evaluation_vs_planning_time(db, domain_name, evaluator, fit):
             if 'resources' in solution:
                 planning_time = solution['resources'][0]
             else:
-                planning_time = 1800.0
+                planning_time = MAX_TIME
             time_sum += planning_time
             solution_count += 1
             data.append([eval_score, planning_time])
@@ -238,19 +240,19 @@ def plot_three(db, domain_name, evaluator, planner1, planner2):
              'planner': planner1,
              'problem': problem['_id']})
         planner1_data.append([problem_index,
-                              solution1.get('resources', [1800])[0]])
+                              solution1.get('resources', [MAX_TIME])[0]])
         solution2 = db.solutions.find_one(
             {'domain': other_domain['_id'],
              'planner': planner2,
              'problem': problem['_id']})
         planner2_data.append([problem_index,
-                              solution2.get('resources', [1800])[0]])
+                              solution2.get('resources', [MAX_TIME])[0]])
         solution_best = db.solutions.find_one(
             {'domain': best_domain['_id'],
              'planner': 'ff',
              'problem': problem['_id']})
         best_data.append([problem_index,
-                          solution_best.get('resources', [1800])[0]])
+                          solution_best.get('resources', [MAX_TIME])[0]])
         problem_index += 1
     base_path = 'stats/' + domain_name.replace(' ', '_') \
             + '_times_three_planners'
@@ -320,14 +322,14 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
                 if solution and 'resources' in solution:
                     times[planner].append(solution['resources'][0])
                 else:
-                    times[planner].append(1800)
+                    times[planner].append(MAX_TIME)
             best_solution = db.solutions.find_one(
                 {'planner': 'ff', 'use_for_macros': { '$ne': True },
                  'problem': problem['_id'], 'domain': best_domain['_id']})
             if best_solution and 'resources' in best_solution:
                 times['dbmp'].append(best_solution['resources'][0])
             else:
-                times['dbmp'].append(1800)
+                times['dbmp'].append(MAX_TIME)
     data = {
         'ff': [],
         'fast-downward': [],
@@ -338,7 +340,7 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
     for planner in planners:
         data[planner] = []
     print('dbmp times: {}'.format(times['dbmp']))
-    for time in range(1800):
+    for time in range(MAX_TIME):
         for planner, planner_times in times.items():
             num_solutions = len(planner_times)
             if not num_solutions: continue
@@ -451,7 +453,7 @@ def get_domain_descriptives(db, domain_id, planner, evaluator=None):
     all_times = copy.copy(times)
     all_lengths = copy.copy(solution_lengths)
     for _ in range(failed_count):
-        all_times.append(1800)
+        all_times.append(MAX_TIME)
         all_lengths.append(10000)
     mean_time = numpy.mean(times)
     quantiles_time = scipy.stats.mstats.mquantiles(all_times)
@@ -556,9 +558,9 @@ def main():
                     domain_descriptives[planner] = {
                             'solved': 0,
                             'mean_length': 10000,
-                            'mean_time': 1800,
+                            'mean_time': MAX_TIME,
                             'quantiles_length': [ 10000, 10000, 10000 ],
-                            'quantiles_time': [ 1800, 1800, 1800 ],
+                            'quantiles_time': [ MAX_TIME, MAX_TIME, MAX_TIME ],
                         }
             descriptives[domain] = domain_descriptives
 
