@@ -85,6 +85,13 @@ def main():
                         help='the min score the macro has to have')
     parser.add_argument('--best', type=int, default=0,
                         help='limit to the n highest scoring macros or domains')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--validation', dest='phase', default='validation',
+                        action='store_const', const='validation',
+                        help='run benchmarks on the validation set')
+    group.add_argument('--test', dest='phase',
+                        action='store_const', const='test',
+                        help='run benchmarks on the test set')
     parser.add_argument('macros', metavar='macro', nargs='*',
                         help='the ID of a macro to use')
     args = parser.parse_args()
@@ -160,7 +167,7 @@ def main():
         domains.add(original_domain['_id'])
     for domain in domains:
         for problem in problem_coll.find({'domain': args.domain,
-                                          'validation': True }):
+                                          'phase': args.phase }):
             if not args.all and solutions_coll.find_one(
                 { 'domain': bson.objectid.ObjectId(domain),
                   'problem': bson.objectid.ObjectId(problem['_id']),
