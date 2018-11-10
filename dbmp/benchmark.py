@@ -63,6 +63,8 @@ def main():
     parser.add_argument('-H', '--db-host', help='the database hostname')
     parser.add_argument('-u', '--db-user', help='the database username')
     parser.add_argument('-p', '--db-passwd', help='the database password')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='dry-run, do not create jobs')
     parser.add_argument('--planner', default='ff', help='the planner to use')
     parser.add_argument('-t', '--kubernetes-template',
                         help='the job template for the Kubernetes job')
@@ -175,8 +177,12 @@ def main():
                   'use_for_macros': { '$ne': True }}):
                 # solution already exists, skip this problem
                 continue
-            start_job(args.planner, args.kubernetes_template, domain,
-                      problem['_id'])
+            if args.dry_run:
+                print('Job: {}-{}-{}'.format(args.planner, domain,
+                                             problem['_id']))
+            else:
+                start_job(args.planner, args.kubernetes_template, domain,
+                          problem['_id'])
 
 if __name__ == "__main__":
     main()
