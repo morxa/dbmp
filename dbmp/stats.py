@@ -33,7 +33,7 @@ import pymongo
 import scipy.stats
 import subprocess
 
-MAX_TIME = 1800
+MAX_TIME = 300
 
 pretty_names = {
     'complementarity_weighted_fp_evaluator_50_50': 'CFP',
