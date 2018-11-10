@@ -26,6 +26,7 @@ import copy
 import bson.objectid
 import configparser
 import jinja2
+import math
 import numpy
 import os
 import pprint
@@ -459,10 +460,17 @@ def get_domain_descriptives(db, domain_id, planner, evaluator=None):
     quantiles_time = scipy.stats.mstats.mquantiles(all_times)
     mean_length = numpy.mean(solution_lengths)
     quantiles_length = scipy.stats.mstats.mquantiles(all_lengths)
+    score = 0
+    for time in times:
+        if time < 1:
+            score += 1
+        elif time <= MAX_TIME:
+            score += 1 - math.log10(time) / math.log(MAX_TIME)
     print('Time Mean: {}.'.format(mean_time))
     print('Time Quantiles: {}.'.format(quantiles_time))
     print('Mean solution length: {}.'.format(mean_length))
     print('Length Quantiles: {}.'.format(quantiles_length))
+    print('Agile Score: {}.'.format(score))
     print('\n')
     return {
         'solved': successful_count,
@@ -471,6 +479,7 @@ def get_domain_descriptives(db, domain_id, planner, evaluator=None):
         'quantiles_time': quantiles_time,
         'mean_length': mean_length,
         'quantiles_length': quantiles_length,
+        'score': score,
     }
 
 def main():
@@ -487,8 +496,11 @@ def main():
     parser.add_argument('-d', '--descriptives', action='store_true',
                         help='get descriptives for the given domain and'
                              'planners')
-    parser.add_argument('-t', '--table', action='store_true',
-                        help='generate a latex table showing the results')
+    table_group = parser.add_mutually_exclusive_group()
+    table_group.add_argument('-t', '--table', action='store_true',
+                             help='generate a latex table showing the results')
+    table_group.add_argument('--score-table', action='store_true',
+                             help='generate a latex table showing the scores')
     parser.add_argument('--fit', action='store_true',
                         help='add a linear fit to evaluator plots')
     parser.add_argument('--plot-evaluators', action='store_true',
@@ -581,7 +593,7 @@ def main():
                 plot_three(database, domain, evaluator, args.planner[0],
                            args.planner[1])
     printer.pprint(descriptives)
-    if args.table:
+    if args.table or args.score_table:
         env = jinja2.Environment(
             block_start_string = '\BLOCK{',
             block_end_string = '}',
@@ -592,7 +604,10 @@ def main():
             line_statement_prefix = '%%',
             line_comment_prefix = '%#',
             loader=jinja2.FileSystemLoader('stats/templates'))
-        template = env.get_template('table.tex.j2')
+        if args.table:
+            template = env.get_template('table.tex.j2')
+        else:
+            template = env.get_template('score_table.tex.j2')
         table = template.render(planners=args.planner,domains=domains,
                                 results=descriptives)
         os.chdir(os.path.join(os.getcwd(), 'stats'))

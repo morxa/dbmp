@@ -1,0 +1,6 @@
+\begin{tabular}{ r \BLOCK{for planner in planners }| r \BLOCK{endfor}}
+\textbf{domain} \BLOCK{for planner in planners} & \VAR{planner|replace("-", "")|replace("_", "")} \BLOCK{endfor } \\
+%% for domain in domains
+\VAR{domain|replace("-","")|replace("_","")} \BLOCK{for planner in planners} & \VAR{ ("%0.2f" % results[domain][planner]['score'] | default(0) ) } \BLOCK{endfor}
+%% endfor
+\end{tabular}
