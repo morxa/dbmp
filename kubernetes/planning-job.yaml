@@ -20,7 +20,7 @@ spec:
         image: morxa/planner
         command: ["worker.py"]
         args: ["--planner", "$PLANNER",
-               "--memory-limit", "4G", "--time-limit", "1800",
+               "--memory-limit", "8G", "--time-limit", "300",
                "$DOMAIN", "$PROBLEM"]
         volumeMounts:
           - name: mongo-certs
@@ -42,10 +42,10 @@ spec:
         resources:
           requests:
             cpu: "1"
-            memory: "4G"
+            memory: "7G"
           limits:
             cpu: "1"
-            memory: "5G"
+            memory: "8G"
       volumes:
         - name: mongo-certs
           secret:
