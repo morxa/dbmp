@@ -88,8 +88,6 @@ def main():
     parser.add_argument('--macro-evaluator',
                         help='the name of the evaluation function '
                              'to use for filtering macros')
-    parser.add_argument('--min-score', type=int, default=0,
-                        help='the min score the macro has to have')
     parser.add_argument('--best', type=int, default=0,
                         help='limit to the n highest scoring macros or domains')
     group = parser.add_mutually_exclusive_group()
@@ -143,9 +141,7 @@ def main():
         domains = set()
     if args.all or args.missing:
         if args.macro_evaluator:
-            query = { 'domain': args.domain,
-                      'evaluation.' + args.macro_evaluator:
-                        { '$gte': args.min_score }}
+            query = { 'domain': args.domain }
             sorter = [ ('evaluation.' + args.macro_evaluator, -1) ]
             for macro in \
                     macro_coll.find(query).sort(sorter).limit(args.best):
@@ -157,18 +153,18 @@ def main():
                           'Did you generate the augmented domain?'.format(
                               macro['_id']),
                          file=sys.stderr)
+        domain_entries = list(
+            domain_coll.find( { 'name': args.domain, 'augmented': True }))
         for evaluator in args.domain_evaluators:
-            query = { 'name': args.domain,
-                      'evaluation.' + evaluator:
-                        { '$gte': args.min_score }}
-            domain_entries = domain_coll.find(query)
             if args.best:
-                domain_entries = sorted(
+                best_domain_entries = sorted(
                     domain_entries,
                     key=lambda x: x['evaluation'][evaluator],
                     reverse=True
                 )[0:args.best]
-            for domain in domain_entries:
+            else:
+                best_domain_entries = domain_entries
+            for domain in best_domain_entries:
                 domains.add(domain['_id'])
     if args.original_domain:
         original_domain = domain_coll.find_one(
