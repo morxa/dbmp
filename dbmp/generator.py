@@ -367,8 +367,8 @@ def main():
                         macro_evaluator.MCWithLengthWeightedFPEvaluator(
                             frequency_weight=weight,
                             frequency_normalizer=total_num_actions,
-                            complementarity_weight=cweight/10,
-                            length_weight=lweight/10))
+                            complementarity_weight=cweight,
+                            length_weight=lweight))
         evaluators.append(macro_evaluator.PRSquaredEvaluator())
         evaluation_scores = []
         for macro in macros:

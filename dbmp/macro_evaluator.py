@@ -184,7 +184,7 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
         num_distinct_actions = len(distinct_actions)
         complementarity = num_distinct_actions / num_actions
         complementarity_factor = math.pow(complementarity,
-                                          complementarity_weight)
+                                          complementarity_weight/10)
         list_evaluation = super(WeightedFPEvaluator, self).evaluate_list(macros)
         return complementarity_factor * list_evaluation
     def name(self):
@@ -206,7 +206,7 @@ class MCWithLengthWeightedFPEvaluator(MacroComplementarityWeightedFPEvaluator):
             complementarity_weight=complementarity_weight)
         self.length_weight = length_weight
     def evaluate_list(self, macros):
-        return math.pow(len(macros), -self.length_weight) * \
+        return math.pow(len(macros), -self.length_weight/10) * \
                 super(MacroComplementarityWeightedFPEvaluator, self).evaluate_list(macros)
     def name(self):
         return 'clfp_f{}_l{}_c{}'.format(
