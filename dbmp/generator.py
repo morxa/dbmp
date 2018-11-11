@@ -358,18 +358,18 @@ def main():
         else:
             print('Failed to initialize macro with actions '
                   '{} and parameters {}.'.format(actions, parameters))
+    evaluators = []
+    for weight in range(0,101,10):
+        for lweight in range(0,11):
+            for cweight in range(0,11):
+                evaluators.append(
+                    macro_evaluator.MCWithLengthWeightedFPEvaluator(
+                        frequency_weight=weight,
+                        frequency_normalizer=total_num_actions,
+                        complementarity_weight=cweight,
+                        length_weight=lweight))
+    evaluators.append(macro_evaluator.PRSquaredEvaluator())
     if args.evaluate:
-        evaluators = []
-        for weight in range(0,101,10):
-            for lweight in range(0,11):
-                for cweight in range(0,11):
-                    evaluators.append(
-                        macro_evaluator.MCWithLengthWeightedFPEvaluator(
-                            frequency_weight=weight,
-                            frequency_normalizer=total_num_actions,
-                            complementarity_weight=cweight,
-                            length_weight=lweight))
-        evaluators.append(macro_evaluator.PRSquaredEvaluator())
         evaluation_scores = []
         for macro in macros:
             evaluation = {}
@@ -400,15 +400,6 @@ def main():
                 return_document=pymongo.ReturnDocument.AFTER)['_id']
         if args.verbose:
             print(macro.__dict__)
-    evaluators = []
-    for weight in range(0,101,10):
-        for lweight in range(0,11):
-            evaluators.append(
-                macro_evaluator.MCWithLengthWeightedFPEvaluator(
-                    frequency_weight=weight,
-                    frequency_normalizer=total_num_actions,
-                    length_weight=lweight))
-        evaluators.append(macro_evaluator.ComplementarityPRSquaredEvaluator())
     if args.augment_domain:
         num_domains = 0
         for num_macros in range(1, args.max_num_macros+1):
