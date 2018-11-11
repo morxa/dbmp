@@ -158,8 +158,14 @@ def main():
             query = { 'name': args.domain,
                       'evaluation.' + args.domain_evaluator:
                         { '$gte': args.min_score }}
-            sorter = [ ('evaluation.' + args.domain_evaluator, -1) ]
-            for domain in domain_coll.find(query).sort(sorter).limit(args.best):
+            domain_entries = domain_coll.find(query)
+            if args.best:
+                domain_entries = sorted(
+                    domain_entries,
+                    key=lambda x: x['evaluation'][args.domain_evaluator],
+                    reverse=True
+                )[0:args.best]
+            for domain in domain_entries:
                 domains.add(domain['_id'])
     if args.original_domain:
         original_domain = domain_coll.find_one(
