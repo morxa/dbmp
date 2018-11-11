@@ -158,6 +158,14 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
     in the given macro list are. Completely complementary actions in the macros
     are evaluated higher than macros that consist of the same actions.
     """
+    def __init__(self, frequency_weight, frequency_normalizer,
+                 complementarity_weight):
+        WeightedFPEvaluator.__init__(
+            self,
+            frequency_weight=frequency_weight,
+            normalizer=frequency_normalizer)
+
+        self.complementarity_weight = complementarity_weight
     def evaluate_list(self, macros):
         """ Evaluate the complementarity of the given macros.
 
@@ -175,8 +183,10 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
         # The number of distinct actions in all macros
         num_distinct_actions = len(distinct_actions)
         complementarity = num_distinct_actions / num_actions
+        complementarity_factor = math.pow(complementarity,
+                                          complementarity_weight)
         list_evaluation = super(WeightedFPEvaluator, self).evaluate_list(macros)
-        return complementarity * list_evaluation
+        return complementarity_factor * list_evaluation
     def name(self):
         return 'cfp_{}_{}'.format(
             self.frequency_weight, self.reduction_weight)
@@ -187,17 +197,21 @@ class MCWithLengthWeightedFPEvaluator(MacroComplementarityWeightedFPEvaluator):
     Having a lot of macros in a domain may be a disadvantage, this evaluator
     tries to minimize the number of macros in a domain.
     """
-    def __init__(self, frequency_weight, frequency_normalizer, length_weight):
-        MacroComplementarityWeightedFPEvaluator.__init__(self,
+    def __init__(self, frequency_weight, frequency_normalizer,
+                 complementarity_weight, length_weight):
+        MacroComplementarityWeightedFPEvaluator.__init__(
+            self,
             frequency_weight=frequency_weight,
-            normalizer=frequency_normalizer)
+            frequency_normalizer=frequency_normalizer,
+            complementarity_weight=complementarity_weight)
         self.length_weight = length_weight
     def evaluate_list(self, macros):
         return math.pow(len(macros), -self.length_weight) * \
                 super(MacroComplementarityWeightedFPEvaluator, self).evaluate_list(macros)
     def name(self):
-        return 'clfp_{}_{}'.format(
-            self.frequency_weight, self.length_weight)
+        return 'clfp_f{}_l{}_c{}'.format(
+            self.frequency_weight, self.length_weight,
+            self.complementarity_weight)
 
 
 class PRSquaredEvaluator(Evaluator):
