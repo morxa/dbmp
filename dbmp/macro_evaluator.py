@@ -184,8 +184,8 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
         num_distinct_actions = len(distinct_actions)
         complementarity = num_distinct_actions / num_actions
         complementarity_factor = math.pow(complementarity,
-                                          complementarity_weight/10)
-        list_evaluation = super(WeightedFPEvaluator, self).evaluate_list(macros)
+                                          self.complementarity_weight/10)
+        list_evaluation = WeightedFPEvaluator.evaluate_list(self, macros)
         return complementarity_factor * list_evaluation
     def name(self):
         return 'cfp_{}_{}'.format(
@@ -207,7 +207,7 @@ class MCWithLengthWeightedFPEvaluator(MacroComplementarityWeightedFPEvaluator):
         self.length_weight = length_weight
     def evaluate_list(self, macros):
         return math.pow(len(macros), -self.length_weight/10) * \
-                super(MacroComplementarityWeightedFPEvaluator, self).evaluate_list(macros)
+                MacroComplementarityWeightedFPEvaluator.evaluate_list(self, macros)
     def name(self):
         return 'clfp_f{}_l{}_c{}'.format(
             self.frequency_weight, self.length_weight,
@@ -251,7 +251,7 @@ class ComplementarityPRSquaredEvaluator(PRSquaredEvaluator):
         # The number of distinct actions in all macros
         num_distinct_actions = len(distinct_actions)
         complementarity = num_distinct_actions / num_actions
-        list_evaluation = super(PRSquaredEvaluator, self).evaluate_list(macros)
+        list_evaluation = PRSquaredEvaluator.evaluate_list(self, macros)
         return complementarity * list_evaluation
     def name(self):
         return "compl_pr2"
