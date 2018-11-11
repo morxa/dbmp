@@ -50,6 +50,14 @@ def start_job(planner, job_template, domain, problem):
     print(job_string)
     print('---')
 
+def get_standard_evaluators():
+    evaluators = []
+    for f in range(0, 101, 10):
+        for l in range(0, 11):
+            for c in range(0, 11):
+                evaluators.append('clfp_f{}_l{}_c{}'.format(f, l, c))
+    return evaluators
+
 def main():
     """ Main program.
 
@@ -80,9 +88,6 @@ def main():
     parser.add_argument('--macro-evaluator',
                         help='the name of the evaluation function '
                              'to use for filtering macros')
-    parser.add_argument('--domain-evaluator',
-                        help='the name of the evaluation function '
-                             'to use for filtering domains')
     parser.add_argument('--min-score', type=int, default=0,
                         help='the min score the macro has to have')
     parser.add_argument('--best', type=int, default=0,
@@ -94,8 +99,11 @@ def main():
     group.add_argument('--test', dest='phase',
                         action='store_const', const='test',
                         help='run benchmarks on the test set')
-    parser.add_argument('macros', metavar='macro', nargs='*',
-                        help='the ID of a macro to use')
+    parser.add_argument('--standard-evaluators', action='store_true',
+                        help='use the standard set of evaluators')
+    parser.add_argument('domain_evaluators', metavar='domain-evaluator',
+                        nargs='*',
+                        help='the evaluators to use for domain selection')
     args = parser.parse_args()
     db_host = 'localhost'
     db_user = 'planner'
@@ -125,19 +133,14 @@ def main():
     macro_coll = client.macro_planning.macros
     problem_coll = client.macro_planning.problems
     solutions_coll = client.macro_planning.solutions
+
+    if args.standard_evaluators:
+        args.domain_evaluators += get_standard_evaluators()
+
     if args.augmented_domain:
         domains = set(args.augmented_domain)
     else:
         domains = set()
-    for macro in args.macros:
-        domain = domain_coll.find_one(
-            {'macros': bson.objectid.ObjectId(macro)})
-        if domain:
-            domains.add(domain['_id'])
-        else:
-           print('Warning: Could not find a domain with macro {}. Did you '
-                 'generate the augmented domain?'.format(macro),
-                 file=sys.stderr)
     if args.all or args.missing:
         if args.macro_evaluator:
             query = { 'domain': args.domain,
@@ -154,15 +157,15 @@ def main():
                           'Did you generate the augmented domain?'.format(
                               macro['_id']),
                          file=sys.stderr)
-        if args.domain_evaluator:
+        for evaluator in args.domain_evaluators:
             query = { 'name': args.domain,
-                      'evaluation.' + args.domain_evaluator:
+                      'evaluation.' + evaluator:
                         { '$gte': args.min_score }}
             domain_entries = domain_coll.find(query)
             if args.best:
                 domain_entries = sorted(
                     domain_entries,
-                    key=lambda x: x['evaluation'][args.domain_evaluator],
+                    key=lambda x: x['evaluation'][evaluator],
                     reverse=True
                 )[0:args.best]
             for domain in domain_entries:
