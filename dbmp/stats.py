@@ -34,6 +34,8 @@ import pymongo
 import scipy.stats
 import subprocess
 
+from operator import itemgetter
+
 MAX_TIME = 300
 
 pretty_names = {
@@ -373,7 +375,7 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def get_descriptives(db, domain_name, planner, phase, evaluator):
+def get_descriptives(db, domain_name, planner, phase, evaluator=None):
     """ Get some basic descriptives such as mean time, # solved, quantiles.
 
     This computes descriptives for the given domain name and planner. It checks
@@ -392,29 +394,31 @@ def get_descriptives(db, domain_name, planner, phase, evaluator):
     else:
         actual_planner = planner
         actual_domain = domain_name
-    try:
-        best_domain = db.domains.find(
-            {'name': actual_domain, 'augmented': True}).sort(
-                [('evaluation.' + evaluator, -1)])[0]
-        print('best domain ID: {}'.format(best_domain['_id']))
-    except IndexError:
-        print('Could not find best domain')
-        best_domain = None
-    orig_domain = db.domains.find_one(
-        {'name': actual_domain, 'augmented': { '$ne': True}})
-    print('')
-    descriptives = {}
-    if best_domain:
+    if evaluator:
+        try:
+            best_domain = db.domains.find(
+                {'name': actual_domain, 'augmented': True}).sort(
+                    [('evaluation.' + evaluator, -1)])[0]
+            print('best domain ID: {}'.format(best_domain['_id']))
+        except IndexError:
+            print('Could not find best domain')
+            return {}
         d = get_domain_descriptives(db, best_domain['_id'], actual_planner,
                                     phase, evaluator)
         if d:
-            descriptives['dbmp{}{}'.format(get_pretty_name(evaluator), planner)] = d
-    if orig_domain:
+            d['config'] = evaluator
+            d['planner'] = planner
+            return d
+    else:
+        orig_domain = db.domains.find_one(
+            {'name': actual_domain, 'augmented': { '$ne': True}})
         d = get_domain_descriptives(db, orig_domain['_id'], actual_planner,
                                     phase)
         if d:
-            descriptives[planner] = d
-    return descriptives
+            d['config'] = 'original'
+            d['planner'] = planner
+            return d
+    return {}
 
 def get_domain_descriptives(db, domain_id, planner, phase, evaluator=None):
     domain = db.domains.find_one({'_id': bson.objectid.ObjectId(domain_id)})
@@ -506,6 +510,9 @@ def main():
     parser.add_argument('-d', '--descriptives', action='store_true',
                         help='get descriptives for the given domain and'
                              'planners')
+    parser.add_argument('--best', type=int, default=0,
+                        help='only get descriptives for the best n'
+                             ' configurations')
     table_group = parser.add_mutually_exclusive_group()
     table_group.add_argument('-t', '--table', action='store_true',
                              help='generate a latex table showing the results')
@@ -568,24 +575,37 @@ def main():
         domains = args.domains
     descriptives = {}
     for domain in domains:
-        domain_descriptives = {}
+        domain_descriptives = []
         if args.descriptives:
             for planner in args.planner:
+                # original domain
+                d = get_descriptives(database, domain, planner, args.phase)
+                if d:
+                    domain_descriptives.append(d)
+                planner_descriptives = []
                 for evaluator in args.evaluator:
                     d = get_descriptives(database, domain, planner, args.phase,
                                          evaluator)
                     if d:
-                        domain_descriptives = { **domain_descriptives, **d }
-            for planner in args.planner:
-                if not planner in domain_descriptives:
-                    domain_descriptives[planner] = {
-                            'solved': 0,
-                            'mean_length': 10000,
-                            'mean_time': MAX_TIME,
-                            'quantiles_length': [ 10000, 10000, 10000 ],
-                            'quantiles_time': [ MAX_TIME, MAX_TIME, MAX_TIME ],
-                        }
-            descriptives[domain] = domain_descriptives
+                        planner_descriptives.append(d)
+                if args.best:
+                    planner_descriptives = sorted(planner_descriptives,
+                                                  key=itemgetter('score'),
+                                                  reverse=True)
+                    planner_descriptives = planner_descriptives[0:args.best]
+                domain_descriptives += planner_descriptives
+#            for planner in args.planner:
+#                if not planner in domain_descriptives:
+#                    domain_descriptives[planner] = {
+#                            'solved': 0,
+#                            'mean_length': 10000,
+#                            'mean_time': MAX_TIME,
+#                            'quantiles_length': [ 10000, 10000, 10000 ],
+#                            'quantiles_time': [ MAX_TIME, MAX_TIME, MAX_TIME ],
+#                        }
+            descriptives[domain] = sorted(domain_descriptives,
+                                          key=itemgetter('score'),
+                                          reverse=True)
 
         if args.plot_evaluators:
             for evaluator in args.evaluator:
@@ -619,8 +639,18 @@ def main():
             template = env.get_template('table.tex.j2')
         else:
             template = env.get_template('score_table.tex.j2')
+        results = {}
+        for domain in domains:
+            results[domain] = {}
+            for planner in args.planner:
+                for d in descriptives[domain]:
+                    if d['planner'] == planner:
+                        if d['config'] == 'original':
+                            results[domain][planner] = d
+                        else:
+                            results[domain]['dbmp' + planner] = d
         table = template.render(planners=args.planner,domains=domains,
-                                results=descriptives)
+                                results=results)
         os.chdir(os.path.join(os.getcwd(), 'stats'))
         table_path = 'table_core.tex'
         with open(table_path, 'w') as table_file:
