@@ -634,6 +634,8 @@ def main():
             comment_end_string = '}',
             line_statement_prefix = '%%',
             line_comment_prefix = '%#',
+            lstrip_blocks=True,
+            trim_blocks=True,
             loader=jinja2.FileSystemLoader('stats/templates'))
         if args.table:
             template = env.get_template('table.tex.j2')
