@@ -25,6 +25,7 @@ import db
 import itertools
 import jinja2
 import math
+import numpy
 import subprocess
 import tempfile
 
@@ -66,10 +67,10 @@ def get_problem_score(database, planner, domain, problem):
     return get_score(time)
 
 def get_domain_score(database, planner, domain):
-    score = 0
+    scores = []
     for problem in database.problems.find({ 'domain': domain['name'] }):
-        score += get_problem_score(database, planner, domain, problem)
-    return score
+        scores.append(get_problem_score(database, planner, domain, problem))
+    return numpy.mean(scores)
 
 def get_data(database, planner, domain):
    fs = range(0, 101, 10)

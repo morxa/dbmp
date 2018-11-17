@@ -21,6 +21,10 @@
 Database handler for DBMP
 """
 
+import configparser
+import getpass
+import pymongo
+
 def auth(args):
     db_host = 'localhost'
     db_user = 'planner'
