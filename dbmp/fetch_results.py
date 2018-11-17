@@ -22,7 +22,7 @@ Fetch solutions from the database.
 """
 
 import argparse
-import pymongo
+import db
 
 def main():
     arg_parser = argparse.ArgumentParser(
@@ -36,14 +36,12 @@ def main():
     arg_parser.add_argument('domain', type=str,
                             help='the domain to fetch the solutions for')
     args = arg_parser.parse_args()
-    client = pymongo.MongoClient(host=args.host)
-    db = client.macro_planning
-    db.authenticate(args.user, args.password)
+    database = db.auth(args)
     print('Fetching results for domain {}.'.format(args.domain))
-    for problem in db.problems.find({'domain': args.domain}):
+    for problem in database.problems.find({'domain': args.domain}):
         name = problem['name']
-        solution = db.solutions.find_one({'problem': problem['_id'],
-                                          'use_for_macros': True})
+        solution = database.solutions.find_one({'problem': problem['_id'],
+                                                'use_for_macros': True})
         if solution:
             solution_file = open(name + '.pddl.soln', 'w')
             solution_file.write(solution['raw'])
