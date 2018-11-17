@@ -19,7 +19,7 @@
 
 import argparse
 import bisect
-import configparser
+import db
 import macro_evaluator
 import getpass
 import itertools
@@ -261,25 +261,6 @@ def main():
         assert(args.evaluator), 'Need evaluator to filter by score'
         assert(args.best_evaluated <= args.best or not args.best), \
                 '--best must be >= --best-evaluated'
-    db_host = 'localhost'
-    db_user = 'planner'
-    db_passwd = ''
-    if args.config_file:
-        config = configparser.ConfigParser()
-        config.read(args.config_file)
-        if 'plan_database' in config:
-            if 'host' in config['plan_database']:
-                db_host = config['plan_database']['host']
-            if 'user' in config['plan_database']:
-                db_user = config['plan_database']['user']
-            if 'passwd' in config['plan_database']:
-                db_passwd = config['plan_database']['passwd']
-    if args.db_host:
-        db_host = args.db_host
-    if args.db_user:
-        db_user = args.db_user
-    if args.db_passwd:
-        db_passwd = db_passwd
     if not args.domain:
         dfile = open(args.domainfile, 'r')
         domain_string = dfile.read()
@@ -287,18 +268,10 @@ def main():
     macros = set()
     total_num_actions = 1
     if args.from_db:
-        assert(db_host and db_user), \
-                'Please specify database host and user'
-        if not db_passwd:
-            db_passwd = getpass.getpass()
-        client = pymongo.MongoClient(host=db_host)
-        database = client.macro_planning
-        database.authenticate(db_user, db_passwd)
-        action_seqs_coll = client.macro_planning.action_sequences
-        action_seqs_coll = \
-                client.macro_planning['action_sequences_' + args.domain]
-        domain_coll = client.macro_planning.domains
-        macros_coll = client.macro_planning.macros
+        database = db.auth(args)
+        action_seqs_coll = database['action_sequences_' + args.domain]
+        domain_coll = database.domains
+        macros_coll = database.macros
         if not args.domainfile:
             domain_entry = domain_coll.find_one({ 'name': args.domain })
             assert(domain_entry), \
