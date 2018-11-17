@@ -25,6 +25,7 @@ import argparse
 import copy
 import bson.objectid
 import db
+import evaluator_heatmap
 import jinja2
 import math
 import numpy
@@ -525,6 +526,9 @@ def main():
                         help='create a comparison plot between the best '
                              'DBMP domain and the original domains with the '
                              'given planners')
+    parser.add_argument('--plot-evaluator-heatmap', action='store_true',
+                        help='plot a heatmap showing the score depending on the'
+                             ' evaluator')
     parser.add_argument('-3', '--plot-three', action='store_true',
                         help='compare DBMP to two other planners')
     parser.add_argument('--meta', action='store_true',
@@ -599,6 +603,9 @@ def main():
             for evaluator in args.evaluator:
                 plot_three(database, domain, evaluator, args.planner[0],
                            args.planner[1])
+        if args.plot_evaluator_heatmap:
+            for planner in args.planner:
+                evaluator_heatmap.plot_heatmap(database, planner, domain)
     printer.pprint(descriptives)
     if args.table or args.score_table:
         env = jinja2.Environment(
