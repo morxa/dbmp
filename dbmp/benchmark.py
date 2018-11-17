@@ -22,9 +22,8 @@ Run planners on domains augmented with macros.
 """
 
 import argparse
-import configparser
 import bson.objectid
-import pymongo
+import db
 import sys
 
 # TODO This is copy-pasted, move to common module instead.
@@ -103,34 +102,11 @@ def main():
                         nargs='*',
                         help='the evaluators to use for domain selection')
     args = parser.parse_args()
-    db_host = 'localhost'
-    db_user = 'planner'
-    db_passwd = ''
-    if args.config_file:
-        config = configparser.ConfigParser()
-        config.read(args.config_file)
-        if 'plan_database' in config:
-            if 'host' in config['plan_database']:
-                db_host = config['plan_database']['host']
-            if 'user' in config['plan_database']:
-                db_user = config['plan_database']['user']
-            if 'passwd' in config['plan_database']:
-                db_passwd = config['plan_database']['passwd']
-    if args.db_host:
-        db_host = args.db_host
-    if args.db_user:
-        db_user = args.db_user
-    if args.db_passwd:
-        db_passwd = db_passwd
-    if not db_passwd:
-        db_passwd = getpass.getpass()
-    client = pymongo.MongoClient(host=db_host)
-    database = client.macro_planning
-    database.authenticate(db_user, db_passwd)
-    domain_coll = client.macro_planning.domains
-    macro_coll = client.macro_planning.macros
-    problem_coll = client.macro_planning.problems
-    solutions_coll = client.macro_planning.solutions
+    database = db.auth(args)
+    domain_coll = database.domains
+    macro_coll = database.macros
+    problem_coll = database.problems
+    solutions_coll = database.solutions
 
     if args.standard_evaluators:
         args.domain_evaluators += get_standard_evaluators()
