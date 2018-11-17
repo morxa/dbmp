@@ -24,10 +24,9 @@ the database.
 
 import argparse
 import bson.objectid
-import configparser
+import db
 import dbmp
 import pprint
-import pymongo
 import re
 
 def parse_solution(raw_solution):
@@ -82,28 +81,7 @@ def main():
                         help='a name of a problem/solution to parse')
 
     args = parser.parse_args()
-    db_host = 'localhost'
-    db_user = 'planner'
-    db_passwd = ''
-    if args.config_file:
-        config = configparser.ConfigParser()
-        config.read(args.config_file)
-        if 'plan_database' in config:
-            if 'host' in config['plan_database']:
-                db_host = config['plan_database']['host']
-            if 'user' in config['plan_database']:
-                db_user = config['plan_database']['user']
-            if 'passwd' in config['plan_database']:
-                db_passwd = config['plan_database']['passwd']
-    if args.db_host:
-        db_host = args.db_host
-    if args.db_user:
-        db_user = args.db_user
-    if args.db_passwd:
-        db_passwd = db_passwd
-    client = pymongo.MongoClient(host=db_host)
-    database = client.macro_planning
-    database.authenticate(db_user, db_passwd)
+    database = db.auth(args)
     coll = database.solutions
     solution_entries = []
     if args.all:
