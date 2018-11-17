@@ -22,7 +22,7 @@ Upload the given MacroFF macro file to the database.
 """
 
 import argparse
-import pymongo
+import db
 
 def main():
     arg_parser = argparse.ArgumentParser(
@@ -39,20 +39,18 @@ def main():
                             help='the domain name')
     arg_parser.add_argument('macro_file', type=argparse.FileType('r'))
     args = arg_parser.parse_args()
-    client = pymongo.MongoClient(host=args.host)
-    db = client.macro_planning
-    db.authenticate(args.user, args.password)
-    domain_entry = db.domains.find_one({'name': args.domain,
-                                        'augmented': { '$ne': True }})
+    database = db.auth(args)
+    domain_entry = database.domains.find_one({'name': args.domain,
+                                              'augmented': { '$ne': True }})
     assert domain_entry, \
-            'Could not find domain with name {} in db'.format(args.domain)
+            'Could not find domain with name {} in database'.format(args.domain)
     domain_id = domain_entry['_id']
     print('Uploading macro file "{}" for domain "{}"'.format(
         args.macro_file.name, domain_id))
-    db.macros.insert_one({'name': 'macroff-' + str(domain_id),
-                          'domain': domain_id,
-                          'type': args.type,
-                          'raw': args.macro_file.read() })
+    database.macros.insert_one({'name': 'macroff-' + str(domain_id),
+                                'domain': domain_id,
+                                'type': args.type,
+                                'raw': args.macro_file.read() })
 
 if __name__ == '__main__':
     main()
