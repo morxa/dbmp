@@ -47,6 +47,14 @@ class Evaluator(object):
         """
         macro_evaluations = [ self.evaluate(macro) for macro in macros ]
         return sum(macro_evaluations)
+
+    def __str__(self):
+        """ Get a string representation of the evaluator.
+
+        Use the evaluator's name as string representation.
+        """
+        return self.name()
+
     def name(self):
         """ The name of the evaluator.
 
