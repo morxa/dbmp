@@ -22,14 +22,12 @@ Validate the results in the database.
 """
 
 import argparse
-import configparser
-import subprocess
+import db
+import dbmp
 import logging
+import subprocess
 import tempfile
 import traceback
-import pymongo
-
-import dbmp
 
 def main():
     """ Connect to the database and check all plans that are not validated. """
@@ -42,26 +40,11 @@ def main():
                         help='also validate solutions which have already been'
                              ' validated')
     args = parser.parse_args()
-    db_host = 'localhost'
-    db_user = 'planner'
-    db_passwd = ''
-    if args.config_file:
-        config = configparser.ConfigParser()
-        config.read(args.config_file)
-        if 'plan_database' in config:
-            if 'host' in config['plan_database']:
-                db_host = config['plan_database']['host']
-            if 'user' in config['plan_database']:
-                db_user = config['plan_database']['user']
-            if 'passwd' in config['plan_database']:
-                db_passwd = config['plan_database']['passwd']
-    client = pymongo.MongoClient(host=db_host)
-    database = client.macro_planning
-    database.authenticate(db_user, db_passwd)
-    domain_coll = client.macro_planning.domains
-    macro_coll = client.macro_planning.macros
-    problem_coll = client.macro_planning.problems
-    solution_coll = client.macro_planning.solutions
+    database = db.auth(args)
+    domain_coll = database.domains
+    macro_coll = database.macros
+    problem_coll = database.problems
+    solution_coll = database.solutions
     query = { 'error': { '$exists': False } }
     if not args.force:
         query['validated'] = { '$ne': True }
