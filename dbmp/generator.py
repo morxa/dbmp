@@ -18,6 +18,7 @@
 #  Read the full text in the LICENSE.GPL file in the doc directory.
 
 import argparse
+import bisect
 import configparser
 import macro_evaluator
 import getpass
@@ -223,7 +224,10 @@ def main():
                         help='only use the best n macros according to '
                              'the given evaluator')
     parser.add_argument('--evaluator', type=str,
-                        help='the evaluator to use for filtering')
+                        help='the macro evaluator to use for filtering')
+    parser.add_argument('--store-best', type=int, default=0,
+                        help='only store a macro if it is one of the best n'
+                             ' domains, according to one domain evaluator')
     parser.add_argument('action', nargs='*',
                         help='an action and its parameters to include into the '
                              'macro, e.g. "unstack 1,2"')
@@ -401,7 +405,12 @@ def main():
         if args.verbose:
             print(macro.__dict__)
     if args.augment_domain:
+        assert(args.save), \
+            'You must provide --save if you want to augment the domain'
         num_domains = 0
+        best_evaluator_scores = {}
+        for evaluator in evaluators:
+            best_evaluator_scores[evaluator] = []
         for num_macros in range(1, args.max_num_macros+1):
             for macro_combination in itertools.combinations(macros, num_macros):
                 if not unique_actions(macro_combination):
@@ -409,8 +418,29 @@ def main():
                           '{}'.format(
                             [ m.__str__() for m in macro_combination ]))
                     continue
-                assert(args.save), \
-                    'You must provide --save if you want to augment the domain'
+                # If we are not storing only the best domains, directly select
+                # this one.
+                selected = args.store_best <= 0
+                evaluation = {}
+                for evaluator in evaluators:
+                    score = evaluator.evaluate_list(list(macro_combination))
+                    evaluation[evaluator.name()] = score
+                    best_scores = best_evaluator_scores[evaluator]
+                    if len(best_scores) < args.store_best or \
+                       -best_scores[args.store_best-1] < score:
+                        if args.verbose:
+                            print('Inserting {} with {} score {},'
+                                  'best: {}'.format(
+                                    [ m.__str__() for m in macro_combination ],
+                                    evaluator,
+                                    score,
+                                    best_scores)
+                                 )
+                        selected = True
+                        # Store -score because bisect expects an increasing list
+                        bisect.insort_left(best_scores, -score)
+                if not selected:
+                    continue
                 domain_entry = domain_coll.find_one(
                     {'name': args.domain, 'augmented': { '$ne': True }})
                 assert(domain_entry), \
@@ -426,10 +456,6 @@ def main():
                 for macro in macro_combination:
                     domain_string = augment_domain(domain_string, macro.macro)
                 augmented_domain_entry['raw'] = domain_string
-                evaluation = {}
-                for evaluator in evaluators:
-                    evaluation[evaluator.name()] = \
-                        evaluator.evaluate_list(list(macro_combination))
                 augmented_domain_entry['evaluation'] = evaluation
                 if args.verbose:
                     print('Inserting {}'.format(augmented_domain_entry))
