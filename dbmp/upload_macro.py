@@ -33,6 +33,8 @@ def main():
                             help='database user')
     arg_parser.add_argument('-p', '--password', type=str,
                             help='password of the database user')
+    arg_parser.add_argument('-t', '--type', type=str,
+                            help='the type of the macro (e.g., macroff)')
     arg_parser.add_argument('domain', type=str,
                             help='the domain name')
     arg_parser.add_argument('macro_file', type=argparse.FileType('r'))
@@ -49,7 +51,7 @@ def main():
         args.macro_file.name, domain_id))
     db.macros.insert_one({'name': 'macroff-' + str(domain_id),
                           'domain': domain_id,
-                          'planner': 'macroff',
+                          'type': args.type,
                           'raw': args.macro_file.read() })
 
 if __name__ == '__main__':
