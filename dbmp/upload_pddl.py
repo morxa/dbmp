@@ -23,9 +23,8 @@ Upload a domain file or a problem file to the database
 
 import argparse
 import bson.objectid
-import configparser
+import db
 import getpass
-import pymongo
 import re
 
 def get_domainname(domain_string):
@@ -168,37 +167,14 @@ def main():
     parser.add_argument('problemfiles', metavar='problemfile', nargs='*',
                         help='the problem files to add')
     args = parser.parse_args()
-    db_host = 'localhost'
-    db_user = 'planner'
-    db_passwd = ''
-    if args.config_file:
-        config = configparser.ConfigParser()
-        config.read(args.config_file)
-        if 'plan_database' in config:
-            if 'host' in config['plan_database']:
-                db_host = config['plan_database']['host']
-            if 'user' in config['plan_database']:
-                db_user = config['plan_database']['user']
-            if 'passwd' in config['plan_database']:
-                db_passwd = config['plan_database']['passwd']
-    if args.db_host:
-        db_host = args.db_host
-    if args.db_user:
-        db_user = args.db_user
-    if args.db_passwd:
-        db_passwd = db_passwd
     if args.problems:
         problems = set(args.problems)
     else:
         problems = set()
-    if not db_passwd:
-        db_passwd = getpass.getpass()
-    client = pymongo.MongoClient(host=db_host)
-    database = client.macro_planning
-    database.authenticate(db_user, db_passwd)
-    domain_coll = client.macro_planning.domains
-    problem_coll = client.macro_planning.problems
-    solution_coll = client.macro_planning.solutions
+    database = db.auth(args)
+    domain_coll = database.domains
+    problem_coll = database.problems
+    solution_coll = database.solutions
     if args.domainfile:
         domainfile = open(args.domainfile, 'r')
         domain_string = domainfile.read()
