@@ -1,7 +1,9 @@
 {% extends "common.p.j2" %}
 {% block data %}
 set xlabel '{{ xlabel }}'
-set xrange [-0.1:1.1]
 set ylabel 'Score'
-plot '{{ datafile }}' with yerrorbars title "Mean score {{ domain }}"
+set style boxplot
+set style data boxplot
+set style boxplot nooutliers
+plot '{{ datafile }}' using (1):4:(0):{{ column }} title "Mean score {{ domain }} ({{ planner }})"
 {% endblock %}

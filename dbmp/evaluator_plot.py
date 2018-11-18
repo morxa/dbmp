@@ -53,10 +53,10 @@ def get_mean_data(data, factor):
 
 def plot_weight_factors(database, planner, domain, phase, factors=FACTORS):
     data = evaluator_heatmap.get_data(database, planner, domain, phase)
+    datafile = create_datafile(
+        data,
+        open('stats/weights_{}_{}.dat'.format(planner, domain), 'w'))
     for factor in factors:
-        datafile = create_datafile(
-            get_mean_data(data, factor),
-            open('stats/weights_{}.dat'.format(factor), 'w'))
         plot_weight_factor(datafile, planner, domain, factor)
 
 def plot_weight_factor(datafile, planner, domain, factor):
@@ -71,9 +71,10 @@ def plot_weight_factor(datafile, planner, domain, factor):
         datafile=datafile,
         column=FACTORS.index(factor)+1,
         xlabel='w_{}'.format(factor),
-        output='stats/weight_{}_{}_{}'.format(factor, planner, domain)
+        output='stats/weights_{}_{}_{}'.format(factor, planner, domain)
     )
-    plotfile = open('stats/weights.p', 'w')
+    plotfile = open('stats/weights_{}_{}_{}.p'.format(factor, planner, domain),
+                    'w')
     plotfile.write(plot)
     plotfile.close()
     subprocess.call(['gnuplot', plotfile.name])
