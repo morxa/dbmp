@@ -26,6 +26,7 @@ import copy
 import bson.objectid
 import db
 import evaluator_heatmap
+import evaluator_plot
 import jinja2
 import math
 import numpy
@@ -522,6 +523,9 @@ def main():
                         help='add a linear fit to evaluator plots')
     parser.add_argument('--plot-evaluators', action='store_true',
                         help='create plots to analyze evaluators')
+    parser.add_argument('--plot-weights', action='store_true',
+                        help='create plots that show the performance change by'
+                             ' changing one particular weight')
     parser.add_argument('--plot-against-planner', action='store_true',
                         help='create a comparison plot between the best '
                              'DBMP domain and the original domains with the '
@@ -605,7 +609,13 @@ def main():
                            args.planner[1])
         if args.plot_evaluator_heatmap:
             for planner in args.planner:
-                evaluator_heatmap.plot_heatmap(database, planner, domain)
+                evaluator_heatmap.plot_heatmap(database, planner, domain,
+                                               args.phase)
+        if args.plot_weights:
+            for planner in args.planner:
+                evaluator_plot.plot_weight_factors(database, planner, domain,
+                                                   args.phase)
+
     printer.pprint(descriptives)
     if args.table or args.score_table:
         env = jinja2.Environment(

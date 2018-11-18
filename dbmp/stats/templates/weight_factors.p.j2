@@ -1,0 +1,7 @@
+{% extends "common.p.j2" %}
+{% block data %}
+set xlabel '{{ xlabel }}'
+set xrange [-0.1:1.1]
+set ylabel 'Score'
+plot '{{ datafile }}' with yerrorbars title "Mean score {{ domain }}"
+{% endblock %}

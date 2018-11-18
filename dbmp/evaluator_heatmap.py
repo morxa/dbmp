@@ -66,23 +66,24 @@ def get_problem_score(database, planner, domain, problem):
     time = solution['resources'][0]
     return get_score(time)
 
-def get_domain_score(database, planner, domain):
+def get_domain_score(database, planner, domain, phase):
     scores = []
-    for problem in database.problems.find({ 'domain': domain['name'] }):
+    for problem in database.problems.find(
+        { 'domain': domain['name'], 'phase': phase }):
         scores.append(get_problem_score(database, planner, domain, problem))
     return numpy.mean(scores)
 
-def get_data(database, planner, domain):
-   fs = range(0, 101, 10)
-   ls = range(0, 11)
-   cs = range(0, 11)
-   data = []
-   for (f, l, c) in itertools.product(fs, ls, cs):
-       domain_entry = get_best_domain(
-           database, domain, get_evaluator_name(f, l, c))
-       score = get_domain_score(database, planner, domain_entry)
-       data.append([f, l, c, score])
-   return data
+def get_data(database, planner, domain, phase):
+    fs = range(0, 101, 10)
+    ls = range(0, 11, 1)
+    cs = range(0, 11, 1)
+    data = []
+    for (f, l, c) in itertools.product(fs, ls, cs):
+        domain_entry = get_best_domain(
+            database, domain, get_evaluator_name(f, l, c))
+        score = get_domain_score(database, planner, domain_entry, phase)
+        data.append([f/100, l/10, c/10, score])
+    return data
 
 def create_datafile(data,
                     outfile=tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -92,9 +93,9 @@ def create_datafile(data,
     outfile.close()
     return outfile.name
 
-def plot_heatmap(database, planner, domain):
+def plot_heatmap(database, planner, domain, phase):
     print('Plotting heatmap for domain {}'.format(domain))
-    datafile = create_datafile(get_data(database, planner, domain))
+    datafile = create_datafile(get_data(database, planner, domain, phase))
     jinja_env = jinja2.Environment(
         loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = jinja_env.get_template('heatmap.p.j2')
