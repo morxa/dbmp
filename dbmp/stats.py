@@ -27,6 +27,7 @@ import bson.objectid
 import db
 import evaluator_heatmap
 import evaluator_plot
+import evaluators
 import jinja2
 import math
 import numpy
@@ -489,6 +490,18 @@ def get_domain_descriptives(db, domain_id, planner, phase, evaluator=None):
         'quantiles_length': quantiles_length,
         'score': score,
     }
+
+def get_best_evaluators(database, domain, planner,
+                        candidates=evaluators.get_standard_evaluators()):
+    """ Get the best evaluator including its score on validation problems """
+    domains = database.domains.find({'name': domain, 'augmented': True})
+    descriptives = []
+    for evaluator in candidates:
+        d = get_descriptives(database, domain, planner, 'validation', evaluator)
+        if d:
+            descriptives.append(d)
+    scores = [(d['config'], d['score']) for d in descriptives]
+    return sorted(scores, key=lambda d: d[1], reverse=True)
 
 def main():
     parser = argparse.ArgumentParser(

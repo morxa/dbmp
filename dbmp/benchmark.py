@@ -25,6 +25,7 @@ import argparse
 import bson.objectid
 import db
 import evaluators
+import stats
 import sys
 
 # TODO This is copy-pasted, move to common module instead.
@@ -124,17 +125,31 @@ def main():
                          file=sys.stderr)
         domain_entries = list(
             domain_coll.find( { 'name': args.domain, 'augmented': True }))
-        for evaluator in args.domain_evaluators:
-            if args.best:
-                best_domain_entries = sorted(
-                    domain_entries,
-                    key=lambda x: x['evaluation'][evaluator],
-                    reverse=True
-                )[0:args.best]
-            else:
-                best_domain_entries = domain_entries
-            for domain in best_domain_entries:
+        if args.phase == 'validation':
+            for evaluator in args.domain_evaluators:
+                if args.best:
+                    best_domain_entries = sorted(
+                        domain_entries,
+                        key=lambda x: x['evaluation'][evaluator],
+                        reverse=True
+                    )[0:args.best]
+                else:
+                    best_domain_entries = domain_entries
+                for domain in best_domain_entries:
+                    domains.add(domain['_id'])
+        else:
+            assert args.phase == 'test', 'Unknown phase {}'.format(args.phase)
+            assert args.best == 1, 'Test phase must run with args.best == 1'
+            best_evaluators = stats.get_best_evaluators(
+                database, args.domain, args.planner)[0:args.best]
+            for evaluator, score in best_evaluators:
+                print('Running evaluator {} with score {}'.format(evaluator,
+                                                                  score))
+                domain = sorted(domain_entries,
+                                key=lambda d: d['evaluation'][evaluator],
+                                reverse=True)[0]
                 domains.add(domain['_id'])
+
     if args.original_domain:
         original_domain = domain_coll.find_one(
             { 'name': args.domain, 'augmented': { '$ne': True } })
