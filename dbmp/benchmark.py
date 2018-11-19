@@ -24,6 +24,7 @@ Run planners on domains augmented with macros.
 import argparse
 import bson.objectid
 import db
+import evaluators
 import sys
 
 # TODO This is copy-pasted, move to common module instead.
@@ -48,14 +49,6 @@ def start_job(planner, job_template, domain, problem):
         .replace('$PLANNER', planner)
     print(job_string)
     print('---')
-
-def get_standard_evaluators():
-    evaluators = []
-    for f in range(0, 101, 10):
-        for l in range(0, 11):
-            for c in range(0, 11):
-                evaluators.append('clfp_f{}_l{}_c{}'.format(f, l, c))
-    return evaluators
 
 def main():
     """ Main program.
@@ -109,7 +102,7 @@ def main():
     solutions_coll = database.solutions
 
     if args.standard_evaluators:
-        args.domain_evaluators += get_standard_evaluators()
+        args.domain_evaluators += evaluators.get_standard_evaluators()
 
     if args.augmented_domain:
         domains = set(args.augmented_domain)
