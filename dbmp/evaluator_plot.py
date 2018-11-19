@@ -51,15 +51,15 @@ def get_mean_data(data, factor):
         mean_data.append([weight, mean, stddev])
     return mean_data
 
-def plot_weight_factors(database, planner, domain, phase, factors=FACTORS):
-    data = evaluator_heatmap.get_data(database, planner, domain, phase)
+def plot_weight_factors(database, planner, domains, phase, factors=FACTORS):
+    data = evaluator_heatmap.get_data(database, planner, domains, phase)
     datafile = create_datafile(
         data,
-        open('stats/weights_{}_{}.dat'.format(planner, domain), 'w'))
+        open('stats/weights_{}_{}.dat'.format(planner, '_'.join(domains)), 'w'))
     for factor in factors:
-        plot_weight_factor(datafile, planner, domain, factor)
+        plot_weight_factor(datafile, planner, domains, factor)
 
-def plot_weight_factor(datafile, planner, domain, factor):
+def plot_weight_factor(datafile, planner, domains, factor):
     assert factor in FACTORS, \
             'Factor needs to be one of ' + FACTORS
     jinja_env = jinja2.Environment(
@@ -67,13 +67,15 @@ def plot_weight_factor(datafile, planner, domain, factor):
     plot_template = jinja_env.get_template('weight_factors.p.j2')
     plot = plot_template.render(
         planner=planner,
-        domain=domain,
+        domain=', '.join(domains),
         datafile=datafile,
         column=FACTORS.index(factor)+1,
         xlabel='w_{}'.format(factor),
-        output='stats/weights_{}_{}_{}'.format(factor, planner, domain)
+        output='stats/weights_{}_{}_{}'.format(factor, planner,
+                                               '_'.join(domains))
     )
-    plotfile = open('stats/weights_{}_{}_{}.p'.format(factor, planner, domain),
+    plotfile = open('stats/weights_{}_{}_{}.p'.format(factor, planner,
+                                                      '_'.join(domains)),
                     'w')
     plotfile.write(plot)
     plotfile.close()

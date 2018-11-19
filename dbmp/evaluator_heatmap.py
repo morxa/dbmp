@@ -73,12 +73,12 @@ def get_domain_score(database, planner, domain, phase):
         scores.append(get_problem_score(database, planner, domain, problem))
     return numpy.mean(scores)
 
-def get_data(database, planner, domain, phase):
+def get_data(database, planner, domains, phase):
     fs = range(0, 101, 10)
     ls = range(0, 11, 1)
     cs = range(0, 11, 1)
     data = []
-    for (f, l, c) in itertools.product(fs, ls, cs):
+    for (domain, f, l, c) in itertools.product(domains, fs, ls, cs):
         domain_entry = get_best_domain(
             database, domain, get_evaluator_name(f, l, c))
         score = get_domain_score(database, planner, domain_entry, phase)
@@ -93,9 +93,9 @@ def create_datafile(data,
     outfile.close()
     return outfile.name
 
-def plot_heatmap(database, planner, domain, phase):
-    print('Plotting heatmap for domain {}'.format(domain))
-    datafile = create_datafile(get_data(database, planner, domain, phase))
+def plot_heatmap(database, planner, domains, phase):
+    print('Plotting heatmap for domains {}'.format(domains))
+    datafile = create_datafile(get_data(database, planner, domains, phase))
     jinja_env = jinja2.Environment(
         loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = jinja_env.get_template('heatmap.p.j2')
@@ -105,7 +105,7 @@ def plot_heatmap(database, planner, domain, phase):
         #domain=get_pretty_name(domain),
         domain=domain,
         datafile=datafile,
-        output='stats/heatmap_{}_{}'.format(planner, domain)
+        output='stats/heatmap_{}_{}'.format(planner, '_'.join(domains))
     )
 
     #plotfile = tempfile.NamedTemporaryFile(mode='w', delete=False)

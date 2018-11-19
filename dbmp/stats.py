@@ -557,6 +557,15 @@ def main():
         domains = database.domains.distinct('name')
     else:
         domains = args.domains
+
+    if args.plot_evaluator_heatmap:
+        for planner in args.planner:
+            evaluator_heatmap.plot_heatmap(database, planner, domains,
+                                           args.phase)
+    if args.plot_weights:
+        for planner in args.planner:
+            evaluator_plot.plot_weight_factors(database, planner, domains,
+                                               args.phase)
     descriptives = {}
     for domain in domains:
         domain_descriptives = []
@@ -607,14 +616,6 @@ def main():
             for evaluator in args.evaluator:
                 plot_three(database, domain, evaluator, args.planner[0],
                            args.planner[1])
-        if args.plot_evaluator_heatmap:
-            for planner in args.planner:
-                evaluator_heatmap.plot_heatmap(database, planner, domain,
-                                               args.phase)
-        if args.plot_weights:
-            for planner in args.planner:
-                evaluator_plot.plot_weight_factors(database, planner, domain,
-                                                   args.phase)
 
     printer.pprint(descriptives)
     if args.table or args.score_table:
