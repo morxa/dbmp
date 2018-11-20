@@ -7,10 +7,8 @@
   %% for domain in domains
     \VAR{domain|replace("-","")|replace("_","")}
     \BLOCK{- for planner in planners } &
-      \BLOCK{- if results[domain] }
-        \BLOCK{- if results[domain][planner] }
-          \BLOCK{ set score = ("%0.3f" % results[domain][planner]['score'] | default(0) ) }
-        \BLOCK{- endif }
+      \BLOCK{- if results[domain] and results[domain][planner] }
+        \BLOCK{ set score = ("%0.3f" % results[domain][planner]['score'] | default(0) ) }
         \BLOCK{- if results[domain][planner]['config'] and results[domain][planner]['config'] != 'original' }
           \BLOCK{ set params = results[domain][planner]['config'][5:].split('_') }
           \shortstack{\VAR{ score } \\ $\left(\VAR{params[0][1:]|int / 100}, \VAR{params[1][1:]|int / 10}, \VAR{params[2][1:]|int / 10}\right)$ }
