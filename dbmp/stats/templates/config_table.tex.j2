@@ -1,0 +1,24 @@
+\begin{tabular}{ r \BLOCK{for planner in planners }| r | r | r\BLOCK{endfor}|}
+  \textbf{Domain}
+  \BLOCK{ for planner in planners }
+    & \multicolumn{3}{c|}{\\VAR{planner|replace("-", "")|replace("_", "")}}
+  \BLOCK{- endfor }
+  \\
+  \BLOCK{ for planner in planners }
+    & $w_f$ & $w_l$ & $w_c$
+  \BLOCK{- endfor }
+  \\
+  \hline
+  %% for domain in domains
+    \\VAR{domain|replace("-","")|replace("_","")}
+    \BLOCK{- for planner in planners }
+      \BLOCK{ set planner = 'dbmp' + planner }
+      \BLOCK{- if results[domain] and results[domain][planner] and results[domain][planner]['config'] and results[domain][planner]['config'] != 'original' }
+          \BLOCK{ set params = results[domain][planner]['config'][5:].split('_') }
+          & \VAR{params[0][1:]|int / 100} & \VAR{params[1][1:]|int / 10} & \VAR{params[2][1:]|int / 10}
+      \BLOCK{- else } & & &
+      \BLOCK{- endif }
+    \BLOCK{ endfor }
+    \\
+  %% endfor
+\end{tabular}

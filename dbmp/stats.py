@@ -503,6 +503,31 @@ def get_best_evaluators(database, domain, planner,
     scores = [(d['config'], d['score']) for d in descriptives]
     return sorted(scores, key=lambda d: d[1], reverse=True)
 
+def generate_table(planners, domains, results, table_type):
+    env = jinja2.Environment(
+        block_start_string = '\BLOCK{',
+        block_end_string = '}',
+        variable_start_string = '\VAR{',
+        variable_end_string = '}',
+        comment_start_string = '\#{',
+        comment_end_string = '}',
+        line_statement_prefix = '%%',
+        line_comment_prefix = '%#',
+        lstrip_blocks=True,
+        trim_blocks=True,
+        loader=jinja2.FileSystemLoader('stats/templates'))
+    template = env.get_template('{}_table.tex.j2'.format(table_type))
+    table = template.render(planners=planners, domains=domains, results=results)
+    owd = os.getcwd()
+    os.chdir(os.path.join(os.getcwd(), 'stats'))
+    table_path = 'table_core.tex'
+    with open(table_path, 'w') as table_file:
+        table_file.write(table)
+    tex_path = 'table.tex'
+    subprocess.call(['pdflatex', tex_path])
+    os.rename('table.pdf', '{}_table.pdf'.format(table_type))
+    os.chdir(owd)
+
 def main():
     parser = argparse.ArgumentParser(
         description='Compute statistics and generate plots to analyze planner'
@@ -527,11 +552,13 @@ def main():
     parser.add_argument('--best', type=int, default=0,
                         help='only get descriptives for the best n'
                              ' configurations')
-    table_group = parser.add_mutually_exclusive_group()
-    table_group.add_argument('-t', '--table', action='store_true',
-                             help='generate a latex table showing the results')
-    table_group.add_argument('--score-table', action='store_true',
-                             help='generate a latex table showing the scores')
+    parser.add_argument('-t', '--times-table', action='store_true',
+                        help='generate a latex table showing the results')
+    parser.add_argument('--score-table', action='store_true',
+                        help='generate a latex table showing the scores')
+    parser.add_argument('--config-table', action='store_true',
+                        help='generate a latex table showing the macro'
+                             'configurations')
     parser.add_argument('--fit', action='store_true',
                         help='add a linear fit to evaluator plots')
     parser.add_argument('--plot-evaluators', action='store_true',
@@ -645,23 +672,7 @@ def main():
                            args.planner[1])
 
     printer.pprint(descriptives)
-    if args.table or args.score_table:
-        env = jinja2.Environment(
-            block_start_string = '\BLOCK{',
-            block_end_string = '}',
-            variable_start_string = '\VAR{',
-            variable_end_string = '}',
-            comment_start_string = '\#{',
-            comment_end_string = '}',
-            line_statement_prefix = '%%',
-            line_comment_prefix = '%#',
-            lstrip_blocks=True,
-            trim_blocks=True,
-            loader=jinja2.FileSystemLoader('stats/templates'))
-        if args.table:
-            template = env.get_template('table.tex.j2')
-        else:
-            template = env.get_template('score_table.tex.j2')
+    if args.table or args.score_table or args.config_table:
         results = {}
         for domain in domains:
             results[domain] = {}
@@ -672,14 +683,13 @@ def main():
                             results[domain][planner] = d
                         else:
                             results[domain]['dbmp' + planner] = d
-        table = template.render(planners=args.planner,domains=domains,
-                                results=results)
-        os.chdir(os.path.join(os.getcwd(), 'stats'))
-        table_path = 'table_core.tex'
-        with open(table_path, 'w') as table_file:
-            table_file.write(table)
-        tex_path = 'table.tex'
-        subprocess.call(['pdflatex', tex_path])
+        if args.times_table:
+            generate_table(args.planner, domains, results, 'times')
+        if args.score_table:
+            generate_table(args.planner, domains, results, 'score')
+        if args.config_table:
+            generate_table(args.dbmp_planner, domains, results, 'config')
+
     if args.meta:
         if args.dbmp_domain:
             assert(len(args.evaluator) == 0), \
