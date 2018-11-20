@@ -553,9 +553,13 @@ def main():
                              'with all given domains in one plot')
     parser.add_argument('--planner', action='append',
                         help='the planner to evaluate')
+    parser.add_argument('--dbmp-planner', action='append',
+                        help='the planner used for DBMP macros')
     parser.add_argument('-e', '--evaluator', action='append',
                         default=[],
                         help='the evaluator to use')
+    parser.add_argument('--evaluator-from-validation', action='store_true',
+                        help='use best evaluator from validation')
     parser.add_argument('--dbmp-domain', type=str, default='',
                         help='Domain ID of the DBMP domain to use instead of '
                              'the domain with the best evaluation score')
@@ -588,12 +592,22 @@ def main():
                 d = get_descriptives(database, domain, planner, args.phase)
                 if d:
                     domain_descriptives.append(d)
-                planner_descriptives = []
                 for evaluator in args.evaluator:
                     d = get_descriptives(database, domain, planner, args.phase,
                                          evaluator)
                     if d:
-                        planner_descriptives.append(d)
+                        domain_descriptives.append(d)
+            for planner in args.dbmp_planner:
+                planner_descriptives = []
+                if args.evaluator_from_validation:
+                    best_evaluators = get_best_evaluators(database, domain,
+                                                          planner)
+                    print('best evaluator for {}, {}: {}'.format(
+                        domain, planner, best_evaluators[0]))
+                    evaluator = best_evaluators[0][0]
+                    d = get_descriptives(database, domain, planner, args.phase,
+                                         evaluator)
+                    planner_descriptives.append(d)
                 if args.best:
                     planner_descriptives = sorted(planner_descriptives,
                                                   key=itemgetter('score'),
