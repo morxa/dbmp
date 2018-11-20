@@ -34,6 +34,7 @@ import numpy
 import os
 import pprint
 import scipy.stats
+import shutil
 import subprocess
 
 from operator import itemgetter
@@ -523,6 +524,7 @@ def generate_table(planners, domains, results, table_type):
     table_path = 'table_core.tex'
     with open(table_path, 'w') as table_file:
         table_file.write(table)
+    shutil.copy2('table_core.tex', 'table_{}_core.tex'.format(table_type))
     tex_path = 'table.tex'
     subprocess.call(['pdflatex', tex_path])
     os.rename('table.pdf', '{}_table.pdf'.format(table_type))
@@ -672,17 +674,20 @@ def main():
                            args.planner[1])
 
     printer.pprint(descriptives)
-    if args.table or args.score_table or args.config_table:
+    if args.times_table or args.score_table or args.config_table:
         results = {}
         for domain in domains:
             results[domain] = {}
+            best_score = 0
             for planner in args.planner:
                 for d in descriptives[domain]:
+                    best_score = max(best_score, d['score'])
                     if d['planner'] == planner:
                         if d['config'] == 'original':
                             results[domain][planner] = d
                         else:
                             results[domain]['dbmp' + planner] = d
+            results[domain]['best_score'] = best_score
         if args.times_table:
             generate_table(args.planner, domains, results, 'times')
         if args.score_table:
