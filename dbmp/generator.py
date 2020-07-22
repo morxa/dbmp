@@ -24,7 +24,7 @@ import macro_evaluator
 import getpass
 import itertools
 import pymongo
-import pyswip
+#import pyswip
 import re
 import subprocess
 import tempfile
