@@ -16,7 +16,6 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Compute statistics for the different augmented domains and generate plots.
 """
@@ -68,9 +67,11 @@ pretty_names = {
     'rcll-production': 'RCLL',
 }
 
+
 def get_pretty_name(name):
     """ Get a pretty name for the given name. """
     return pretty_names.get(name, name)
+
 
 def plot_evaluation_vs_planning_time(db, domain_name, evaluator, fit):
     """ Create a plot to analyze evaluation functions.
@@ -84,13 +85,14 @@ def plot_evaluation_vs_planning_time(db, domain_name, evaluator, fit):
     """
     data = []
     data_avgs = []
-    for domain in db.domains.find( { 'name': domain_name, 'augmented': True
-                                   }).sort([('evaluation.'+evaluator, 1)]):
+    for domain in db.domains.find({
+            'name': domain_name,
+            'augmented': True
+    }).sort([('evaluation.' + evaluator, 1)]):
         eval_score = domain['evaluation'][evaluator]
         time_sum = 0
         solution_count = 0
-        for solution in db.solutions.find(
-            {'domain': domain['_id']}):
+        for solution in db.solutions.find({'domain': domain['_id']}):
             if 'resources' in solution:
                 planning_time = solution['resources'][0]
             else:
@@ -106,40 +108,54 @@ def plot_evaluation_vs_planning_time(db, domain_name, evaluator, fit):
     with open(data_file_path, 'w') as data_file:
         for datum in data_avgs:
             data_file.write(' '.join(map(str, datum)) + '\n')
-    scores = [ datapoint[0] for datapoint in data ]
-    times = [ datapoint[1] for datapoint in data ]
+    scores = [datapoint[0] for datapoint in data]
+    times = [datapoint[1] for datapoint in data]
     print('evaluator: {}\ndomain: {}'.format(evaluator, domain_name))
     spearman_rho, spearman_p = scipy.stats.spearmanr(scores, times)
-    print('times spearman: rho={}, p={}'.format( spearman_rho, spearman_p))
+    print('times spearman: rho={}, p={}'.format(spearman_rho, spearman_p))
     print('\n')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('evaluation_vs_time.p.j2')
-    plot = plot_template.render(
-        domain=get_pretty_name(domain_name), data_file=data_file_path,
-        evaluator=get_pretty_name(evaluator),
-        fit=fit,
-        output=base_path)
+    plot = plot_template.render(domain=get_pretty_name(domain_name),
+                                data_file=data_file_path,
+                                evaluator=get_pretty_name(evaluator),
+                                fit=fit,
+                                output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
+
 def plot_evaluation_vs_num_completions(db, domain_name, evaluator, fit):
     data = []
-    for domain in db.domains.find( { 'name': domain_name, 'augmented': True
-                                   }).sort([('evaluation.'+evaluator, 1)]):
+    for domain in db.domains.find({
+            'name': domain_name,
+            'augmented': True
+    }).sort([('evaluation.' + evaluator, 1)]):
         eval_score = domain['evaluation'][evaluator]
-        successful = db.solutions.find(
-            {'domain': domain['_id'], 'error': { '$exists': False }}).count()
-        failed = db.solutions.find(
-            {'domain': domain['_id'], 'error': { '$exists': True }}).count()
+        successful = db.solutions.find({
+            'domain': domain['_id'],
+            'error': {
+                '$exists': False
+            }
+        }).count()
+        failed = db.solutions.find({
+            'domain': domain['_id'],
+            'error': {
+                '$exists': True
+            }
+        }).count()
         if successful or failed:
-            data.append([eval_score, float(successful)/(successful + failed)])
-    scores = [ datapoint[0] for datapoint in data ]
-    completions = [ datapoint[1] for datapoint in data ]
+            data.append(
+                [eval_score,
+                 float(successful) / (successful + failed)])
+    scores = [datapoint[0] for datapoint in data]
+    completions = [datapoint[1] for datapoint in data]
     print('evaluator: {}\ndomain: {}'.format(evaluator, domain_name))
-    spearman_rho, spearman_p= scipy.stats.spearmanr(scores, completions)
-    print('completions spearman: rho={}, p={}'.format(spearman_rho,spearman_p))
+    spearman_rho, spearman_p = scipy.stats.spearmanr(scores, completions)
+    print('completions spearman: rho={}, p={}'.format(spearman_rho,
+                                                      spearman_p))
     print('\n')
     base_path = 'stats/' + domain_name.replace(' ', '_') + '_completions'
     base_path = 'stats/' + domain_name.replace(' ', '_') + \
@@ -150,15 +166,16 @@ def plot_evaluation_vs_num_completions(db, domain_name, evaluator, fit):
             data_file.write(' '.join(map(str, datum)) + '\n')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('evaluation_vs_completions.p.j2')
-    plot = plot_template.render(
-        domain=get_pretty_name(domain_name), data_file=data_file_path,
-        evaluator=get_pretty_name(evaluator),
-        fit=fit,
-        output=base_path)
+    plot = plot_template.render(domain=get_pretty_name(domain_name),
+                                data_file=data_file_path,
+                                evaluator=get_pretty_name(evaluator),
+                                fit=fit,
+                                output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
+
 
 def plot_best_vs_other_planner(db, domain_name, other_planner, evaluator):
     """ Plot the best augmented domain against another planner.
@@ -173,30 +190,42 @@ def plot_best_vs_other_planner(db, domain_name, other_planner, evaluator):
         other_domain_name = 'cleanup_with_kif'
     else:
         other_domain_name = domain_name
-    other_domain = db.domains.find_one(
-        {'name': other_domain_name, 'augmented': { '$ne': True }})
-    best_domain = db.domains.find(
-        {'name': domain_name, 'augmented': True}).sort(
-            [('evaluation.' + evaluator, -1)])[0]
-    assert(best_domain), 'Could not find an augmented domain'
+    other_domain = db.domains.find_one({
+        'name': other_domain_name,
+        'augmented': {
+            '$ne': True
+        }
+    })
+    best_domain = db.domains.find({
+        'name': domain_name,
+        'augmented': True
+    }).sort([('evaluation.' + evaluator, -1)])[0]
+    assert (best_domain), 'Could not find an augmented domain'
     for problem in db.problems.find({'domain': domain_name}):
-        other_problem = db.problems.find_one(
-            {'domain': other_domain_name, 'name':
-             problem['name'].replace('prob_cleanup_fd', 'prob_cleanup_with_kif')})
+        other_problem = db.problems.find_one({
+            'domain':
+            other_domain_name,
+            'name':
+            problem['name'].replace('prob_cleanup_fd', 'prob_cleanup_with_kif')
+        })
         if not other_problem:
             continue
-        other_solution = db.solutions.find_one(
-            {'domain': other_domain['_id'],
-             'problem': other_problem['_id'],
-             'planner': other_planner,
-             'use_for_macros': { '$ne': True }})
+        other_solution = db.solutions.find_one({
+            'domain': other_domain['_id'],
+            'problem': other_problem['_id'],
+            'planner': other_planner,
+            'use_for_macros': {
+                '$ne': True
+            }
+        })
         if not other_solution or 'error' in other_solution:
             continue
         other_time = other_solution['resources'][0]
         other_data.append([other_time, other_time])
-        best_solution = db.solutions.find_one(
-            {'domain': best_domain['_id'],
-             'problem': problem['_id']})
+        best_solution = db.solutions.find_one({
+            'domain': best_domain['_id'],
+            'problem': problem['_id']
+        })
         if not best_solution or 'error' in best_solution:
             continue
         best_time = best_solution['resources'][0]
@@ -213,17 +242,17 @@ def plot_best_vs_other_planner(db, domain_name, other_planner, evaluator):
             data_file.write(' '.join(map(str, datum)) + '\n')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('times_best_vs_other.p.j2')
-    plot = plot_template.render(
-        domain=get_pretty_name(domain_name),
-        other_data_file=other_data_file_path,
-        best_data_file=best_data_file_path,
-        other_planner=get_pretty_name(other_planner),
-        evaluator=get_pretty_name(evaluator),
-        output=base_path)
+    plot = plot_template.render(domain=get_pretty_name(domain_name),
+                                other_data_file=other_data_file_path,
+                                best_data_file=best_data_file_path,
+                                other_planner=get_pretty_name(other_planner),
+                                evaluator=get_pretty_name(evaluator),
+                                output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
+
 
 def plot_three(db, domain_name, evaluator, planner1, planner2):
     """ Create a plot for DBMP against two other planners. """
@@ -234,31 +263,42 @@ def plot_three(db, domain_name, evaluator, planner1, planner2):
         other_domain_name = 'cleanup_with_kif'
     else:
         other_domain_name = domain_name
-    other_domain = db.domains.find_one(
-        {'name': other_domain_name, 'augmented': { '$ne': True }})
-    best_domain = db.domains.find(
-        {'name': domain_name, 'augmented': True}).sort(
-            [('evaluation.' + evaluator, -1)])[0]
+    other_domain = db.domains.find_one({
+        'name': other_domain_name,
+        'augmented': {
+            '$ne': True
+        }
+    })
+    best_domain = db.domains.find({
+        'name': domain_name,
+        'augmented': True
+    }).sort([('evaluation.' + evaluator, -1)])[0]
     problem_index = 1
     for problem in db.problems.find({'domain': domain_name}):
-        solution1 = db.solutions.find_one(
-            {'domain': other_domain['_id'],
-             'planner': planner1,
-             'problem': problem['_id']})
-        planner1_data.append([problem_index,
-                              solution1.get('resources', [MAX_TIME])[0]])
-        solution2 = db.solutions.find_one(
-            {'domain': other_domain['_id'],
-             'planner': planner2,
-             'problem': problem['_id']})
-        planner2_data.append([problem_index,
-                              solution2.get('resources', [MAX_TIME])[0]])
-        solution_best = db.solutions.find_one(
-            {'domain': best_domain['_id'],
-             'planner': 'ff',
-             'problem': problem['_id']})
-        best_data.append([problem_index,
-                          solution_best.get('resources', [MAX_TIME])[0]])
+        solution1 = db.solutions.find_one({
+            'domain': other_domain['_id'],
+            'planner': planner1,
+            'problem': problem['_id']
+        })
+        planner1_data.append(
+            [problem_index,
+             solution1.get('resources', [MAX_TIME])[0]])
+        solution2 = db.solutions.find_one({
+            'domain': other_domain['_id'],
+            'planner': planner2,
+            'problem': problem['_id']
+        })
+        planner2_data.append(
+            [problem_index,
+             solution2.get('resources', [MAX_TIME])[0]])
+        solution_best = db.solutions.find_one({
+            'domain': best_domain['_id'],
+            'planner': 'ff',
+            'problem': problem['_id']
+        })
+        best_data.append(
+            [problem_index,
+             solution_best.get('resources', [MAX_TIME])[0]])
         problem_index += 1
     base_path = 'stats/' + domain_name.replace(' ', '_') \
             + '_times_three_planners'
@@ -276,21 +316,25 @@ def plot_three(db, domain_name, evaluator, planner1, planner2):
             data_file.write(' '.join(map(str, datum)) + '\n')
     env = jinja2.Environment(loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = env.get_template('times_three.p.j2')
-    plot = plot_template.render(
-        domain=get_pretty_name(domain_name),
-        p1_data_file=p1_data_file_path,
-        p2_data_file=p2_data_file_path,
-        best_data_file=best_data_file_path,
-        planner1=get_pretty_name(planner1),
-        planner2=get_pretty_name(planner2),
-        evaluator=get_pretty_name(evaluator),
-        output=base_path)
+    plot = plot_template.render(domain=get_pretty_name(domain_name),
+                                p1_data_file=p1_data_file_path,
+                                p2_data_file=p2_data_file_path,
+                                best_data_file=best_data_file_path,
+                                planner1=get_pretty_name(planner1),
+                                planner2=get_pretty_name(planner2),
+                                evaluator=get_pretty_name(evaluator),
+                                output=base_path)
     plot_file_path = base_path + '.p'
     with open(plot_file_path, 'w') as plot_file:
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
-def plot_meta(db, domains, planners, evaluator, print_domains=False,
+
+def plot_meta(db,
+              domains,
+              planners,
+              evaluator,
+              print_domains=False,
               dbmp_domain=''):
     """ Create a plot for all problems of the given domains.
 
@@ -303,9 +347,14 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
     times = {'dbmp': []}
     for planner in planners:
         times[planner] = []
-    for domain in db.domains.find({'augmented': { '$ne': True},
-                                   'name': { '$in': domains},
-                                   }):
+    for domain in db.domains.find({
+            'augmented': {
+                '$ne': True
+            },
+            'name': {
+                '$in': domains
+            },
+    }):
         try:
             if dbmp_domain:
                 best_domain = db.domains.find_one(
@@ -314,24 +363,33 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
                         'Mismatching domain names "{}" and "{}"'.format(
                             best_domain['name'], domain['name'])
             else:
-                best_domain = db.domains.find(
-                    {'base_domain': domain['_id'], 'augmented': True}).sort(
-                        [('evaluation.' + evaluator, -1)])[0]
+                best_domain = db.domains.find({
+                    'base_domain': domain['_id'],
+                    'augmented': True
+                }).sort([('evaluation.' + evaluator, -1)])[0]
         except IndexError:
             print('Could not find a domain for {}!'.format(domain['name']))
             continue
         for problem in db.problems.find({'domain': domain['name']}):
             for planner in planners:
-                solution = db.solutions.find_one(
-                    {'planner': planner, 'use_for_macros': False,
-                     'domain': domain['_id'], 'problem': problem['_id']})
+                solution = db.solutions.find_one({
+                    'planner': planner,
+                    'use_for_macros': False,
+                    'domain': domain['_id'],
+                    'problem': problem['_id']
+                })
                 if solution and 'resources' in solution:
                     times[planner].append(solution['resources'][0])
                 else:
                     times[planner].append(MAX_TIME)
-            best_solution = db.solutions.find_one(
-                {'planner': 'ff', 'use_for_macros': { '$ne': True },
-                 'problem': problem['_id'], 'domain': best_domain['_id']})
+            best_solution = db.solutions.find_one({
+                'planner': 'ff',
+                'use_for_macros': {
+                    '$ne': True
+                },
+                'problem': problem['_id'],
+                'domain': best_domain['_id']
+            })
             if best_solution and 'resources' in best_solution:
                 times['dbmp'].append(best_solution['resources'][0])
             else:
@@ -350,7 +408,7 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
         for planner, planner_times in times.items():
             num_solutions = len(planner_times)
             if not num_solutions: continue
-            count = sum([ ptime <= time for ptime in planner_times])
+            count = sum([ptime <= time for ptime in planner_times])
             quotient = count / num_solutions
             data[planner].append([time, quotient])
     base_path = 'stats/meta_' + domain['name']
@@ -378,6 +436,7 @@ def plot_meta(db, domains, planners, evaluator, print_domains=False,
         plot_file.write(plot)
     subprocess.call(['gnuplot', plot_file_path])
 
+
 def get_descriptives(db, domain_name, planner, phase, evaluator=None):
     """ Get some basic descriptives such as mean time, # solved, quantiles.
 
@@ -399,9 +458,10 @@ def get_descriptives(db, domain_name, planner, phase, evaluator=None):
         actual_domain = domain_name
     if evaluator:
         try:
-            best_domain = db.domains.find(
-                {'name': actual_domain, 'augmented': True}).sort(
-                    [('evaluation.' + evaluator, -1)])[0]
+            best_domain = db.domains.find({
+                'name': actual_domain,
+                'augmented': True
+            }).sort([('evaluation.' + evaluator, -1)])[0]
             print('best domain ID: {}'.format(best_domain['_id']))
         except IndexError:
             print('Could not find best domain')
@@ -413,8 +473,12 @@ def get_descriptives(db, domain_name, planner, phase, evaluator=None):
             d['planner'] = planner
             return d
     else:
-        orig_domain = db.domains.find_one(
-            {'name': actual_domain, 'augmented': { '$ne': True}})
+        orig_domain = db.domains.find_one({
+            'name': actual_domain,
+            'augmented': {
+                '$ne': True
+            }
+        })
         d = get_domain_descriptives(db, orig_domain['_id'], actual_planner,
                                     phase)
         if d:
@@ -422,6 +486,7 @@ def get_descriptives(db, domain_name, planner, phase, evaluator=None):
             d['planner'] = planner
             return d
     return {}
+
 
 def get_domain_descriptives(db, domain_id, planner, phase, evaluator=None):
     domain = db.domains.find_one({'_id': bson.objectid.ObjectId(domain_id)})
@@ -433,29 +498,36 @@ def get_domain_descriptives(db, domain_id, planner, phase, evaluator=None):
         evaluator = None
     domain_name = domain['name']
     problems = db.problems.find({'domain': domain_name, 'phase': phase})
-    problem_ids = [ problem['_id'] for problem in problems ]
-    failed_count = db.solutions.find(
-            {'domain': domain['_id'],
-             'planner': planner,
-             'problem': { '$in': problem_ids },
-             'error': { '$exists': True } }
-        ).count()
-    solutions = db.solutions.find(
-            {'domain': domain['_id'],
-             'planner': planner,
-             'problem': { '$in': problem_ids },
-             'error': { '$exists': False } }
-        )
+    problem_ids = [problem['_id'] for problem in problems]
+    failed_count = db.solutions.find({
+        'domain': domain['_id'],
+        'planner': planner,
+        'problem': {
+            '$in': problem_ids
+        },
+        'error': {
+            '$exists': True
+        }
+    }).count()
+    solutions = db.solutions.find({
+        'domain': domain['_id'],
+        'planner': planner,
+        'problem': {
+            '$in': problem_ids
+        },
+        'error': {
+            '$exists': False
+        }
+    })
     successful_count = solutions.count()
     if not (failed_count or successful_count):
         print('No solutions for domain ID {} and planner {} '
               'found, skipping!'.format(domain['_id'], planner))
         return
     print('Planner: {}\ndomain: {}\ndomain ID: {}\naugmented: {}\n'
-          'evaluator: {}'.format(
-            planner, domain_name, domain['_id'], is_augmented, evaluator))
-    print('successful: {}, failed: {}'.format(
-        successful_count, failed_count))
+          'evaluator: {}'.format(planner, domain_name, domain['_id'],
+                                 is_augmented, evaluator))
+    print('successful: {}, failed: {}'.format(successful_count, failed_count))
     times = []
     solution_lengths = []
     for solution in solutions:
@@ -492,33 +564,39 @@ def get_domain_descriptives(db, domain_id, planner, phase, evaluator=None):
         'score': score,
     }
 
-def get_best_evaluators(database, domain, planner,
+
+def get_best_evaluators(database,
+                        domain,
+                        planner,
                         candidates=evaluators.get_standard_evaluators()):
     """ Get the best evaluator including its score on validation problems """
     domains = database.domains.find({'name': domain, 'augmented': True})
     descriptives = []
     for evaluator in candidates:
-        d = get_descriptives(database, domain, planner, 'validation', evaluator)
+        d = get_descriptives(database, domain, planner, 'validation',
+                             evaluator)
         if d:
             descriptives.append(d)
     scores = [(d['config'], d['score']) for d in descriptives]
     return sorted(scores, key=lambda d: d[1], reverse=True)
 
+
 def generate_table(planners, domains, results, table_type):
-    env = jinja2.Environment(
-        block_start_string = '\BLOCK{',
-        block_end_string = '}',
-        variable_start_string = '\VAR{',
-        variable_end_string = '}',
-        comment_start_string = '\#{',
-        comment_end_string = '}',
-        line_statement_prefix = '%%',
-        line_comment_prefix = '%#',
-        lstrip_blocks=True,
-        trim_blocks=True,
-        loader=jinja2.FileSystemLoader('stats/templates'))
+    env = jinja2.Environment(block_start_string='\BLOCK{',
+                             block_end_string='}',
+                             variable_start_string='\VAR{',
+                             variable_end_string='}',
+                             comment_start_string='\#{',
+                             comment_end_string='}',
+                             line_statement_prefix='%%',
+                             line_comment_prefix='%#',
+                             lstrip_blocks=True,
+                             trim_blocks=True,
+                             loader=jinja2.FileSystemLoader('stats/templates'))
     template = env.get_template('{}_table.tex.j2'.format(table_type))
-    table = template.render(planners=planners, domains=domains, results=results)
+    table = template.render(planners=planners,
+                            domains=domains,
+                            results=results)
     owd = os.getcwd()
     os.chdir(os.path.join(os.getcwd(), 'stats'))
     table_path = 'table_core.tex'
@@ -530,69 +608,103 @@ def generate_table(planners, domains, results, table_type):
     os.rename('table.pdf', '{}_table.pdf'.format(table_type))
     os.chdir(owd)
 
+
 def main():
     parser = argparse.ArgumentParser(
         description='Compute statistics and generate plots to analyze planner'
-                    'performance.')
+        'performance.')
     parser.add_argument('-H', '--db-host', help='the database hostname')
     parser.add_argument('-u', '--db-user', help='the database username')
     parser.add_argument('-p', '--db-passwd', help='the database password')
-    parser.add_argument('-c', '--config-file',
+    parser.add_argument('-c',
+                        '--config-file',
                         help='config file to read database info from')
-    parser.add_argument('-a', '--all', action='store_true',
+    parser.add_argument('-a',
+                        '--all',
+                        action='store_true',
                         help='evaluate all domains')
     phase_group = parser.add_mutually_exclusive_group(required=True)
-    phase_group.add_argument('--validation', dest='phase',
-                             action='store_const', const='validation',
+    phase_group.add_argument('--validation',
+                             dest='phase',
+                             action='store_const',
+                             const='validation',
                              help='get stats for the validation group')
-    phase_group.add_argument('--test', dest='phase',
-                             action='store_const', const='test',
+    phase_group.add_argument('--test',
+                             dest='phase',
+                             action='store_const',
+                             const='test',
                              help='get stats for the test group')
-    parser.add_argument('-d', '--descriptives', action='store_true',
+    parser.add_argument('-d',
+                        '--descriptives',
+                        action='store_true',
                         help='get descriptives for the given domain and'
-                             'planners')
-    parser.add_argument('--best', type=int, default=0,
+                        'planners')
+    parser.add_argument('--best',
+                        type=int,
+                        default=0,
                         help='only get descriptives for the best n'
-                             ' configurations')
-    parser.add_argument('-t', '--times-table', action='store_true',
+                        ' configurations')
+    parser.add_argument('-t',
+                        '--times-table',
+                        action='store_true',
                         help='generate a latex table showing the results')
-    parser.add_argument('--score-table', action='store_true',
+    parser.add_argument('--score-table',
+                        action='store_true',
                         help='generate a latex table showing the scores')
-    parser.add_argument('--config-table', action='store_true',
+    parser.add_argument('--config-table',
+                        action='store_true',
                         help='generate a latex table showing the macro'
-                             'configurations')
-    parser.add_argument('--fit', action='store_true',
+                        'configurations')
+    parser.add_argument('--fit',
+                        action='store_true',
                         help='add a linear fit to evaluator plots')
-    parser.add_argument('--plot-evaluators', action='store_true',
+    parser.add_argument('--plot-evaluators',
+                        action='store_true',
                         help='create plots to analyze evaluators')
-    parser.add_argument('--plot-weights', action='store_true',
+    parser.add_argument('--plot-weights',
+                        action='store_true',
                         help='create plots that show the performance change by'
-                             ' changing one particular weight')
-    parser.add_argument('--plot-against-planner', action='store_true',
+                        ' changing one particular weight')
+    parser.add_argument('--plot-against-planner',
+                        action='store_true',
                         help='create a comparison plot between the best '
-                             'DBMP domain and the original domains with the '
-                             'given planners')
-    parser.add_argument('--plot-evaluator-heatmap', action='store_true',
-                        help='plot a heatmap showing the score depending on the'
-                             ' evaluator')
-    parser.add_argument('-3', '--plot-three', action='store_true',
+                        'DBMP domain and the original domains with the '
+                        'given planners')
+    parser.add_argument(
+        '--plot-evaluator-heatmap',
+        action='store_true',
+        help='plot a heatmap showing the score depending on the'
+        ' evaluator')
+    parser.add_argument('-3',
+                        '--plot-three',
+                        action='store_true',
                         help='compare DBMP to two other planners')
-    parser.add_argument('--meta', action='store_true',
+    parser.add_argument('--meta',
+                        action='store_true',
                         help='create a plot completion vs planning time '
-                             'with all given domains in one plot')
-    parser.add_argument('--planner', action='append',
+                        'with all given domains in one plot')
+    parser.add_argument('--planner',
+                        action='append',
                         help='the planner to evaluate')
-    parser.add_argument('--dbmp-planner', action='append',
+    parser.add_argument('--dbmp-planner',
+                        action='append',
                         help='the planner used for DBMP macros')
-    parser.add_argument('-e', '--evaluator', action='append',
+    parser.add_argument('-e',
+                        '--evaluator',
+                        action='append',
                         default=[],
                         help='the evaluator to use')
-    parser.add_argument('--evaluator-from-validation', action='store_true',
+    parser.add_argument('--evaluator-from-validation',
+                        action='store_true',
                         help='use best evaluator from validation')
-    parser.add_argument('--dbmp-domain', type=str, default='',
+    parser.add_argument('--dbmp-domain',
+                        type=str,
+                        default='',
                         help='Domain ID of the DBMP domain to use instead of '
-                             'the domain with the best evaluation score')
-    parser.add_argument('domains', metavar='domain', nargs='*',
+                        'the domain with the best evaluation score')
+    parser.add_argument('domains',
+                        metavar='domain',
+                        nargs='*',
                         help='the name of the domain to evaluate')
     args = parser.parse_args()
     database = db.auth(args)
@@ -629,8 +741,8 @@ def main():
             for planner in args.dbmp_planner:
                 planner_descriptives = []
                 if args.evaluator_from_validation:
-                    best_evaluators = get_best_evaluators(database, domain,
-                                                          planner)
+                    best_evaluators = get_best_evaluators(
+                        database, domain, planner)
                     print('best evaluator for {}, {}: {}'.format(
                         domain, planner, best_evaluators[0]))
                     evaluator = best_evaluators[0][0]
@@ -643,6 +755,8 @@ def main():
                                                   reverse=True)
                     planner_descriptives = planner_descriptives[0:args.best]
                 domain_descriptives += planner_descriptives
+
+
 #            for planner in args.planner:
 #                if not planner in domain_descriptives:
 #                    domain_descriptives[planner] = {
@@ -661,14 +775,14 @@ def main():
                 plot_evaluation_vs_planning_time(database, domain, evaluator,
                                                  args.fit)
                 plot_evaluation_vs_num_completions(database, domain, evaluator,
-                                                  args.fit)
+                                                   args.fit)
         if args.plot_against_planner:
             for planner in args.planner:
                 for evaluator in args.evaluator:
                     plot_best_vs_other_planner(database, domain, planner,
                                                evaluator)
         if args.plot_three:
-            assert(len(args.planner) == 2), 'Need two other planners.'
+            assert (len(args.planner) == 2), 'Need two other planners.'
             for evaluator in args.evaluator:
                 plot_three(database, domain, evaluator, args.planner[0],
                            args.planner[1])
@@ -704,10 +818,10 @@ def main():
             assert(len(args.domains) == 1), \
                     'Can only plot one domain if domain ID is given!'
         else:
-            assert(len(args.evaluator) == 1), 'Expected exactly one evaluator'
+            assert (len(args.evaluator) == 1), 'Expected exactly one evaluator'
             evaluator = args.evaluator[0]
         plot_meta(database, args.domains, args.planner, evaluator, True,
-                 args.dbmp_domain)
+                  args.dbmp_domain)
 
 if __name__ == '__main__':
     main()

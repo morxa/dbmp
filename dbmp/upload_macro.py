@@ -16,7 +16,6 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Upload the given MacroFF macro file to the database.
 """
@@ -24,33 +23,49 @@ Upload the given MacroFF macro file to the database.
 import argparse
 import db
 
+
 def main():
     arg_parser = argparse.ArgumentParser(
         description="Upload the given MacroFF macro file to the database")
-    arg_parser.add_argument('--host', type=str, default='enterprise',
+    arg_parser.add_argument('--host',
+                            type=str,
+                            default='enterprise',
                             help='Host to connect to')
-    arg_parser.add_argument('-u', '--user', type=str, default='planner',
+    arg_parser.add_argument('-u',
+                            '--user',
+                            type=str,
+                            default='planner',
                             help='database user')
-    arg_parser.add_argument('-p', '--password', type=str,
+    arg_parser.add_argument('-p',
+                            '--password',
+                            type=str,
                             help='password of the database user')
-    arg_parser.add_argument('-t', '--type', type=str,
+    arg_parser.add_argument('-t',
+                            '--type',
+                            type=str,
                             help='the type of the macro (e.g., macroff)')
-    arg_parser.add_argument('domain', type=str,
-                            help='the domain name')
+    arg_parser.add_argument('domain', type=str, help='the domain name')
     arg_parser.add_argument('macro_file', type=argparse.FileType('r'))
     args = arg_parser.parse_args()
     database = db.auth(args)
-    domain_entry = database.domains.find_one({'name': args.domain,
-                                              'augmented': { '$ne': True }})
+    domain_entry = database.domains.find_one({
+        'name': args.domain,
+        'augmented': {
+            '$ne': True
+        }
+    })
     assert domain_entry, \
             'Could not find domain with name {} in database'.format(args.domain)
     domain_id = domain_entry['_id']
     print('Uploading macro file "{}" for domain "{}"'.format(
         args.macro_file.name, domain_id))
-    database.macros.insert_one({'name': 'macroff-' + str(domain_id),
-                                'domain': domain_id,
-                                'type': args.type,
-                                'raw': args.macro_file.read() })
+    database.macros.insert_one({
+        'name': 'macroff-' + str(domain_id),
+        'domain': domain_id,
+        'type': args.type,
+        'raw': args.macro_file.read()
+    })
+
 
 if __name__ == '__main__':
     main()

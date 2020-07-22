@@ -16,7 +16,6 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Plot the score of an evaluator against the performance.
 """
@@ -27,15 +26,17 @@ import numpy
 import subprocess
 import tempfile
 
-FACTORS=['f', 'l', 'c']
+FACTORS = ['f', 'l', 'c']
+
 
 def create_datafile(data,
-                    outfile=tempfile.NamedTemporaryFile(mode='w', delete=False)
-                   ):
+                    outfile=tempfile.NamedTemporaryFile(mode='w',
+                                                        delete=False)):
     for datum in data:
         outfile.write(' '.join(map(str, datum)) + '\n')
     outfile.close()
     return outfile.name
+
 
 def get_mean_data(data, factor):
     column = FACTORS.index(factor)
@@ -51,13 +52,16 @@ def get_mean_data(data, factor):
         mean_data.append([weight, mean, stddev])
     return mean_data
 
+
 def plot_weight_factors(database, planner, domains, phase, factors=FACTORS):
     data = evaluator_heatmap.get_data(database, planner, domains, phase)
     datafile = create_datafile(
         data,
-        open('stats/weights_{}_{}.dat'.format(planner, '_'.join(domains)), 'w'))
+        open('stats/weights_{}_{}.dat'.format(planner, '_'.join(domains)),
+             'w'))
     for factor in factors:
         plot_weight_factor(datafile, planner, domains, factor)
+
 
 def plot_weight_factor(datafile, planner, domains, factor):
     assert factor in FACTORS, \
@@ -65,18 +69,16 @@ def plot_weight_factor(datafile, planner, domains, factor):
     jinja_env = jinja2.Environment(
         loader=jinja2.FileSystemLoader('stats/templates'))
     plot_template = jinja_env.get_template('weight_factors.p.j2')
-    plot = plot_template.render(
-        planner=planner,
-        domain=', '.join(domains),
-        datafile=datafile,
-        column=FACTORS.index(factor)+1,
-        xlabel='w_{}'.format(factor),
-        output='stats/weights_{}_{}_{}'.format(factor, planner,
-                                               '_'.join(domains))
-    )
-    plotfile = open('stats/weights_{}_{}_{}.p'.format(factor, planner,
-                                                      '_'.join(domains)),
-                    'w')
+    plot = plot_template.render(planner=planner,
+                                domain=', '.join(domains),
+                                datafile=datafile,
+                                column=FACTORS.index(factor) + 1,
+                                xlabel='w_{}'.format(factor),
+                                output='stats/weights_{}_{}_{}'.format(
+                                    factor, planner, '_'.join(domains)))
+    plotfile = open(
+        'stats/weights_{}_{}_{}.p'.format(factor, planner, '_'.join(domains)),
+        'w')
     plotfile.write(plot)
     plotfile.close()
     subprocess.call(['gnuplot', plotfile.name])

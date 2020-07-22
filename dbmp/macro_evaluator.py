@@ -16,12 +16,12 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Evaluate the usefulness of macros.
 """
 
 import math
+
 
 class Evaluator(object):
     def evaluate(self, macro):
@@ -34,6 +34,7 @@ class Evaluator(object):
             A score for the macro; the higher the score the better the macro.
         """
         raise NotImplementedError()
+
     def evaluate_list(self, macros):
         """ Evaluate the given list of macros and return an evaluation score.
 
@@ -45,7 +46,7 @@ class Evaluator(object):
         Returns:
             A score for the macro list.
         """
-        macro_evaluations = [ self.evaluate(macro) for macro in macros ]
+        macro_evaluations = [self.evaluate(macro) for macro in macros]
         return sum(macro_evaluations)
 
     def __str__(self):
@@ -62,6 +63,7 @@ class Evaluator(object):
         """
         raise NotImplementedError()
 
+
 class FrequencyEvaluator(Evaluator):
     """ An Evaluator based on the frequency of the macro.
 
@@ -75,7 +77,7 @@ class FrequencyEvaluator(Evaluator):
         Args:
             normalizer: The normalizer to use.
         """
-        assert(normalizer > 0), 'Normalizer must be > 0'
+        assert (normalizer > 0), 'Normalizer must be > 0'
         self.normalizer = normalizer
 
     def evaluate(self, macro):
@@ -88,8 +90,10 @@ class FrequencyEvaluator(Evaluator):
             A score for the macro; the higher the score the better the macro.
         """
         return len(macro.actions) * macro.count / self.normalizer
+
     def name(self):
         return 'frequency'
+
 
 class ReductionEvaluator(Evaluator):
     """ An Evaluator based on the macro's parameter reduction.
@@ -112,8 +116,10 @@ class ReductionEvaluator(Evaluator):
         if macro.parameter_reduction == 0:
             return 0
         return macro.parameter_reduction / len(macro.flat_parameters)
+
     def name(self):
         return 'param_reduction'
+
 
 class WeightedFPEvaluator(Evaluator):
     """ An evaluator that combines frequency and parameter reduction.
@@ -138,6 +144,7 @@ class WeightedFPEvaluator(Evaluator):
         self.reduction_weight = 100 - frequency_weight
         self.frequency_evaluator = FrequencyEvaluator(normalizer)
         self.reduction_evaluator = ReductionEvaluator()
+
     def evaluate(self, macro):
         """ Evaluate the macro by combining frequency and parameter reduction.
 
@@ -154,9 +161,10 @@ class WeightedFPEvaluator(Evaluator):
                 (self.frequency_evaluator.evaluate(macro)) + \
                 self.reduction_weight * \
                 (self.reduction_evaluator.evaluate(macro))
+
     def name(self):
-        return 'fp_{}_{}'.format(self.frequency_weight,
-                                                    self.reduction_weight)
+        return 'fp_{}_{}'.format(self.frequency_weight, self.reduction_weight)
+
 
 class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
     """ An evaluator that additionally considers the macros' complementarity.
@@ -168,12 +176,12 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
     """
     def __init__(self, frequency_weight, frequency_normalizer,
                  complementarity_weight):
-        WeightedFPEvaluator.__init__(
-            self,
-            frequency_weight=frequency_weight,
-            normalizer=frequency_normalizer)
+        WeightedFPEvaluator.__init__(self,
+                                     frequency_weight=frequency_weight,
+                                     normalizer=frequency_normalizer)
 
         self.complementarity_weight = complementarity_weight
+
     def evaluate_list(self, macros):
         """ Evaluate the complementarity of the given macros.
 
@@ -184,7 +192,7 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
             A score for the macros.
         """
         # The sum over distinct actions in each macro.
-        num_actions = sum([ len(set(macro.actions)) for macro in macros ])
+        num_actions = sum([len(set(macro.actions)) for macro in macros])
         distinct_actions = set()
         for macro in macros:
             distinct_actions.update(macro.actions)
@@ -192,12 +200,13 @@ class MacroComplementarityWeightedFPEvaluator(WeightedFPEvaluator):
         num_distinct_actions = len(distinct_actions)
         complementarity = num_distinct_actions / num_actions
         complementarity_factor = math.pow(complementarity,
-                                          self.complementarity_weight/10)
+                                          self.complementarity_weight / 10)
         list_evaluation = WeightedFPEvaluator.evaluate_list(self, macros)
         return complementarity_factor * list_evaluation
+
     def name(self):
-        return 'cfp_{}_{}'.format(
-            self.frequency_weight, self.reduction_weight)
+        return 'cfp_{}_{}'.format(self.frequency_weight, self.reduction_weight)
+
 
 class MCWithLengthWeightedFPEvaluator(MacroComplementarityWeightedFPEvaluator):
     """ The MacroComplementarityWeightedFPEvaluator with penalty for many macros
@@ -213,13 +222,15 @@ class MCWithLengthWeightedFPEvaluator(MacroComplementarityWeightedFPEvaluator):
             frequency_normalizer=frequency_normalizer,
             complementarity_weight=complementarity_weight)
         self.length_weight = length_weight
+
     def evaluate_list(self, macros):
         return math.pow(len(macros), -self.length_weight/10) * \
                 MacroComplementarityWeightedFPEvaluator.evaluate_list(self, macros)
+
     def name(self):
-        return 'clfp_f{}_l{}_c{}'.format(
-            self.frequency_weight, self.length_weight,
-            self.complementarity_weight)
+        return 'clfp_f{}_l{}_c{}'.format(self.frequency_weight,
+                                         self.length_weight,
+                                         self.complementarity_weight)
 
 
 class PRSquaredEvaluator(Evaluator):
@@ -234,9 +245,11 @@ class PRSquaredEvaluator(Evaluator):
         Returns:
             The macro's score.
         """
-        return (macro.parameter_reduction + 1)** 2 * macro.count
+        return (macro.parameter_reduction + 1)**2 * macro.count
+
     def name(self):
         return "pr2"
+
 
 class ComplementarityPRSquaredEvaluator(PRSquaredEvaluator):
     """
@@ -252,7 +265,7 @@ class ComplementarityPRSquaredEvaluator(PRSquaredEvaluator):
             A score for the macros.
         """
         # The sum over distinct actions in each macro.
-        num_actions = sum([ len(set(macro.actions)) for macro in macros ])
+        num_actions = sum([len(set(macro.actions)) for macro in macros])
         distinct_actions = set()
         for macro in macros:
             distinct_actions.update(macro.actions)
@@ -261,6 +274,6 @@ class ComplementarityPRSquaredEvaluator(PRSquaredEvaluator):
         complementarity = num_distinct_actions / num_actions
         list_evaluation = PRSquaredEvaluator.evaluate_list(self, macros)
         return complementarity * list_evaluation
+
     def name(self):
         return "compl_pr2"
-

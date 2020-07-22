@@ -16,7 +16,6 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Compare evaluator scores with a 3D heatmap
 """
@@ -31,19 +30,24 @@ import tempfile
 
 MAX_TIME = 300
 
+
 def get_evaluator_name(f, l, c):
     return 'clfp_f{}_l{}_c{}'.format(f, l, c)
 
+
 def get_best_domain(database, domain, evaluator):
     try:
-        domain_entries = database.domains.find(
-            { 'name': domain, 'augmented': True, })
+        domain_entries = database.domains.find({
+            'name': domain,
+            'augmented': True,
+        })
         return sorted(domain_entries,
                       key=lambda x: x['evaluation'][evaluator],
                       reverse=True)[0]
     except IndexError:
         print('Could not find any domain with name {}'.format(domain))
         raise
+
 
 def get_score(time):
     if time < 1:
@@ -53,25 +57,31 @@ def get_score(time):
     else:
         return 0
 
+
 def get_problem_score(database, planner, domain, problem):
-    solution = database.solutions.find_one(
-        {
-            'domain': domain['_id'],
-            'problem': problem['_id'],
-            'planner': planner,
-            'error': { '$exists': False },
-        })
+    solution = database.solutions.find_one({
+        'domain': domain['_id'],
+        'problem': problem['_id'],
+        'planner': planner,
+        'error': {
+            '$exists': False
+        },
+    })
     if not solution:
         return 0
     time = solution['resources'][0]
     return get_score(time)
 
+
 def get_domain_score(database, planner, domain, phase):
     scores = []
-    for problem in database.problems.find(
-        { 'domain': domain['name'], 'phase': phase }):
+    for problem in database.problems.find({
+            'domain': domain['name'],
+            'phase': phase
+    }):
         scores.append(get_problem_score(database, planner, domain, problem))
     return numpy.mean(scores)
+
 
 def get_data(database, planner, domains, phase):
     fs = range(0, 101, 10)
@@ -79,19 +89,21 @@ def get_data(database, planner, domains, phase):
     cs = range(0, 11, 1)
     data = []
     for (domain, f, l, c) in itertools.product(domains, fs, ls, cs):
-        domain_entry = get_best_domain(
-            database, domain, get_evaluator_name(f, l, c))
+        domain_entry = get_best_domain(database, domain,
+                                       get_evaluator_name(f, l, c))
         score = get_domain_score(database, planner, domain_entry, phase)
-        data.append([f/100, l/10, c/10, score])
+        data.append([f / 100, l / 10, c / 10, score])
     return data
 
+
 def create_datafile(data,
-                    outfile=tempfile.NamedTemporaryFile(mode='w', delete=False)
-                   ):
+                    outfile=tempfile.NamedTemporaryFile(mode='w',
+                                                        delete=False)):
     for datum in data:
         outfile.write(' '.join(map(str, datum)) + '\n')
     outfile.close()
     return outfile.name
+
 
 def plot_heatmap(database, planner, domains, phase):
     print('Plotting heatmap for domains {}'.format(domains))
@@ -105,12 +117,10 @@ def plot_heatmap(database, planner, domains, phase):
         #domain=get_pretty_name(domain),
         domain=domain,
         datafile=datafile,
-        output='stats/heatmap_{}_{}'.format(planner, '_'.join(domains))
-    )
+        output='stats/heatmap_{}_{}'.format(planner, '_'.join(domains)))
 
     #plotfile = tempfile.NamedTemporaryFile(mode='w', delete=False)
     plotfile = open('stats/heatmap.p', 'w')
     plotfile.write(plot)
     plotfile.close()
     subprocess.call(['gnuplot', plotfile.name])
-

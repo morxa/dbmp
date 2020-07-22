@@ -16,10 +16,10 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Some utility functions for evaluators
 """
+
 
 def get_standard_evaluators():
     evaluators = []

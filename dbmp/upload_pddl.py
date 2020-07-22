@@ -16,7 +16,6 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Upload a domain file or a problem file to the database
 """
@@ -26,6 +25,7 @@ import bson.objectid
 import db
 import getpass
 import re
+
 
 def get_domainname(domain_string):
     """Gets the domain name from the domain given as string.
@@ -52,6 +52,7 @@ def get_domainname(domain_string):
             'first non-empty line "{}".'.format(line)
         return match.group(1)
 
+
 def get_problemname(problem_string):
     """Get the problem name from the problem given as string.
 
@@ -76,6 +77,7 @@ def get_problemname(problem_string):
             'Could not extract problem name from ' \
             'first non-empty line "{}".'.format(line)
         return match.group(1)
+
 
 def get_domain_of_problem(problem_string):
     """Get the domain of the given problem.
@@ -103,6 +105,7 @@ def get_domain_of_problem(problem_string):
         'first non-empty line "{}".'.format(line)
     return match.group(1)
 
+
 def start_job(planner, job_template, domain, problem):
     """ Start a job for the given planner, domain, and problem.
 
@@ -124,47 +127,67 @@ def start_job(planner, job_template, domain, problem):
         .replace('$PLANNER', planner)
     print(job_string)
 
+
 def main():
     parser = argparse.ArgumentParser(
         description='Upload a PDDL domain or problem file to the database,'
-                    ' and optionally start a Kubernetes job.')
-    parser.add_argument('-c', '--config-file',
+        ' and optionally start a Kubernetes job.')
+    parser.add_argument('-c',
+                        '--config-file',
                         help='config file to read database info from')
     parser.add_argument('-H', '--db-host', help='the database hostname')
     parser.add_argument('-u', '--db-user', help='the database username')
     parser.add_argument('-p', '--db-passwd', help='the database password')
-    parser.add_argument('--start-job', action='store_true',
+    parser.add_argument('--start-job',
+                        action='store_true',
                         help='start a Kubernetes job for the given problem')
-    parser.add_argument('-a', '--all', action='store_true',
+    parser.add_argument('-a',
+                        '--all',
+                        action='store_true',
                         help='start jobs for all problems in the domain')
-    parser.add_argument('--all-missing', action='store_true',
+    parser.add_argument('--all-missing',
+                        action='store_true',
                         help='start jobs for all problems without a solution')
-    parser.add_argument('--all-failed', action='store_true',
+    parser.add_argument('--all-failed',
+                        action='store_true',
                         help='start jobs for all problems that failed before')
-    parser.add_argument('-t', '--kubernetes-template',
+    parser.add_argument('-t',
+                        '--kubernetes-template',
                         help='the job template for the Kubernetes job')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--training', dest='phase', default='training',
-                        action='store_const', const='training',
-                        help='mark uploaded problems as training problems')
-    group.add_argument('--validation', dest='phase',
-                        action='store_const', const='validation',
-                        help='mark uploaded problems as validation problems')
-    group.add_argument('--test', dest='phase',
-                        action='store_const', const='test',
-                        help='mark uploaded problems as test problems')
-    parser.add_argument('--skip-upload', action='store_true',
+    group.add_argument('--training',
+                       dest='phase',
+                       default='training',
+                       action='store_const',
+                       const='training',
+                       help='mark uploaded problems as training problems')
+    group.add_argument('--validation',
+                       dest='phase',
+                       action='store_const',
+                       const='validation',
+                       help='mark uploaded problems as validation problems')
+    group.add_argument('--test',
+                       dest='phase',
+                       action='store_const',
+                       const='test',
+                       help='mark uploaded problems as test problems')
+    parser.add_argument('--skip-upload',
+                        action='store_true',
                         help='do not upload the problem')
     dom_group = parser.add_mutually_exclusive_group(required=True)
     dom_group.add_argument('--domainfile', help='the domain file to add')
-    dom_group.add_argument('--domain',
-                           help='the name of the domain the problems belong to')
+    dom_group.add_argument(
+        '--domain', help='the name of the domain the problems belong to')
     dom_group.add_argument('--domain-id',
                            help='the ID of the domain the problems belong to')
-    parser.add_argument('--problem', action='append', dest='problems',
+    parser.add_argument('--problem',
+                        action='append',
+                        dest='problems',
                         help='Additional problem to start a job for')
     parser.add_argument('--planner', default='ff', help='the planner to use')
-    parser.add_argument('problemfiles', metavar='problemfile', nargs='*',
+    parser.add_argument('problemfiles',
+                        metavar='problemfile',
+                        nargs='*',
                         help='the problem files to add')
     args = parser.parse_args()
     if args.problems:
@@ -183,22 +206,27 @@ def main():
             assert domain_coll.find({ 'name': domain_name }).count() == 0, \
                 'Domain "{}" already exists in the database.'.format(
                     domain_name)
-            domain = domain_coll.insert(
-                { 'name': domain_name, 'raw': domain_string})
+            domain = domain_coll.insert({
+                'name': domain_name,
+                'raw': domain_string
+            })
         if not domain:
-            domain = domain_coll.find_one({'name': domain_name,
-                                           'augmented': { '$ne': True }})['_id']
+            domain = domain_coll.find_one({
+                'name': domain_name,
+                'augmented': {
+                    '$ne': True
+                }
+            })['_id']
     elif args.domain_id:
         domain = args.domain_id
         domain_entry = domain_coll.find_one(
-            { '_id': bson.objectid.ObjectId(domain) })
+            {'_id': bson.objectid.ObjectId(domain)})
         assert(domain_entry), \
                 'Could not find domain with ID "{}"'.format(domain)
         domain_name = domain_entry['name']
     else:
         domain_name = args.domain
-        domain_entry = domain_coll.find_one(
-            { 'name': domain_name })
+        domain_entry = domain_coll.find_one({'name': domain_name})
         assert domain_entry, \
                 'Could not find domain with name "{}"'.format(domain_name)
         domain = domain_entry['_id']
@@ -213,35 +241,44 @@ def main():
         if not args.skip_upload:
             assert problem_coll.find({ 'name': problem_name }).count() == 0, \
                 'Problem "{}" already exists in database.'.format(problem_name)
-            problem_id = problem_coll.insert(
-                {'name': problem_name, 'domain': domain_name,
-                 'raw': problem_string, 'phase': args.phase })
+            problem_id = problem_coll.insert({
+                'name': problem_name,
+                'domain': domain_name,
+                'raw': problem_string,
+                'phase': args.phase
+            })
         else:
-            problem_id =  problem_coll.find_one({ 'name': problem_name })['_id']
+            problem_id = problem_coll.find_one({'name': problem_name})['_id']
         problems.add(problem_id)
     if args.all or args.all_missing or args.all_failed:
         all_problems = list(
-            problem_coll.find({ 'domain': domain_name }, { 'name': True }))
+            problem_coll.find({'domain': domain_name}, {'name': True}))
     if args.all:
         for problem in all_problems:
             problems.add(problem['_id'])
     if args.all_missing:
         for problem in all_problems:
-            if not solution_coll.find_one(
-                    { 'domain_id': domain, 'problem': problem['_id'],
-                      'planner': args.planner}):
+            if not solution_coll.find_one({
+                    'domain_id': domain,
+                    'problem': problem['_id'],
+                    'planner': args.planner
+            }):
                 problems.add(problem['_id'])
     if args.all_failed:
         for problem in all_problems:
-            if solution_coll.find_one(
-                    { 'domain_id': domain, 'problem': problem['_id'],
-                      'raw': { '$exists': False }}):
+            if solution_coll.find_one({
+                    'domain_id': domain,
+                    'problem': problem['_id'],
+                    'raw': {
+                        '$exists': False
+                    }
+            }):
                 problems.add(problem['_id'])
     if args.start_job:
         for problem in problems:
             start_job(args.planner, args.kubernetes_template, domain, problem)
             print('---')
 
+
 if __name__ == '__main__':
     main()
-

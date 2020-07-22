@@ -16,7 +16,6 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Parse a solution given as raw text and save the solution in a structured way in
 the database.
@@ -28,6 +27,7 @@ import db
 import dbmp
 import pprint
 import re
+
 
 def parse_solution(raw_solution):
     """Parse a solution given as text into a structured format.
@@ -52,32 +52,44 @@ def parse_solution(raw_solution):
         split_line = re.split('\s+', inside_parentheses)
         operator = split_line[0]
         parameters = split_line[1:]
-        actions.append( { 'operator': operator, 'parameters': parameters } )
-    return { 'time': time, 'actions': actions }
+        actions.append({'operator': operator, 'parameters': parameters})
+    return {'time': time, 'actions': actions}
 
 
 def main():
     parser = argparse.ArgumentParser(
         description='Upload a PDDL domain or problem file to the database,'
-                    ' and optionally start a Kubernetes job.')
-    parser.add_argument('-v', '--verbose', action='count', default=0,
+        ' and optionally start a Kubernetes job.')
+    parser.add_argument('-v',
+                        '--verbose',
+                        action='count',
+                        default=0,
                         help='verbose output; '
-                             '-v: print errors; -vv: print solutions')
-    parser.add_argument('-c', '--config-file',
+                        '-v: print errors; -vv: print solutions')
+    parser.add_argument('-c',
+                        '--config-file',
                         help='config file to read database info from')
     parser.add_argument('-H', '--db-host', help='the database hostname')
     parser.add_argument('-u', '--db-user', help='the database username')
     parser.add_argument('-p', '--db-passwd', help='the database password')
-    parser.add_argument('-i', '--solution-id', action='append',
+    parser.add_argument('-i',
+                        '--solution-id',
+                        action='append',
                         dest='solution_ids',
                         help='an ID of a solution to parse')
-    parser.add_argument('-f', '--force', action='store_true',
+    parser.add_argument('-f',
+                        '--force',
+                        action='store_true',
                         help='Update db entry even parsed solution already'
-                             'exists')
-    parser.add_argument('-a', '--all', action='store_true',
+                        'exists')
+    parser.add_argument('-a',
+                        '--all',
+                        action='store_true',
                         help='check the database for any unparsed solutions '
-                             'and parse them')
-    parser.add_argument('solutions', metavar='problem_name', nargs='*',
+                        'and parse them')
+    parser.add_argument('solutions',
+                        metavar='problem_name',
+                        nargs='*',
                         help='a name of a problem/solution to parse')
 
     args = parser.parse_args()
@@ -88,18 +100,17 @@ def main():
         if args.force:
             solution_entries = list(coll.find())
         else:
-            solution_entries = list(coll.find(
-                { 'actions': { '$exists': False } } ))
+            solution_entries = list(coll.find({'actions': {'$exists': False}}))
     if args.solution_ids:
         for solution_id in args.solution_ids:
-            res = coll.find_one({ '_id': bson.objectid.ObjectId(solution_id) })
+            res = coll.find_one({'_id': bson.objectid.ObjectId(solution_id)})
             if res:
                 solution_entries.append(res)
             else:
                 print('Could not find ID {}, skipping!'.format(solution_id))
     if args.solutions:
         for solution in args.solutions:
-            res = coll.find_one({ 'problem': solution })
+            res = coll.find_one({'problem': solution})
             if res:
                 solution_entries.append(res)
             else:
@@ -132,11 +143,11 @@ def main():
             domain_string = domain['raw']
             extractor.extract_macros_from_string(domain_string)
             try:
-                translated_solution = extractor.translate_solution(raw_solution)
+                translated_solution = extractor.translate_solution(
+                    raw_solution)
             except Exception as e:
                 print('ERROR translating the solution of {}: "{}". '
-                      'Skipping!'.format(
-                    solution['_id'], str(e)))
+                      'Skipping!'.format(solution['_id'], str(e)))
                 continue
             parsed_solution = parse_solution(translated_solution)
         else:
@@ -146,7 +157,8 @@ def main():
             print('Result for ID {} (problem "{}"):'\
                     .format(solution['_id'], solution['problem']))
             pp.pprint(parsed_solution)
-        coll.update(solution, { '$set': parsed_solution })
+        coll.update(solution, {'$set': parsed_solution})
+
 
 if __name__ == '__main__':
     main()

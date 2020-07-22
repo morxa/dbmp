@@ -16,7 +16,6 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Database handler for DBMP
 """
@@ -24,6 +23,7 @@ Database handler for DBMP
 import configparser
 import getpass
 import pymongo
+
 
 def auth(args):
     db_host = 'localhost'

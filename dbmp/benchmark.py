@@ -16,7 +16,6 @@
 #  GNU Library General Public License for more details.
 #
 #  Read the full text in the LICENSE.GPL file in the doc directory.
-
 """
 Run planners on domains augmented with macros.
 """
@@ -27,6 +26,7 @@ import db
 import evaluators
 import stats
 import sys
+
 
 # TODO This is copy-pasted, move to common module instead.
 def start_job(planner, job_template, domain, problem):
@@ -51,6 +51,7 @@ def start_job(planner, job_template, domain, problem):
     print(job_string)
     print('---')
 
+
 def main():
     """ Main program.
 
@@ -59,40 +60,59 @@ def main():
     """
     parser = argparse.ArgumentParser(
         description='Run planners on domains augmented with macros.')
-    parser.add_argument('-c', '--config-file',
+    parser.add_argument('-c',
+                        '--config-file',
                         help='config file to read database info from')
     parser.add_argument('-H', '--db-host', help='the database hostname')
     parser.add_argument('-u', '--db-user', help='the database username')
     parser.add_argument('-p', '--db-passwd', help='the database password')
-    parser.add_argument('--dry-run', action='store_true',
+    parser.add_argument('--dry-run',
+                        action='store_true',
                         help='dry-run, do not create jobs')
     parser.add_argument('--planner', default='ff', help='the planner to use')
-    parser.add_argument('-t', '--kubernetes-template',
+    parser.add_argument('-t',
+                        '--kubernetes-template',
                         help='the job template for the Kubernetes job')
     parser.add_argument('--domain', help='the name of the domain to run')
-    parser.add_argument('--augmented-domain', action='append',
+    parser.add_argument('--augmented-domain',
+                        action='append',
                         help='an ID of an augmented domain to run')
-    parser.add_argument('-a', '--all', action='store_true',
+    parser.add_argument('-a',
+                        '--all',
+                        action='store_true',
                         help='run all macros that fit the given criteria')
-    parser.add_argument('--missing', action='store_true',
+    parser.add_argument('--missing',
+                        action='store_true',
                         help='run all problems without a solution')
-    parser.add_argument('-o', '--original-domain', action='store_true',
+    parser.add_argument('-o',
+                        '--original-domain',
+                        action='store_true',
                         help='also run the original domain')
     parser.add_argument('--macro-evaluator',
                         help='the name of the evaluation function '
-                             'to use for filtering macros')
-    parser.add_argument('--best', type=int, default=0,
-                        help='limit to the n highest scoring macros or domains')
+                        'to use for filtering macros')
+    parser.add_argument(
+        '--best',
+        type=int,
+        default=0,
+        help='limit to the n highest scoring macros or domains')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--validation', dest='phase', default='validation',
-                        action='store_const', const='validation',
-                        help='run benchmarks on the validation set')
-    group.add_argument('--test', dest='phase',
-                        action='store_const', const='test',
-                        help='run benchmarks on the test set')
-    parser.add_argument('--standard-evaluators', action='store_true',
+    group.add_argument('--validation',
+                       dest='phase',
+                       default='validation',
+                       action='store_const',
+                       const='validation',
+                       help='run benchmarks on the validation set')
+    group.add_argument('--test',
+                       dest='phase',
+                       action='store_const',
+                       const='test',
+                       help='run benchmarks on the test set')
+    parser.add_argument('--standard-evaluators',
+                        action='store_true',
                         help='use the standard set of evaluators')
-    parser.add_argument('domain_evaluators', metavar='domain-evaluator',
+    parser.add_argument('domain_evaluators',
+                        metavar='domain-evaluator',
                         nargs='*',
                         help='the evaluators to use for domain selection')
     args = parser.parse_args()
@@ -111,28 +131,30 @@ def main():
         domains = set()
     if args.all or args.missing:
         if args.macro_evaluator:
-            query = { 'domain': args.domain }
-            sorter = [ ('evaluation.' + args.macro_evaluator, -1) ]
+            query = {'domain': args.domain}
+            sorter = [('evaluation.' + args.macro_evaluator, -1)]
             for macro in \
                     macro_coll.find(query).sort(sorter).limit(args.best):
-                domain = domain_coll.find_one( {'macros': macro['_id'] })
+                domain = domain_coll.find_one({'macros': macro['_id']})
                 if domain:
                     domains.add(domain['_id'])
                 else:
                     print('Warning: Could not find a domain with macro {}. '
                           'Did you generate the augmented domain?'.format(
                               macro['_id']),
-                         file=sys.stderr)
+                          file=sys.stderr)
         domain_entries = list(
-            domain_coll.find( { 'name': args.domain, 'augmented': True }))
+            domain_coll.find({
+                'name': args.domain,
+                'augmented': True
+            }))
         if args.phase == 'validation':
             for evaluator in args.domain_evaluators:
                 if args.best:
                     best_domain_entries = sorted(
                         domain_entries,
                         key=lambda x: x['evaluation'][evaluator],
-                        reverse=True
-                    )[0:args.best]
+                        reverse=True)[0:args.best]
                 else:
                     best_domain_entries = domain_entries
                 for domain in best_domain_entries:
@@ -143,27 +165,37 @@ def main():
             best_evaluators = stats.get_best_evaluators(
                 database, args.domain, args.planner)[0:args.best]
             for evaluator, score in best_evaluators:
-                print('Running evaluator {} with score {}'.format(evaluator,
-                                                                  score))
+                print('Running evaluator {} with score {}'.format(
+                    evaluator, score))
                 domain = sorted(domain_entries,
                                 key=lambda d: d['evaluation'][evaluator],
                                 reverse=True)[0]
                 domains.add(domain['_id'])
 
     if args.original_domain:
-        original_domain = domain_coll.find_one(
-            { 'name': args.domain, 'augmented': { '$ne': True } })
+        original_domain = domain_coll.find_one({
+            'name': args.domain,
+            'augmented': {
+                '$ne': True
+            }
+        })
         assert(original_domain), \
                 'Could not find unaugmented domain {}.'.format(args.domain)
         domains.add(original_domain['_id'])
     for domain in domains:
-        for problem in problem_coll.find({'domain': args.domain,
-                                          'phase': args.phase }):
+        for problem in problem_coll.find({
+                'domain': args.domain,
+                'phase': args.phase
+        }):
             if not args.all and solutions_coll.find_one(
-                { 'domain': bson.objectid.ObjectId(domain),
-                  'problem': bson.objectid.ObjectId(problem['_id']),
-                  'planner': args.planner,
-                  'use_for_macros': { '$ne': True }}):
+                {
+                    'domain': bson.objectid.ObjectId(domain),
+                    'problem': bson.objectid.ObjectId(problem['_id']),
+                    'planner': args.planner,
+                    'use_for_macros': {
+                        '$ne': True
+                    }
+                }):
                 # solution already exists, skip this problem
                 continue
             if args.dry_run:
@@ -172,6 +204,7 @@ def main():
             else:
                 start_job(args.planner, args.kubernetes_template, domain,
                           problem['_id'])
+
 
 if __name__ == "__main__":
     main()
